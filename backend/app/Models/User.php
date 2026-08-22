@@ -30,4 +30,14 @@ class User extends Authenticatable
     {
         return $this->password_hash;
     }
+
+    public function courts()
+    {
+        return $this->hasMany(Court::class, 'owner_id', 'user_id');
+    }
+
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class, 'user_id', 'user_id');
+    }
 }
