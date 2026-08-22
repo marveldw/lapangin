@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\CourtOperatingHour;
 
 class Court extends Model
 {
@@ -22,5 +23,10 @@ class Court extends Model
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_id', 'user_id');
+    }
+
+    public function operatingHours()
+    {
+        return $this->hasMany(CourtOperatingHour::class, 'court_id', 'court_id');
     }
 }
