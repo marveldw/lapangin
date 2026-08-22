@@ -4,10 +4,13 @@ use App\Http\Controllers\Api\AuthController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CourtController;
 use App\Http\Controllers\Api\BookingController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\PlanController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::get('/plans', [PlanController::class, 'index']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -26,5 +29,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::get('/bookings/{id}', [BookingController::class, 'show']);
     Route::put('/bookings/{id}', [BookingController::class, 'update']);
+    Route::get('/dashboard', [DashboardController::class, 'index']);
 });
 
