@@ -10,8 +10,8 @@ Sistem manajemen lapangan olahraga berbasis SaaS untuk pemilik lapangan.
 | Nama | Role | Teknologi |
 |------|------|-----------|
 | Marvel | Backend | Laravel 12 |
-| [Nama Fullstack] | Fullstack / Landing Page | Next.js |
-| [Nama Frontend] | Frontend / Dashboard | Next.js |
+| [Nama Fullstack] | Fullstack / Landing Page | 
+| [Nama Frontend] | Frontend / Dashboard | 
 
 ---
 
