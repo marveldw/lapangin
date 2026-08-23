@@ -16,6 +16,11 @@ class Subscription extends Model
         'status',
     ];
 
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
+    }
+
     public function plan()
     {
         return $this->belongsTo(Plan::class, 'plan_id', 'plan_id');

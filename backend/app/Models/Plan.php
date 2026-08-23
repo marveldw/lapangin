@@ -16,4 +16,9 @@ class Plan extends Model
         'max_courts',
         'is_active',
     ];
+
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class, 'plan_id', 'plan_id');
+    }
 }

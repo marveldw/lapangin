@@ -11,6 +11,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class MySubscription extends Page
 {
@@ -29,6 +30,17 @@ class MySubscription extends Page
             ->where('user_id', $userId)
             ->where('status', 'ACTIVE')
             ->latest('start_date')
+            ->first();
+    }
+
+    public function getPendingSubscription()
+    {
+        $userId = auth()->user()?->user_id;
+
+        return Subscription::with('plan')
+            ->where('user_id', $userId)
+            ->where('status', 'PENDING')
+            ->latest('created_at')
             ->first();
     }
 
@@ -66,17 +78,17 @@ class MySubscription extends Page
     protected function getViewData(): array
     {
         return [
-            'subscription' => $this->getSubscription(),
-            'plans'        => $this->getPlans(),
-            'usageStats'   => $this->getUsageStats(),
+            'subscription'        => $this->getSubscription(),
+            'pendingSubscription' => $this->getPendingSubscription(),
+            'plans'               => $this->getPlans(),
+            'usageStats'          => $this->getUsageStats(),
         ];
     }
 
-    public function upgradePlan(int $planId): void
+    public function requestUpgrade(int $planId): void
     {
         $userId = auth()->user()?->user_id;
         $targetPlan = Plan::findOrFail($planId);
-
         $currentSub = $this->getSubscription();
 
         if ($currentSub && $currentSub->plan_id === $planId) {
@@ -88,22 +100,71 @@ class MySubscription extends Page
             return;
         }
 
-        if ($currentSub) {
-            $currentSub->update(['status' => 'CANCELLED', 'end_date' => now()]);
+        // If target plan is FREE, allow instant switch
+        if ($targetPlan->price == 0) {
+            DB::transaction(function () use ($userId, $targetPlan, $currentSub) {
+                if ($currentSub) {
+                    $currentSub->update(['status' => 'EXPIRED', 'end_date' => now()]);
+                }
+
+                Subscription::create([
+                    'user_id'    => $userId,
+                    'plan_id'    => $targetPlan->plan_id,
+                    'start_date' => now(),
+                    'end_date'   => null,
+                    'status'     => 'ACTIVE',
+                ]);
+            });
+
+            Notification::make()
+                ->title('Paket Berhasil Diubah! 🎉')
+                ->body('Paket langganan Anda berhasil dialihkan ke ' . $targetPlan->name . '.')
+                ->success()
+                ->send();
+
+            return;
         }
 
-        Subscription::create([
-            'user_id'    => $userId,
-            'plan_id'    => $targetPlan->plan_id,
-            'start_date' => now(),
-            'end_date'   => null,
-            'status'     => 'ACTIVE',
-        ]);
+        // For paid plans (BASIC / PRO), create PENDING subscription request for Admin Approval
+        $pendingSub = $this->getPendingSubscription();
+
+        if ($pendingSub) {
+            $pendingSub->update([
+                'plan_id'    => $targetPlan->plan_id,
+                'start_date' => now(),
+            ]);
+        } else {
+            Subscription::create([
+                'user_id'    => $userId,
+                'plan_id'    => $targetPlan->plan_id,
+                'start_date' => now(),
+                'end_date'   => null,
+                'status'     => 'PENDING',
+            ]);
+        }
 
         Notification::make()
-            ->title('Upgrade Berhasil! 🎉')
-            ->body('Selamat! Paket langganan Anda berhasil diubah ke ' . $targetPlan->name . '.')
-            ->success()
+            ->title('Pengajuan Upgrade Terkirim! ⏳')
+            ->body('Pengajuan paket ' . $targetPlan->name . ' telah dikirim ke Super Admin. Silakan lakukan pembayaran dan tunggu persetujuan.')
+            ->warning()
             ->send();
+    }
+
+    public function cancelPendingRequest(): void
+    {
+        $pendingSub = $this->getPendingSubscription();
+
+        if ($pendingSub) {
+            $pendingSub->update([
+                'status'   => 'CANCELLED',
+                'end_date' => now(),
+            ]);
+
+            Notification::make()
+                ->title('Pengajuan Dibatalkan')
+                ->body('Pengajuan upgrade paket telah dibatalkan.')
+                ->info()
+                ->send();
+        }
     }
 }

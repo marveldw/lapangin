@@ -2,7 +2,45 @@
 
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
 
-        <!-- 1. Ringkasan Status & Kuota Aktif (Native Filament Section) -->
+        <!-- 1. NOTIFIKASI PENGAJUAN PENDING (Jika Ada Pengajuan Menunggu Approval Admin) -->
+        @if($pendingSubscription)
+            <div style="border-radius: 0.75rem; border: 2px solid rgb(245, 158, 11); background-color: rgba(245, 158, 11, 0.08); padding: 1.25rem;">
+                <div style="display: flex; flex-direction: column; md:flex-row; justify-content: space-between; gap: 1rem;">
+                    <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                        <div style="color: rgb(245, 158, 11); width: 24px; height: 24px; min-width: 24px; margin-top: 0.125rem;">
+                            <x-filament::icon icon="heroicon-o-clock" style="width: 24px; height: 24px;" />
+                        </div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span style="font-size: 0.875rem; font-weight: 700; color: inherit;">
+                                    Pengajuan Upgrade ke Paket {{ $pendingSubscription->plan?->name }} Sedang Diproses
+                                </span>
+                                <x-filament::badge color="warning" size="sm">
+                                    MENUNGGU PERSETUJUAN ADMIN
+                                </x-filament::badge>
+                            </div>
+                            <p style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem; line-height: 1.4;">
+                                Total Tagihan: <strong style="color: inherit;">Rp {{ number_format($pendingSubscription->plan?->price ?? 0, 0, ',', '.') }}</strong>.<br>
+                                Silakan transfer ke rekening: <strong>Bank BCA 123-456-7890 a.n PT Lapangin Indonesia</strong>.<br>
+                                Paket akan otomatis aktif setelah pembayaran diverifikasi dan disetujui oleh Super Admin.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center;">
+                        <x-filament::button 
+                            color="danger" 
+                            size="sm"
+                            wire:click="cancelPendingRequest"
+                            wire:confirm="Apakah Anda yakin ingin membatalkan pengajuan upgrade ini?">
+                            Batalkan Pengajuan
+                        </x-filament::button>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <!-- 2. Ringkasan Status & Kuota Aktif (Sleek Banner) -->
         <x-filament::section>
             <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem;">
                 
@@ -51,7 +89,7 @@
             </div>
         </x-filament::section>
 
-        <!-- 2. Pilihan Upgrade Paket -->
+        <!-- 3. Pilihan Upgrade Paket -->
         <div>
             <div style="margin-bottom: 0.875rem;">
                 <h3 style="font-size: 1rem; font-weight: 700;">Pilihan Paket Langganan</h3>
@@ -62,15 +100,22 @@
                 @foreach($plans as $plan)
                     @php
                         $isCurrent = ($subscription?->plan_id === $plan->plan_id) || (!$subscription && $plan->name === 'FREE');
+                        $isPending = ($pendingSubscription?->plan_id === $plan->plan_id);
                     @endphp
 
-                    <div style="border-radius: 0.75rem; border: {{ $isCurrent ? '2px solid rgb(16, 185, 129)' : '1px solid rgba(156, 163, 175, 0.2)' }}; background-color: {{ $isCurrent ? 'rgba(16, 185, 129, 0.03)' : 'rgba(255, 255, 255, 0.02)' }}; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+                    <div style="border-radius: 0.75rem; border: {{ $isCurrent ? '2px solid rgb(16, 185, 129)' : ($isPending ? '2px solid rgb(245, 158, 11)' : '1px solid rgba(156, 163, 175, 0.2)') }}; background-color: {{ $isCurrent ? 'rgba(16, 185, 129, 0.03)' : ($isPending ? 'rgba(245, 158, 11, 0.03)' : 'rgba(255, 255, 255, 0.02)') }}; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
                         
                         <!-- Top Badge -->
                         @if($isCurrent)
                             <div style="position: absolute; top: -0.625rem; right: 1rem;">
                                 <x-filament::badge color="success" size="sm">
                                     Paket Aktif
+                                </x-filament::badge>
+                            </div>
+                        @elseif($isPending)
+                            <div style="position: absolute; top: -0.625rem; right: 1rem;">
+                                <x-filament::badge color="warning" size="sm">
+                                    Menunggu Persetujuan
                                 </x-filament::badge>
                             </div>
                         @elseif($plan->name === 'BASIC')
@@ -150,17 +195,21 @@
                                 <x-filament::button color="gray" disabled size="sm" style="width: 100%;">
                                     ✓ Sedang Digunakan
                                 </x-filament::button>
+                            @elseif($isPending)
+                                <x-filament::button color="warning" disabled size="sm" style="width: 100%;">
+                                    ⏳ Menunggu Persetujuan
+                                </x-filament::button>
                             @else
                                 <x-filament::button 
                                     color="{{ $plan->name === 'PRO' ? 'primary' : 'success' }}"
-                                    wire:click="upgradePlan({{ $plan->plan_id }})" 
+                                    wire:click="requestUpgrade({{ $plan->plan_id }})" 
                                     wire:loading.attr="disabled"
                                     size="sm"
                                     style="width: 100%;">
-                                    <span wire:loading.remove wire:target="upgradePlan({{ $plan->plan_id }})">
-                                        {{ $plan->price > ($subscription?->plan?->price ?? 0) ? 'Pilih / Upgrade' : 'Ganti ke Paket Ini' }}
+                                    <span wire:loading.remove wire:target="requestUpgrade({{ $plan->plan_id }})">
+                                        {{ $plan->price > 0 ? 'Ajukan Upgrade' : 'Ganti ke Free' }}
                                     </span>
-                                    <span wire:loading wire:target="upgradePlan({{ $plan->plan_id }})">
+                                    <span wire:loading wire:target="requestUpgrade({{ $plan->plan_id }})">
                                         Memproses...
                                     </span>
                                 </x-filament::button>

@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\Subscriptions\Schemas;
 
+use App\Models\Plan;
+use App\Models\User;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
 use Filament\Schemas\Schema;
 
 class SubscriptionForm
@@ -12,18 +14,37 @@ class SubscriptionForm
     {
         return $schema
             ->components([
-                TextInput::make('user_id')
-                    ->required()
-                    ->numeric(),
-                TextInput::make('plan_id')
-                    ->required()
-                    ->numeric(),
-                DatePicker::make('start_date')
+                Select::make('user_id')
+                    ->label('Pemilik Venue (Owner)')
+                    ->relationship('user', 'name')
+                    ->searchable()
+                    ->preload()
                     ->required(),
-                DatePicker::make('end_date'),
-                TextInput::make('status')
-                    ->required()
-                    ->default('ACTIVE'),
+
+                Select::make('plan_id')
+                    ->label('Paket Langganan')
+                    ->relationship('plan', 'name')
+                    ->preload()
+                    ->required(),
+
+                DatePicker::make('start_date')
+                    ->label('Tanggal Mulai')
+                    ->default(now())
+                    ->required(),
+
+                DatePicker::make('end_date')
+                    ->label('Tanggal Berakhir'),
+
+                Select::make('status')
+                    ->label('Status Langganan')
+                    ->options([
+                        'ACTIVE'    => 'Active (Sedang Aktif)',
+                        'PENDING'   => 'Pending (Menunggu Persetujuan Admin)',
+                        'EXPIRED'   => 'Expired (Kedaluwarsa)',
+                        'CANCELLED' => 'Cancelled (Dibatalkan/Ditolak)',
+                    ])
+                    ->default('ACTIVE')
+                    ->required(),
             ]);
     }
 }
