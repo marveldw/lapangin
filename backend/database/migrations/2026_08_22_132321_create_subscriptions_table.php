@@ -17,7 +17,7 @@ return new class extends Migration
         $table->foreignId('user_id')->constrained('users', 'user_id');
         $table->foreignId('plan_id')->constrained('plans', 'plan_id');
         $table->date('start_date');
-        $table->date('end_date');
+        $table->date('end_date')->nullable();
         $table->string('status', 20)->default('ACTIVE');
         $table->timestamps();
         });

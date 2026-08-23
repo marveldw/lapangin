@@ -1,0 +1,36 @@
+# Documentation & Tools
+/docs/
+/postman/
+
+# Dependencies
+**/node_modules/
+**/vendor/
+
+# Environment files
+**/.env
+**/.env.*
+!**/.env.example
+
+# Next.js build
+**/.next/
+**/out/
+
+# Laravel storage & cache
+**/storage/*.key
+**/storage/oauth-*.key
+**/storage/framework/cache/*
+**/storage/framework/sessions/*
+**/storage/framework/views/*
+**/storage/logs/*
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Tests & Coverage
+.phpunit.result.cache
+/coverage/

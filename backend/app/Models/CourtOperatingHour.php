@@ -15,4 +15,9 @@ class CourtOperatingHour extends Model
         'close_time',
         'is_closed',
     ];
+
+    public function court()
+    {
+        return $this->belongsTo(Court::class, 'court_id', 'court_id');
+    }
 }

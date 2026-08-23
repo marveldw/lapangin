@@ -12,6 +12,7 @@ class Booking extends Model
         'booking_code',
         'court_id',
         'customer_id',
+        'user_id',
         'booking_date',
         'start_time',
         'end_time',
@@ -28,5 +29,10 @@ class Booking extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class, 'customer_id', 'customer_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 }

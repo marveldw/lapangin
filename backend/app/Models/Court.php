@@ -15,7 +15,9 @@ class Court extends Model
         'sport_type',
         'description',
         'price_per_hour',
-        'location',
+        'address',
+        'city',
+        'district',
         'image_url',
         'status',
     ];
@@ -28,5 +30,10 @@ class Court extends Model
     public function operatingHours()
     {
         return $this->hasMany(CourtOperatingHour::class, 'court_id', 'court_id');
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class, 'court_id', 'court_id');
     }
 }
