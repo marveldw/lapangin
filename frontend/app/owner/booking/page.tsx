@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import Link from 'next/link';
+
 
 export default function BookingPage() {
   const [openFilter, setOpenFilter] = useState<string | null>(null);
@@ -21,10 +21,6 @@ export default function BookingPage() {
             <p className="text-[#3d4a3d] max-w-2xl text-base">Kelola dan pantau seluruh reservasi lapangan Anda.</p>
           </div>
           <div className="flex gap-4">
-            <Link href="/owner/booking/tambah" className="bg-[#006e2f] text-[#ffffff] font-semibold text-sm px-6 py-2.5 rounded-lg flex items-center gap-2 hover:-translate-y-0.5 transition-transform shadow-md hover:shadow-lg w-fit">
-  <span className="material-symbols-outlined text-[20px]">add</span>
-  Buat Booking Manual
-</Link>
             <button className="bg-[#ffffff] text-[#006e2f] border border-[#bccbb9]/50 font-semibold text-sm px-4 py-2.5 rounded-lg flex items-center gap-2 hover:bg-[#eff4ff] transition-colors shadow-sm">
               <span className="material-symbols-outlined text-[20px]">download</span>
               Export

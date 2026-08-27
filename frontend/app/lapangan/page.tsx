@@ -62,30 +62,55 @@ export default function CariLapanganPage() {
             </div>
 
             <div className="w-full md:w-48 relative">
-              <select className="w-full bg-[#f8f9ff] py-2.5 pl-4 pr-10 rounded-lg border border-[#bccbb9]/40 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none appearance-none text-sm text-[#0b1c30] cursor-pointer">
-                <option value="">Semua Kota</option>
-                <option value="semarang">Semarang</option>
-                <option value="jakarta">Jakarta</option>
-                <option value="bandung">Bandung</option>
-              </select>
-              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#3d4a3d]/60 pointer-events-none text-[20px]">expand_more</span>
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#3d4a3d]/60 pointer-events-none text-[20px]">location_on</span>
+              <input
+                type="text"
+                placeholder="Kota..."
+                className="w-full bg-[#f8f9ff] py-2.5 pl-10 pr-4 rounded-lg border border-[#bccbb9]/40 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none text-sm text-[#0b1c30] placeholder:text-[#3d4a3d]/60"
+              />
             </div>
 
             <div className="w-full md:w-48 relative">
-              <select className="w-full bg-[#f8f9ff] py-2.5 pl-4 pr-10 rounded-lg border border-[#bccbb9]/40 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none appearance-none text-sm text-[#0b1c30] cursor-pointer">
-                <option value="">Semua Kecamatan</option>
-                <option value="ngaliyan">Ngaliyan</option>
-                <option value="banyumanik">Banyumanik</option>
-              </select>
-              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#3d4a3d]/60 pointer-events-none text-[20px]">expand_more</span>
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#3d4a3d]/60 pointer-events-none text-[20px]">location_on</span>
+              <input
+                type="text"
+                placeholder="Kecamatan..."
+                className="w-full bg-[#f8f9ff] py-2.5 pl-10 pr-4 rounded-lg border border-[#bccbb9]/40 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none text-sm text-[#0b1c30] placeholder:text-[#3d4a3d]/60"
+              />
             </div>
 
             <div className="w-full md:w-48 relative">
               <select className="w-full bg-[#f8f9ff] py-2.5 pl-4 pr-10 rounded-lg border border-[#bccbb9]/40 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none appearance-none text-sm text-[#0b1c30] cursor-pointer">
                 <option value="">Semua Olahraga</option>
+                <option value="padel">Padel</option>
+                <option value="tennis">Tennis</option>
                 <option value="badminton">Badminton</option>
+                <option value="mini-soccer">Mini Soccer</option>
+                <option value="sepak-bola">Sepak Bola</option>
+                <option value="basketball">Basketball</option>
+                <option value="pickleball">Pickleball</option>
                 <option value="futsal">Futsal</option>
-                <option value="basket">Basket</option>
+                <option value="billiard">Billiard</option>
+                <option value="tenis-meja">Tenis Meja</option>
+                <option value="games">Games</option>
+                <option value="squash">Squash</option>
+                <option value="fitness">Fitness</option>
+                <option value="running">Running</option>
+                <option value="volley">Volley</option>
+                <option value="golf">Golf</option>
+                <option value="baseball">Baseball</option>
+                <option value="softball">Softball</option>
+                <option value="hockey">Hockey</option>
+                <option value="recovery">Recovery</option>
+                <option value="pilates">Pilates</option>
+                <option value="yoga">Yoga</option>
+                <option value="airsoft-gun">Airsoft Gun</option>
+                <option value="fishing">Fishing</option>
+                <option value="beach-tennis">Beach Tennis</option>
+                <option value="board-game">Board Game</option>
+                <option value="equestrian">Equestrian</option>
+                <option value="cycling">Cycling</option>
+                <option value="skybal">Skybal</option>
               </select>
               <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[#3d4a3d]/60 pointer-events-none text-[20px]">expand_more</span>
             </div>
@@ -102,37 +127,19 @@ export default function CariLapanganPage() {
           {/* Left Sidebar (Filters) */}
           <aside className="w-full lg:w-[260px] shrink-0 flex flex-col gap-6">
             
-            {/* Fasilitas */}
+            {/* Rentang Harga */}
             <div className="bg-white rounded-xl shadow-sm border border-[#bccbb9]/30 p-6 flex flex-col gap-4">
-              <h3 className="font-bold text-[#0b1c30] text-lg">Fasilitas</h3>
+              <h3 className="font-bold text-[#0b1c30] text-lg">Rentang Harga</h3>
               <div className="flex flex-col gap-3">
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <input type="checkbox" className="w-4 h-4 rounded border-[#bccbb9] text-[#006e2f] focus:ring-[#006e2f]" />
-                  <span className="text-sm font-medium text-[#3d4a3d] group-hover:text-[#0b1c30] transition-colors">Parkir Luas</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-[#bccbb9] text-[#006e2f] focus:ring-[#006e2f]" />
-                  <span className="text-sm font-medium text-[#3d4a3d] group-hover:text-[#0b1c30] transition-colors">Kantin</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <input type="checkbox" className="w-4 h-4 rounded border-[#bccbb9] text-[#006e2f] focus:ring-[#006e2f]" />
-                  <span className="text-sm font-medium text-[#3d4a3d] group-hover:text-[#0b1c30] transition-colors">Toilet / Loker</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Tipe Lantai */}
-            <div className="bg-white rounded-xl shadow-sm border border-[#bccbb9]/30 p-6 flex flex-col gap-4">
-              <h3 className="font-bold text-[#0b1c30] text-lg">Tipe Lantai</h3>
-              <div className="flex flex-col gap-3">
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <input type="checkbox" className="w-4 h-4 rounded border-[#bccbb9] text-[#006e2f] focus:ring-[#006e2f]" />
-                  <span className="text-sm font-medium text-[#3d4a3d] group-hover:text-[#0b1c30] transition-colors">Vinyl</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer group">
-                  <input type="checkbox" className="w-4 h-4 rounded border-[#bccbb9] text-[#006e2f] focus:ring-[#006e2f]" />
-                  <span className="text-sm font-medium text-[#3d4a3d] group-hover:text-[#0b1c30] transition-colors">Sintetis / Rumput</span>
-                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3d4a3d] font-semibold text-sm">Rp</span>
+                  <input type="number" placeholder="Harga Minimum" className="w-full bg-[#f8f9ff] py-2 pl-9 pr-3 rounded-lg border border-[#bccbb9]/40 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none text-sm text-[#0b1c30]" />
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#3d4a3d] font-semibold text-sm">Rp</span>
+                  <input type="number" placeholder="Harga Maksimum" className="w-full bg-[#f8f9ff] py-2 pl-9 pr-3 rounded-lg border border-[#bccbb9]/40 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none text-sm text-[#0b1c30]" />
+                </div>
+                <button className="w-full mt-2 bg-[#e5eeff] text-[#006e2f] font-bold text-sm py-2.5 rounded-lg hover:bg-[#cce0ff] transition-colors">Terapkan Filter</button>
               </div>
             </div>
 
@@ -151,9 +158,22 @@ export default function CariLapanganPage() {
           {/* Right Content (Court Grid) */}
           <div className="flex-1 flex flex-col gap-6">
             
-            <div className="flex justify-between items-center pb-2 border-b border-[#bccbb9]/30">
-              <h2 className="text-2xl font-bold text-[#0b1c30]">Menampilkan Lapangan</h2>
-              <span className="text-xs font-bold text-[#006e2f] bg-[#e5eeff] px-3 py-1.5 rounded-full">12 Ditemukan</span>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-[#bccbb9]/30 gap-4">
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-[#0b1c30]">Menampilkan Lapangan</h2>
+                <span className="text-xs font-bold text-[#006e2f] bg-[#e5eeff] px-3 py-1.5 rounded-full">12 Ditemukan</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-[#3d4a3d]">Urutkan berdasarkan:</span>
+                <div className="relative flex items-center">
+                  <select className="bg-transparent text-[#006e2f] font-bold text-sm outline-none cursor-pointer border-b border-dashed border-[#006e2f] pb-0.5 appearance-none pr-5 z-10">
+                    <option value="popularitas">Popularitas</option>
+                    <option value="harga_terendah">Harga Terendah</option>
+                    <option value="harga_tertinggi">Harga Tertinggi</option>
+                  </select>
+                  <span className="material-symbols-outlined absolute right-0 text-[#006e2f] pointer-events-none text-[16px]">expand_more</span>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
