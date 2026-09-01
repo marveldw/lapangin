@@ -18,10 +18,11 @@ Route::post('/register', [AuthController::class, 'register'])
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:login');
 
-Route::get('/plans', [PlanController::class, 'index']);
+Route::get('/plans', [PlanController::class, 'index'])
+    ->middleware('throttle:60,1');
 
-// Public — Marketplace Browsing & Cek Jadwal (Tanpa Login)
-Route::prefix('public')->group(function () {
+// Public — Marketplace Browsing & Cek Jadwal (Tanpa Login, Rate Limit 60/menit)
+Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     // Browse semua lapangan (filter: city, district, sport_type, search)
     Route::get('/courts', [PublicCourtController::class, 'index']);
     Route::get('/courts/{id}', [PublicCourtController::class, 'show'])->whereNumber('id');
@@ -39,7 +40,7 @@ Route::prefix('public')->group(function () {
 // PROTECTED ROUTES (Wajib Login via Sanctum)
 // ==========================================
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
-    // Auth & Profil
+    // Auth & Profil (Semua Role)
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
 
@@ -49,19 +50,24 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/bookings/{id}', [BookingController::class, 'show'])->whereNumber('id');
     Route::put('/bookings/{id}', [BookingController::class, 'update'])->whereNumber('id');
 
-    // Courts Management (Owner)
-    Route::get('/courts', [CourtController::class, 'index']);
-    Route::post('/courts', [CourtController::class, 'store']);
-    Route::get('/courts/{id}', [CourtController::class, 'show'])->whereNumber('id');
-    Route::put('/courts/{id}', [CourtController::class, 'update'])->whereNumber('id');
-    Route::delete('/courts/{id}', [CourtController::class, 'destroy'])->whereNumber('id');
+    // ==========================================
+    // OWNER & ADMIN ONLY ROUTES
+    // ==========================================
+    Route::middleware('role:OWNER,ADMIN')->group(function () {
+        // Courts Management (Owner)
+        Route::get('/courts', [CourtController::class, 'index']);
+        Route::post('/courts', [CourtController::class, 'store']);
+        Route::get('/courts/{id}', [CourtController::class, 'show'])->whereNumber('id');
+        Route::put('/courts/{id}', [CourtController::class, 'update'])->whereNumber('id');
+        Route::delete('/courts/{id}', [CourtController::class, 'destroy'])->whereNumber('id');
 
-    // Customers Management (Owner)
-    Route::get('/customers', [CustomerController::class, 'index']);
-    Route::post('/customers', [CustomerController::class, 'store']);
-    Route::get('/customers/{id}', [CustomerController::class, 'show'])->whereNumber('id');
-    Route::put('/customers/{id}', [CustomerController::class, 'update'])->whereNumber('id');
+        // Customers Management (Owner)
+        Route::get('/customers', [CustomerController::class, 'index']);
+        Route::post('/customers', [CustomerController::class, 'store']);
+        Route::get('/customers/{id}', [CustomerController::class, 'show'])->whereNumber('id');
+        Route::put('/customers/{id}', [CustomerController::class, 'update'])->whereNumber('id');
 
-    // Dashboard Analytics (Owner)
-    Route::get('/dashboard', [DashboardController::class, 'index']);
+        // Dashboard Analytics (Owner)
+        Route::get('/dashboard', [DashboardController::class, 'index']);
+    });
 });

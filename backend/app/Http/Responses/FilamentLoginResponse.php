@@ -17,7 +17,8 @@ class FilamentLoginResponse implements Responsable
         }
 
         if ($user?->role === 'OWNER') {
-            return redirect()->to('/owner');
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            return redirect()->away("{$frontendUrl}/owner/dashboard");
         }
 
         return redirect()->to('/');
