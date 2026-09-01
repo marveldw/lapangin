@@ -16,8 +16,8 @@ return new class extends Migration
         $table->string('name', 50)->unique();
         $table->text('description')->nullable();
         $table->unsignedBigInteger('price');
-        $table->integer('max_bookings_per_month');
-        $table->integer('max_courts');
+        $table->integer('max_bookings_per_month')->nullable();
+        $table->integer('max_courts')->nullable();
         $table->boolean('is_active')->default(true);
         $table->timestamps();
         });
