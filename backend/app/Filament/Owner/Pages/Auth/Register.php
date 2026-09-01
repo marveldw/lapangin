@@ -63,4 +63,10 @@ class Register extends BaseRegister
 
         return $user;
     }
+
+    public function getRedirectUrl(): string
+    {
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+        return "{$frontendUrl}/owner/dashboard";
+    }
 }

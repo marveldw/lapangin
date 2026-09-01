@@ -19,9 +19,9 @@ export default function Sidebar() {
       
       {/* Logo */}
       <div className="p-6 flex items-center gap-2 mb-8">
-  <img alt="Lapangin Logo" className="h-8 w-auto object-contain" src="/logo.png" />
-  <span className="text-xl font-semibold text-[#006e2f] tracking-tight">Lapangin</span>
-</div>
+        <img alt="Lapangin Logo" className="h-8 w-auto object-contain" src="/logo.png" />
+        <span className="text-xl font-semibold text-[#006e2f] tracking-tight">Lapangin</span>
+      </div>
 
       {/* Navigasi */}
       <nav className="flex-1 px-4 space-y-1">
@@ -74,6 +74,15 @@ export default function Sidebar() {
           <span className="material-symbols-outlined">settings</span>
           <span className="text-sm font-semibold tracking-wide">Pengaturan</span>
         </Link>
+
+        {/* Tombol Logout */}
+        <a 
+          href="http://localhost:8000/logout" 
+          className="flex items-center gap-4 px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-700 font-semibold text-sm transition-all duration-200 mt-4"
+        >
+          <span className="material-symbols-outlined">logout</span>
+          <span className="text-sm font-semibold tracking-wide">Keluar (Logout)</span>
+        </a>
       </nav>
 
       {/* Upgrade */}
