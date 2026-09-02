@@ -7,13 +7,13 @@ services:
     container_name: lapangin_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-lapangin}
-      POSTGRES_USER: ${POSTGRES_USER:-atlas}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-4tl45}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-atlas} -d ${POSTGRES_DB:-lapangin}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -39,17 +39,17 @@ services:
     environment:
       # --- App ---
       APP_NAME: Lapangin
-      APP_ENV: ${APP_ENV:-production}
-      APP_DEBUG: "${APP_DEBUG:-false}"
-      APP_KEY: ${APP_KEY:-base64:MBHbt3HW20lOFONJHB47WYDydPyYI8yaNEpu2iDpKV0=}
-      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_ENV: ${APP_ENV}
+      APP_DEBUG: "${APP_DEBUG}"
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL}
       # --- Database ---
       DB_CONNECTION: pgsql
       DB_HOST: db
       DB_PORT: 5432
-      DB_DATABASE: ${POSTGRES_DB:-lapangin}
-      DB_USERNAME: ${POSTGRES_USER:-atlas}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-4tl45}
+      DB_DATABASE: ${POSTGRES_DB}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
       # --- Laravel Services ---
       SESSION_DRIVER: database
       QUEUE_CONNECTION: database
@@ -72,13 +72,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     container_name: lapangin_frontend
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NODE_ENV: production
       PORT: 3000
     depends_on:
@@ -90,10 +90,12 @@ services:
     networks:
       - lapangin_network
 
+# Persistent Storage
 volumes:
   postgres_data:
     driver: local
 
+# Jaringan Terisolasi
 networks:
   lapangin_network:
     driver: bridge
