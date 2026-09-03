@@ -78,6 +78,15 @@ export default function Sidebar() {
           <span className="material-symbols-outlined">settings</span>
           <span className="text-sm font-semibold tracking-wide">Pengaturan</span>
         </Link>
+
+        {/* Tombol Logout */}
+        <a 
+          href="http://localhost:8000/logout" 
+          className="flex items-center gap-4 px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-700 font-semibold text-sm transition-all duration-200 mt-4"
+        >
+          <span className="material-symbols-outlined">logout</span>
+          <span className="text-sm font-semibold tracking-wide">Keluar (Logout)</span>
+        </a>
       </nav>
 
       {/* Upgrade */}

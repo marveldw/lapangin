@@ -17,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
+
+        // Register custom middleware aliases
+        $middleware->alias([
+            'role' => \App\Http\Middleware\EnsureUserRole::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Return JSON for API authentication errors instead of redirect

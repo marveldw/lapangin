@@ -2,37 +2,22 @@
 
 use Illuminate\Support\Facades\Route;
 
-// 1. Landing Page
+// 1. Root redirect directly to Super Admin Panel
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/admin');
 });
 
-// 2. Unified Login Route
+// 2. Super Admin Login Route
 Route::get('/login', function () {
-    if (auth()->check()) {
-        $user = auth()->user();
-        if ($user->role === 'ADMIN') {
-            return redirect('/admin');
-        }
-        if ($user->role === 'OWNER') {
-            return redirect('/owner');
-        }
-    }
-
-    return redirect('/owner/login');
+    return redirect('/admin/login');
 })->name('login');
 
-// 3. Unified Register Route (Mitra / Owner Registration)
-Route::get('/register', function () {
-    if (auth()->check()) {
-        $user = auth()->user();
-        if ($user->role === 'ADMIN') {
-            return redirect('/admin');
-        }
-        if ($user->role === 'OWNER') {
-            return redirect('/owner');
-        }
-    }
+// 3. Logout Route
+Route::match(['get', 'post'], '/logout', function () {
+    auth()->guard('web')->logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
 
-    return redirect('/owner/register');
-})->name('register');
+    return redirect('/admin/login');
+})->name('logout');
+

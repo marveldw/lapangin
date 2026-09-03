@@ -104,5 +104,20 @@ class DatabaseSeeder extends Seeder
                 ]
             );
         }
+
+        // 5. Seed Demo Customer User
+        $customer = User::firstOrCreate(
+            ['email' => 'customer@lapangin.id'],
+            [
+                'name'          => 'Budi Customer',
+                'password_hash' => Hash::make('password123'),
+                'phone'         => '081298765432',
+                'role'          => 'CUSTOMER',
+                'status'        => 'ACTIVE',
+            ]
+        );
+        if ($customer && !$customer->hasRole('customer')) {
+            $customer->assignRole('customer');
+        }
     }
 }
