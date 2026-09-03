@@ -52,6 +52,7 @@ class AuthController extends Controller
                     'user_id'    => $user->user_id,
                     'plan_id'    => $freePlan->plan_id,
                     'start_date' => now(),
+                    'end_date'   => now()->addYear(),
                     'status'     => 'ACTIVE',
                 ]);
             }
@@ -94,7 +95,7 @@ class AuthController extends Controller
         if ($user->status === 'INACTIVE') {
             return response()->json([
                 'success' => false,
-                'message' => 'Email atau password salah.',
+                'message' => 'Akun Anda sedang dinonaktifkan.',
             ], 401);
         }
 

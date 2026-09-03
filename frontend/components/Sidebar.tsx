@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   // Logika di-upgrade: Cek apakah URL persis SAMA, ATAU berawalan kata yang sama (sub-halaman)
   const getMenuClass = (path: string) => {
@@ -14,14 +16,16 @@ export default function Sidebar() {
       : 'text-[#3d4a3d] hover:bg-[#eff4ff] hover:text-[#0b1c30]';
   };
 
+  const planName = user?.subscription?.plan_name || 'FREE';
+
   return (
     <aside className="fixed left-0 top-0 h-full w-72 bg-[#ffffff] z-50 flex flex-col shadow-[1px_0_8px_rgba(0,0,0,0.02)] border-r border-[#bccbb9]/30">
       
       {/* Logo */}
       <div className="p-6 flex items-center gap-2 mb-8">
-  <img alt="Lapangin Logo" className="h-8 w-auto object-contain" src="/logo.png" />
-  <span className="text-xl font-semibold text-[#006e2f] tracking-tight">Lapangin</span>
-</div>
+        <img alt="Lapangin Logo" className="h-8 w-auto object-contain" src="/logo.png" />
+        <span className="text-xl font-semibold text-[#006e2f] tracking-tight">Lapangin</span>
+      </div>
 
       {/* Navigasi */}
       <nav className="flex-1 px-4 space-y-1">
@@ -79,8 +83,13 @@ export default function Sidebar() {
       {/* Upgrade */}
       <div className="p-6 mt-auto">
         <div className="bg-[#dce9ff] rounded-xl p-4">
-          <p className="text-xs font-medium text-[#3d4a3d] mb-1">Plan: Pro Elite</p>
-          <button className="w-full bg-[#006e2f] text-[#ffffff] py-1.5 rounded-lg text-sm font-semibold tracking-wide hover:bg-[#006e2f]/90 transition-colors">Upgrade Plan</button>
+          <p className="text-xs font-semibold text-[#3d4a3d] mb-1">Paket: {planName}</p>
+          <Link
+            href="/owner/pengaturan"
+            className="block text-center w-full bg-[#006e2f] text-[#ffffff] py-1.5 rounded-lg text-xs font-semibold tracking-wide hover:bg-[#006e2f]/90 transition-colors"
+          >
+            Kelola Langganan
+          </Link>
         </div>
       </div>
     </aside>

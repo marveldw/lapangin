@@ -17,9 +17,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
-
-        // Ensure Sanctum stateful domains are configured
-        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Return JSON for API authentication errors instead of redirect
