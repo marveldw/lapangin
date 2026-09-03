@@ -6,11 +6,13 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { setAuthSession } from "@/lib/auth";
+import { useAuth } from "@/lib/AuthContext";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParam = searchParams.get("redirect");
+  const { refreshUser } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,6 +52,7 @@ function LoginForm() {
       // Save token and user profile
       if (data.token && data.user) {
         setAuthSession(data.token, data.user);
+        await refreshUser();
       }
 
       // Smart Redirect based on Role
