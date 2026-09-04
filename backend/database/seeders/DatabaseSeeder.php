@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Court;
+use App\Models\CourtOperatingHour;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
@@ -118,6 +120,59 @@ class DatabaseSeeder extends Seeder
         );
         if ($customer && !$customer->hasRole('customer')) {
             $customer->assignRole('customer');
+        }
+
+        // 6. Seed Demo Courts for Owner
+        if ($owner) {
+            $courts = [
+                [
+                    'name'           => 'GOR Bulutangkis Shafa Arena',
+                    'sport_type'     => 'Badminton',
+                    'description'    => 'Lapangan badminton karpet vinyl standar PBSI dengan sirkulasi udara sejuk.',
+                    'price_per_hour' => 45000,
+                    'address'        => 'Jl. Margonda Raya No. 45',
+                    'city'           => 'Depok',
+                    'district'       => 'Beji',
+                    'image_url'      => 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=800&q=80',
+                    'status'         => 'ACTIVE',
+                ],
+                [
+                    'name'           => 'Shafa Futsal Stadium',
+                    'sport_type'     => 'Futsal',
+                    'description'    => 'Lapangan futsal rumput sintetis lembut dengan pencahayaan LED terang.',
+                    'price_per_hour' => 120000,
+                    'address'        => 'Jl. Cinere Raya No. 88',
+                    'city'           => 'Depok',
+                    'district'       => 'Cinere',
+                    'image_url'      => 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&w=800&q=80',
+                    'status'         => 'ACTIVE',
+                ],
+            ];
+
+            foreach ($courts as $courtData) {
+                $court = Court::firstOrCreate(
+                    [
+                        'owner_id' => $owner->user_id,
+                        'name'     => $courtData['name'],
+                    ],
+                    $courtData
+                );
+
+                // Operating Hours: 7 days a week (0 = Sunday ... 6 = Saturday), 08:00 - 23:00
+                for ($day = 0; $day <= 6; $day++) {
+                    CourtOperatingHour::firstOrCreate(
+                        [
+                            'court_id'    => $court->court_id,
+                            'day_of_week' => $day,
+                        ],
+                        [
+                            'open_time'  => '08:00',
+                            'close_time' => '23:00',
+                            'is_closed'  => false,
+                        ]
+                    );
+                }
+            }
         }
     }
 }
