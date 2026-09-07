@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useAuth } from '@/lib/AuthContext';
 import { api } from '@/lib/api';
@@ -28,7 +29,7 @@ interface BookingRecord {
   };
 }
 
-export default function OwnerJadwalPage() {
+ function JadwalContent() {
   const { token } = useAuth();
 
   const [courts, setCourts] = useState<Court[]>([]);
@@ -476,3 +477,18 @@ export default function OwnerJadwalPage() {
     </div>
   );
 }
+const OwnerJadwalPage = dynamic(() => Promise.resolve(JadwalContent), {
+  ssr: false,
+  loading: () => (
+    <div className="flex justify-center items-center h-[60vh] w-full">
+      <div className="flex flex-col items-center gap-3 text-[#006e2f]">
+        <span className="material-symbols-outlined animate-spin text-[40px]">
+          progress_activity
+        </span>
+        <span className="font-bold text-sm">Menyiapkan Papan Jadwal...</span>
+      </div>
+    </div>
+  ),
+});
+
+export default OwnerJadwalPage;
