@@ -13,10 +13,10 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $ownerId = $request->user()->user_id;
-        $today   = Carbon::today()->toDateString();
-        $month   = Carbon::now()->month;
-        $year    = Carbon::now()->year;
+        $ownerId      = $request->user()->user_id;
+        $today        = Carbon::today()->toDateString();
+        $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
+        $endOfMonth   = Carbon::now()->endOfMonth()->toDateString();
 
         // Total courts milik owner ini
         $totalCourts = Court::where('owner_id', $ownerId)
@@ -39,14 +39,14 @@ class DashboardController extends Controller
             ]);
         }
 
-        // Single optimized aggregate query for booking stats
+        // Single optimized aggregate query for booking stats using sargable date ranges
         $stats = Booking::whereIn('court_id', $courtIds)
             ->selectRaw("
                 COUNT(CASE WHEN status != 'CANCELLED' THEN 1 END) as total_bookings,
                 COUNT(CASE WHEN booking_date = ? AND status != 'CANCELLED' THEN 1 END) as today_bookings,
                 COALESCE(SUM(CASE WHEN booking_date = ? AND status = 'CONFIRMED' THEN price ELSE 0 END), 0) as today_revenue,
-                COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM booking_date) = ? AND EXTRACT(YEAR FROM booking_date) = ? AND status = 'CONFIRMED' THEN price ELSE 0 END), 0) as monthly_revenue
-            ", [$today, $today, $month, $year])
+                COALESCE(SUM(CASE WHEN booking_date >= ? AND booking_date <= ? AND status = 'CONFIRMED' THEN price ELSE 0 END), 0) as monthly_revenue
+            ", [$today, $today, $startOfMonth, $endOfMonth])
             ->first();
 
         return response()->json([
