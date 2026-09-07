@@ -25,7 +25,7 @@ function LoginForm() {
     setIsLoading(true);
 
     try {
-      const rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+      const rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
       const apiUrl = rawUrl.endsWith("/api") ? rawUrl : `${rawUrl}/api`;
       const res = await fetch(`${apiUrl}/login`, {
         method: "POST",
@@ -55,7 +55,7 @@ function LoginForm() {
       // Smart Redirect based on Role
       const role = data.user?.role;
       if (role === "ADMIN") {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
         window.location.href = `${backendUrl}/admin`;
       } else if (role === "OWNER") {
         router.push(redirectParam || "/owner/dashboard");

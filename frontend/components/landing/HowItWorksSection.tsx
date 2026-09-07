@@ -89,7 +89,7 @@ export default function HowItWorksSection() {
           <p className="text-[11px] font-bold tracking-widest text-[#006e2f] uppercase mb-2">
             Cara Kerja
           </p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0b1c30] tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">
             Satu platform, dua sisi yang saling terhubung
           </h2>
           <p className="text-sm sm:text-base text-gray-500 mt-2 max-w-2xl leading-relaxed">

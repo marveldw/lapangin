@@ -2,7 +2,7 @@ import Navbar from "@/components/landing/Navbar";
 import HeroSection from "@/components/landing/HeroSection";
 import DualRoleSection from "@/components/landing/DualRoleSection";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
-import OwnerSection from "@/components/landing/OwnerSection";
+import WhyUs from "@/components/landing/WhyUs";
 import TestimoniSection from "@/components/landing/TestimoniSection";
 import FaqSection from "@/components/landing/FaqSection";
 import CtaSection from "@/components/landing/CtaSection";
@@ -15,7 +15,7 @@ export default function LandingPage() {
       <HeroSection />
       <DualRoleSection />
       <HowItWorksSection />
-      <OwnerSection />
+      <WhyUs />
       <TestimoniSection />
       <FaqSection />
       <CtaSection />

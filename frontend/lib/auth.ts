@@ -51,7 +51,7 @@ export async function logoutUser(): Promise<void> {
   const token = getAuthToken();
   if (token) {
     try {
-      const rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+      const rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
       const apiUrl = rawUrl.endsWith("/api") ? rawUrl : `${rawUrl}/api`;
       await fetch(`${apiUrl}/logout`, {
         method: "POST",
