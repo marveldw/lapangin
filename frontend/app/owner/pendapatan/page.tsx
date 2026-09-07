@@ -36,43 +36,44 @@ export default function PendapatanPage() {
     today_revenue: 0,
     monthly_revenue: 0,
   });
-  const [bookings, setBookings] = useState<BookingItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [recentTransactions, setRecentTransactions] = useState<BookingItem[]>([]);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingTx, setLoadingTx] = useState(true);
 
   useEffect(() => {
     if (!token) return;
 
-    async function loadData() {
-      setLoading(true);
-      try {
-        const [dashRes, bookRes] = await Promise.all([
-          api.get('/dashboard', token),
-          api.get('/bookings', token),
-        ]);
+    let isMounted = true;
 
-        if (dashRes.success && dashRes.data) {
-          setStats(dashRes.data);
+    // 1. Fetch Stats independently
+    api.get('/dashboard', token)
+      .then((res) => {
+        if (isMounted && res.success && res.data) {
+          setStats(res.data);
         }
-        if (bookRes.success && bookRes.data) {
-          const items = Array.isArray(bookRes.data.data) ? bookRes.data.data : bookRes.data;
-          setBookings(items || []);
-        }
-      } catch (err) {
-        console.error('Failed to load income data:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
+      })
+      .catch((err) => console.error('Failed to load dashboard stats:', err))
+      .finally(() => {
+        if (isMounted) setLoadingStats(false);
+      });
 
-    loadData();
+    // 2. Fetch Confirmed Transactions directly from indexed endpoint
+    api.get('/bookings?status=CONFIRMED&limit=10', token)
+      .then((res) => {
+        if (isMounted && res.success && res.data) {
+          const items = Array.isArray(res.data.data) ? res.data.data : res.data;
+          setRecentTransactions(items || []);
+        }
+      })
+      .catch((err) => console.error('Failed to load recent transactions:', err))
+      .finally(() => {
+        if (isMounted) setLoadingTx(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [token]);
-
-  // Recent confirmed transactions
-  const recentTransactions = useMemo(() => {
-    return bookings
-      .filter((b) => b.status === 'CONFIRMED')
-      .slice(0, 10);
-  }, [bookings]);
 
   return (
     <div className="flex flex-col w-full gap-8 pb-12">
@@ -95,9 +96,13 @@ export default function PendapatanPage() {
             <p className="font-bold text-[11px] text-[#3d4a3d] uppercase tracking-wider">
               Pendapatan Hari Ini
             </p>
-            <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0b1c30] mt-2">
-              {formatRupiah(stats.today_revenue)}
-            </h2>
+            {loadingStats ? (
+              <div className="h-8 w-36 bg-gray-300/60 animate-pulse rounded-lg mt-2"></div>
+            ) : (
+              <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0b1c30] mt-2">
+                {formatRupiah(stats.today_revenue)}
+              </h2>
+            )}
           </div>
           <div className="flex items-center gap-1 mt-4 bg-[#22c55e]/15 text-[#006e2f] px-2.5 py-1 rounded-full w-fit">
             <span className="material-symbols-outlined text-[16px]">payments</span>
@@ -112,9 +117,13 @@ export default function PendapatanPage() {
             <p className="font-bold text-[11px] text-[#3d4a3d] uppercase tracking-wider">
               Pendapatan Bulan Ini
             </p>
-            <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0b1c30] mt-2">
-              {formatRupiah(stats.monthly_revenue)}
-            </h2>
+            {loadingStats ? (
+              <div className="h-8 w-36 bg-gray-300/60 animate-pulse rounded-lg mt-2"></div>
+            ) : (
+              <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0b1c30] mt-2">
+                {formatRupiah(stats.monthly_revenue)}
+              </h2>
+            )}
           </div>
           <div className="flex items-center gap-1.5 mt-4 text-[#3d4a3d] text-xs font-semibold">
             <span className="material-symbols-outlined text-[16px] text-[#006e2f]">
@@ -131,9 +140,13 @@ export default function PendapatanPage() {
             <p className="font-bold text-[11px] text-[#3d4a3d] uppercase tracking-wider">
               Total Booking Aktif
             </p>
-            <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0b1c30] mt-2">
-              {stats.total_bookings} Booking
-            </h2>
+            {loadingStats ? (
+              <div className="h-8 w-28 bg-gray-300/60 animate-pulse rounded-lg mt-2"></div>
+            ) : (
+              <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0b1c30] mt-2">
+                {stats.total_bookings} Booking
+              </h2>
+            )}
           </div>
           <div className="flex items-center gap-1.5 mt-4 text-[#3d4a3d] text-xs font-semibold">
             <span className="material-symbols-outlined text-[16px] text-[#006e2f]">check_circle</span>
@@ -157,9 +170,11 @@ export default function PendapatanPage() {
           </Link>
         </div>
 
-        {loading ? (
-          <div className="py-16 text-center text-xs font-semibold text-[#006e2f]">
-            Memuat transaksi...
+        {loadingTx ? (
+          <div className="p-6 space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-10 bg-gray-100 animate-pulse rounded-xl w-full" />
+            ))}
           </div>
         ) : recentTransactions.length === 0 ? (
           <div className="py-16 text-center flex flex-col items-center gap-2">

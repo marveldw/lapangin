@@ -1,10 +1,15 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/lib/AuthContext';
 import { api } from '@/lib/api';
 import { formatRupiah, formatDateIndo } from '@/lib/formatters';
+
+const BookingDetailModal = dynamic(() => import('./BookingDetailModal'), {
+  ssr: false,
+});
 
 interface Court {
   court_id: number;
@@ -13,7 +18,7 @@ interface Court {
   price_per_hour: number;
 }
 
-interface BookingRecord {
+export interface BookingRecord {
   booking_id: number;
   booking_code: string;
   court_id: number;
@@ -39,14 +44,15 @@ export default function OwnerJadwalPage() {
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
-  // Bookings for the venue
-  const [venueBookings, setVenueBookings] = useState<BookingRecord[]>([]);
+  // Lazy cache & active day bookings
+  const [scheduleCache, setScheduleCache] = useState<Record<string, BookingRecord[]>>({});
+  const [dayBookings, setDayBookings] = useState<BookingRecord[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
 
   // Popover state
   const [activePopoverBooking, setActivePopoverBooking] = useState<BookingRecord | null>(null);
 
-  // 1. Fetch owner courts
+  // 1. Fetch owner courts on mount
   useEffect(() => {
     if (!token) return;
     async function loadCourts() {
@@ -69,45 +75,48 @@ export default function OwnerJadwalPage() {
     loadCourts();
   }, [token]);
 
-  // 2. Fetch bookings for the owner
-  const fetchOwnerBookings = async () => {
-    if (!token) return;
-    setLoadingBookings(true);
-    try {
-      const res = await api.get('/bookings', token);
-      if (res.success && res.data) {
-        const items = Array.isArray(res.data.data) ? res.data.data : res.data;
-        setVenueBookings(items || []);
+  // 2. Lazy load schedule on demand for selected court and date
+  const loadSchedule = useCallback(
+    async (courtId: number, date: string, force = false) => {
+      if (!token) return;
+      const cacheKey = `${courtId}_${date}`;
+
+      if (!force && scheduleCache[cacheKey]) {
+        setDayBookings(scheduleCache[cacheKey]);
+        return;
       }
-    } catch (err) {
-      console.error('Failed to load bookings:', err);
-    } finally {
-      setLoadingBookings(false);
-    }
-  };
+
+      setLoadingBookings(true);
+      try {
+        const res = await api.get(
+          `/bookings?court_id=${courtId}&booking_date=${date}&limit=100`,
+          token
+        );
+        if (res.success && res.data) {
+          const items: BookingRecord[] = Array.isArray(res.data.data) ? res.data.data : res.data;
+          const active = (items || []).filter((b) => b.status !== 'CANCELLED');
+          setScheduleCache((prev) => ({ ...prev, [cacheKey]: active }));
+          setDayBookings(active);
+        }
+      } catch (err) {
+        console.error('Failed to load schedule:', err);
+      } finally {
+        setLoadingBookings(false);
+      }
+    },
+    [token, scheduleCache]
+  );
 
   useEffect(() => {
-    if (token) {
-      fetchOwnerBookings();
+    if (selectedCourtId && selectedDate) {
+      loadSchedule(selectedCourtId, selectedDate);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [selectedCourtId, selectedDate, loadSchedule]);
 
   // Selected Court Object
   const selectedCourt = useMemo(() => {
     return courts.find((c) => c.court_id === selectedCourtId) || courts[0] || null;
   }, [courts, selectedCourtId]);
-
-  // Bookings on selectedDate for selectedCourt
-  const dayBookings = useMemo(() => {
-    if (!selectedCourt) return [];
-    return venueBookings.filter(
-      (b) =>
-        b.court_id === selectedCourt.court_id &&
-        b.booking_date === selectedDate &&
-        b.status !== 'CANCELLED'
-    );
-  }, [venueBookings, selectedCourt, selectedDate]);
 
   // Operating timeline generation: 08:00 - 23:00 (15 hours)
   const timelineHours = useMemo(() => {
@@ -407,71 +416,12 @@ export default function OwnerJadwalPage() {
         </>
       )}
 
-      {/* Popover Modal for clicked Booking Slot */}
+      {/* Dynamically Loaded Modal for clicked Booking Slot */}
       {activePopoverBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setActivePopoverBooking(null)}
-          ></div>
-          <div className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4 animate-in zoom-in-95 duration-150 border border-[#bccbb9]/30">
-            <div className="flex justify-between items-start border-b border-[#bccbb9]/30 pb-3">
-              <div>
-                <h3 className="text-base font-bold text-[#0b1c30]">
-                  {activePopoverBooking.customer?.name || 'Pelanggan'}
-                </h3>
-                <span className="font-mono text-xs text-[#006e2f] font-bold">
-                  #{activePopoverBooking.booking_code}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActivePopoverBooking(null)}
-                className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-[#3d4a3d]">Waktu</span>
-                <span className="font-bold">
-                  {activePopoverBooking.start_time.slice(0, 5)} -{' '}
-                  {activePopoverBooking.end_time.slice(0, 5)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#3d4a3d]">No. WhatsApp</span>
-                <span className="font-bold">
-                  {activePopoverBooking.customer?.phone || '-'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#3d4a3d]">Tarif Sewa</span>
-                <span className="font-extrabold text-[#006e2f]">
-                  {formatRupiah(activePopoverBooking.price)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#3d4a3d]">Status</span>
-                <span className="font-bold">{activePopoverBooking.status}</span>
-              </div>
-            </div>
-
-            {activePopoverBooking.customer?.phone && (
-              <a
-                href={`https://wa.me/${activePopoverBooking.customer.phone.replace(/^0/, '62')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 w-full py-2.5 rounded-xl bg-[#25D366] text-white font-bold text-xs flex items-center justify-center gap-2 hover:opacity-90 shadow-sm"
-              >
-                <span className="material-symbols-outlined text-[18px]">chat</span>
-                <span>Hubungi via WhatsApp</span>
-              </a>
-            )}
-          </div>
-        </div>
+        <BookingDetailModal
+          booking={activePopoverBooking}
+          onClose={() => setActivePopoverBooking(null)}
+        />
       )}
     </div>
   );

@@ -81,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(res.user);
         localStorage.setItem('lapangin_token', res.token);
         localStorage.setItem('lapangin_user', JSON.stringify(res.user));
+        document.cookie = `lapangin_token=${encodeURIComponent(res.token)}; path=/; max-age=604800; SameSite=Lax`;
         return { success: true, role: res.user.role };
       }
       return { success: false, message: res.message || 'Email atau password salah.' };
@@ -97,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(res.user);
         localStorage.setItem('lapangin_token', res.token);
         localStorage.setItem('lapangin_user', JSON.stringify(res.user));
+        document.cookie = `lapangin_token=${encodeURIComponent(res.token)}; path=/; max-age=604800; SameSite=Lax`;
         return { success: true, role: res.user.role };
       }
       return {
@@ -121,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     localStorage.removeItem('lapangin_token');
     localStorage.removeItem('lapangin_user');
+    document.cookie = `lapangin_token=; path=/; max-age=0; SameSite=Lax`;
     window.location.href = '/login';
   };
 
