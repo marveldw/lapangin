@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { api } from '@/lib/api';
 import { formatRupiah, getCourtFallbackImage } from '@/lib/formatters';
+import { useDebounce } from '@/lib/useDebounce';
 
 interface Court {
   court_id: number;
@@ -24,6 +25,7 @@ function CariLapanganContent() {
 
   // Filters state
   const [search, setSearch] = useState(searchParams.get('search') || '');
+  const debouncedSearch = useDebounce(search, 500);
   const [city, setCity] = useState(searchParams.get('city') || '');
   const [district, setDistrict] = useState(searchParams.get('district') || '');
   const [sportType, setSportType] = useState(searchParams.get('sport_type') || '');
@@ -89,7 +91,7 @@ function CariLapanganContent() {
     setError(null);
     try {
       const queryParams = new URLSearchParams();
-      if (search.trim()) queryParams.append('search', search.trim());
+      if (debouncedSearch.trim()) queryParams.append('search', debouncedSearch.trim());
       if (city) queryParams.append('city', city);
       if (district) queryParams.append('district', district);
       if (sportType) queryParams.append('sport_type', sportType);
@@ -113,7 +115,7 @@ function CariLapanganContent() {
   useEffect(() => {
     fetchCourts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [city, district, sportType]);
+  }, [city, district, sportType, debouncedSearch]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

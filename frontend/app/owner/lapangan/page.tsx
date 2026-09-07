@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/AuthContext';
 import { api } from '@/lib/api';
 import { formatRupiah } from '@/lib/formatters';
+import { useDebounce } from '@/lib/useDebounce';
 
 export interface CourtItem {
   court_id: number;
@@ -58,6 +59,7 @@ export default function DaftarLapangan() {
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [sportFilter, setSportFilter] = useState<string>('ALL');
 
@@ -273,7 +275,7 @@ export default function DaftarLapangan() {
   // Filtered courts
   const filteredCourts = useMemo(() => {
     return courts.filter((court) => {
-      const query = searchTerm.toLowerCase().trim();
+      const query = debouncedSearch.toLowerCase().trim();
       const matchSearch =
         !query ||
         court.name.toLowerCase().includes(query) ||
@@ -291,7 +293,7 @@ export default function DaftarLapangan() {
 
       return matchSearch && matchStatus && matchSport;
     });
-  }, [courts, searchTerm, statusFilter, sportFilter]);
+  }, [courts, debouncedSearch, statusFilter, sportFilter]);
 
   const totalCourts = courts.length;
   const activeCourts = courts.filter((c) => c.status === 'ACTIVE').length;
