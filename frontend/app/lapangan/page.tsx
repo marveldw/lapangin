@@ -98,7 +98,6 @@ function CariLapanganContent() {
 
       const res = await api.get(`/public/courts?${queryParams.toString()}`);
       if (res.success && res.data) {
-        // Laravel paginate format: res.data.data
         const items = Array.isArray(res.data.data) ? res.data.data : res.data;
         setCourts(items || []);
       } else {
@@ -160,13 +159,15 @@ function CariLapanganContent() {
 
   return (
     <div className="bg-[#f8f9ff] font-sans text-[#0b1c30] min-h-screen flex flex-col">
+      {/* Menggunakan Navbar dari Landing Page */}
       <Navbar />
 
+      {/* Konten Utama diletakkan dengan pt-16 agar tidak tertutup Navbar Fixed */}
       <main className="w-full pt-16 bg-[#f8f9ff] flex-1">
         {/* Hero Section */}
         <section className="relative w-full h-[300px] md:h-[350px] flex items-center justify-center overflow-hidden">
           <div
-            className="absolute inset-0 bg-cover bg-center"
+            className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 scale-105"
             style={{
               backgroundImage:
                 "url('https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=1920&q=80')",
@@ -188,7 +189,7 @@ function CariLapanganContent() {
         <div className="relative z-20 max-w-7xl mx-auto w-full px-6 -mt-12">
           <form
             onSubmit={handleSearchSubmit}
-            className="bg-white rounded-2xl shadow-lg border border-[#bccbb9]/30 p-3 md:p-4 flex flex-col md:flex-row items-center gap-3"
+            className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-3 md:p-4 flex flex-col md:flex-row items-center gap-3"
           >
             {/* Search Input */}
             <div className="flex-1 w-full relative">
@@ -273,7 +274,7 @@ function CariLapanganContent() {
 
             <button
               type="submit"
-              className="w-full md:w-auto bg-[#006e2f] hover:bg-[#005321] text-white px-8 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
+              className="w-full md:w-auto bg-[#0b1c30] hover:bg-[#006e2f] text-white px-8 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
             >
               <span>Cari</span>
             </button>
@@ -410,7 +411,7 @@ function CariLapanganContent() {
                 {filteredAndSortedCourts.map((court) => (
                   <div
                     key={court.court_id}
-                    className="bg-white rounded-2xl shadow-sm border border-[#bccbb9]/30 overflow-hidden hover:shadow-md transition-shadow duration-300 flex flex-col relative group"
+                    className="bg-white rounded-2xl shadow-sm border border-[#bccbb9]/30 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col relative group"
                   >
                     <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#006e2f] z-10"></div>
 
