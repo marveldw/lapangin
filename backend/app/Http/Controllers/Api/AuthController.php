@@ -101,6 +101,12 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        activity()
+            ->causedBy($user)
+            ->performedOn($user)
+            ->event('login')
+            ->log("Pengguna '{$user->name}' berhasil login ke sistem");
+
         return response()->json([
             'success' => true,
             'token'   => $token,
@@ -116,7 +122,15 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+
+        activity()
+            ->causedBy($user)
+            ->performedOn($user)
+            ->event('logout')
+            ->log("Pengguna '{$user->name}' melakukan logout");
+
+        $user->currentAccessToken()->delete();
 
         return response()->json([
             'success' => true,
