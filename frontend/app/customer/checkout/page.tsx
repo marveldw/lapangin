@@ -1,201 +1,352 @@
-"use client";
+'use client';
 
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Navbar from '@/components/Navbar';
+import { useAuth } from '@/lib/AuthContext';
+import { api } from '@/lib/api';
+import { formatRupiah, formatDateIndo, getCourtFallbackImage } from '@/lib/formatters';
 
-export default function KonfirmasiBookingPage() {
+interface CourtInfo {
+  court_id: number;
+  name: string;
+  sport_type: string;
+  price_per_hour: number;
+  address: string;
+  city: string | null;
+  image_url: string | null;
+}
+
+function KonfirmasiBookingContent() {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+  const searchParams = useSearchParams();
+  const { user, token, isLoading: authLoading } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const courtId = searchParams.get('court_id');
+  const bookingDate = searchParams.get('date');
+  const startTime = searchParams.get('start_time');
+  const endTime = searchParams.get('end_time');
+
+  const [court, setCourt] = useState<CourtInfo | null>(null);
+  const [loadingCourt, setLoadingCourt] = useState(true);
+  const [notes, setNotes] = useState('');
+
+  // Form submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [createdBookingCode, setCreatedBookingCode] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // 1. Check auth
+  useEffect(() => {
+    if (!authLoading && !token) {
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+    }
+  }, [token, authLoading, router]);
+
+  // 2. Fetch court info
+  useEffect(() => {
+    if (!courtId) {
+      setLoadingCourt(false);
+      return;
+    }
+
+    async function fetchCourt() {
+      setLoadingCourt(true);
+      try {
+        const res = await api.get(`/public/courts/${courtId}`);
+        if (res.success && res.data) {
+          setCourt(res.data);
+        }
+      } catch (err) {
+        console.error('Failed to load court:', err);
+      } finally {
+        setLoadingCourt(false);
+      }
+    }
+
+    fetchCourt();
+  }, [courtId]);
+
+  // 3. Calculate duration & price
+  const { durationHours, totalPrice } = useMemo(() => {
+    if (!startTime || !endTime || !court) return { durationHours: 1, totalPrice: 0 };
+    const startH = parseInt(startTime.split(':')[0], 10);
+    const endH = parseInt(endTime.split(':')[0], 10);
+    const hours = Math.max(1, endH - startH);
+    return {
+      durationHours: hours,
+      totalPrice: court.price_per_hour * hours,
+    };
+  }, [startTime, endTime, court]);
+
+  // 4. Handle submit booking
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!courtId || !bookingDate || !startTime || !endTime) {
+      setErrorMessage('Informasi jadwal atau lapangan tidak lengkap.');
+      return;
+    }
+
     setIsSubmitting(true);
-    
-    // Simulasi loading proses booking (1 detik)
-    setTimeout(() => {
+    setErrorMessage(null);
+
+    try {
+      const payload = {
+        court_id: parseInt(courtId, 10),
+        booking_date: bookingDate,
+        start_time: startTime,
+        end_time: endTime,
+        notes: notes.trim() || undefined,
+      };
+
+      const res = await api.post('/bookings', payload, token);
+
+      if (res.success && res.data) {
+        setCreatedBookingCode(res.data.booking_code || 'LPG-SUCCESS');
+        setShowModal(true);
+      } else {
+        setErrorMessage(res.message || 'Gagal membuat reservasi. Silakan coba kembali.');
+      }
+    } catch (err) {
+      setErrorMessage('Terjadi kendala jaringan saat menghubungi server.');
+    } finally {
       setIsSubmitting(false);
-      setShowModal(true);
-    }, 1000);
+    }
+  };
+
+  const handleCopyCode = () => {
+    if (createdBookingCode) {
+      navigator.clipboard.writeText(createdBookingCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
-    // Setelah sukses, lempar customer ke halaman Booking Saya
     router.push('/customer/booking');
   };
 
+  if (authLoading || loadingCourt) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f8f9ff]">
+        <div className="flex items-center gap-2 text-[#006e2f]">
+          <span className="material-symbols-outlined animate-spin text-[28px]">progress_activity</span>
+          <span className="text-sm font-bold">Menyiapkan Checkout...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!court || !bookingDate || !startTime || !endTime) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9ff] p-6 text-center">
+        <span className="material-symbols-outlined text-amber-500 text-[48px] mb-2">warning</span>
+        <h2 className="text-xl font-bold text-[#0b1c30]">Data Booking Tidak Valid</h2>
+        <p className="text-xs text-[#3d4a3d] mt-1 mb-6">
+          Informasi lapangan atau jam booking belum lengkap. Silakan pilih kembali dari halaman detail.
+        </p>
+        <Link
+          href="/lapangan"
+          className="px-6 py-2.5 rounded-xl bg-[#006e2f] text-white text-xs font-bold hover:bg-[#005321] transition-all shadow-md"
+        >
+          Cari Lapangan
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-[#f8f9ff] font-sans text-[#0b1c30] min-h-screen flex flex-col relative">
-      
-      {/* Header (Navbar) */}
-      <header className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl shadow-sm border-b border-[#bccbb9]/30">
-        <div className="h-16 w-full px-6 md:px-12 max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-10">
-            <Link href="/" className="flex items-center gap-2">
-              <img src="/logo.png" alt="Lapangin Logo" className="w-8 h-8 object-contain" />
-              <span className="text-xl font-bold text-[#006e2f] tracking-tight">Lapangin</span>
-            </Link>
-            <nav className="hidden md:flex items-center gap-8 h-16">
-              <Link href="/" className="text-sm font-semibold text-[#3d4a3d] hover:text-[#006e2f] transition-colors">Beranda</Link>
-              <Link href="/lapangan" className="text-sm font-semibold text-[#3d4a3d] hover:text-[#006e2f] transition-colors">Cari Lapangan</Link>
-              <Link href="/customer/booking" className="text-sm font-semibold text-[#3d4a3d] hover:text-[#006e2f] transition-colors">Booking Saya</Link>
-              <Link href="/profile" className="text-sm font-semibold text-[#3d4a3d] hover:text-[#006e2f] transition-colors">Profile</Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#e5eeff] text-[#3d4a3d] transition-colors">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-            <div className="w-9 h-9 rounded-full bg-[#006e2f] flex items-center justify-center cursor-pointer shadow-sm">
-              <span className="material-symbols-outlined text-white text-[18px]">person</span>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
-      <main className="w-full pt-16 bg-[#f8f9ff] flex-1 flex flex-col relative group">
-        {/* Ambient background layer */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-          <svg className="absolute w-full h-full opacity-[0.03]" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern height="32" id="dot-grid" patternUnits="userSpaceOnUse" width="32">
-                <circle cx="2" cy="2" fill="currentColor" r="1.5"></circle>
-              </pattern>
-            </defs>
-            <rect fill="url(#dot-grid)" height="100%" width="100%"></rect>
-          </svg>
-        </div>
-
-        <div className="w-full max-w-7xl mx-auto px-6 md:px-12 py-10 z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Left Panel: Booking Details */}
-          <div className="col-span-1 lg:col-span-5 bg-[#e5eeff] rounded-xl shadow-sm overflow-hidden sticky top-24 border border-[#bccbb9]/30">
-            <div 
-              className="bg-cover bg-center w-full h-48 lg:h-64 relative shadow-sm" 
-              style={{ backgroundImage: "url('https://images.unsplash.com/photo-1599586120429-48281b6f0ece?auto=format&fit=crop&w=800&q=80')" }}
-            >
+      <main className="w-full pt-16 bg-[#f8f9ff] flex-1 flex flex-col relative">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-10 z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Panel: Booking Details Card */}
+          <div className="col-span-1 lg:col-span-5 bg-[#e5eeff] rounded-2xl shadow-sm overflow-hidden sticky top-24 border border-[#bccbb9]/30">
+            <div className="h-44 w-full relative overflow-hidden bg-slate-900">
+              <img
+                src={court.image_url || getCourtFallbackImage(court.sport_type)}
+                alt={court.name}
+                className="w-full h-full object-cover opacity-90"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = getCourtFallbackImage(court.sport_type);
+                }}
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-[#e5eeff] via-[#e5eeff]/20 to-transparent"></div>
-              <div className="absolute bottom-4 left-4">
-                <span className="inline-flex items-center px-3 py-1 bg-white/80 backdrop-blur-md rounded-full text-[#004b1e] font-bold text-xs shadow-sm gap-1 border border-white/50">
-                  <span className="material-symbols-outlined text-[14px]">sports_tennis</span>
-                  Badminton
+              <div className="absolute bottom-3 left-4">
+                <span className="inline-flex items-center px-3 py-1 bg-white/90 backdrop-blur-md rounded-lg text-[#004b1e] font-bold text-xs shadow-sm gap-1 border border-white/50 uppercase">
+                  {court.sport_type}
                 </span>
               </div>
             </div>
-            
-            <div className="p-6 md:p-8 flex flex-col gap-6">
+
+            <div className="p-6 flex flex-col gap-5">
               <div className="flex flex-col gap-1">
-                <h2 className="text-2xl font-bold text-[#0b1c30]">Court A</h2>
-                <p className="text-sm font-medium text-[#3d4a3d] flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[18px]">location_on</span> Lapangin Arena, Jakarta
+                <h2 className="text-xl font-bold text-[#0b1c30]">{court.name}</h2>
+                <p className="text-xs font-medium text-[#3d4a3d] flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[16px] text-[#006e2f]">location_on</span>
+                  <span>
+                    {court.address}
+                    {court.city ? `, ${court.city}` : ''}
+                  </span>
                 </p>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4 bg-white p-4 rounded-lg shadow-sm border border-[#bccbb9]/30">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-bold text-[#3d4a3d] uppercase tracking-wider">Tanggal</span>
-                  <span className="text-sm font-bold text-[#0b1c30] flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[18px] text-[#006e2f]">calendar_month</span>
-                    12 Okt 2026
+
+              <div className="grid grid-cols-2 gap-3 bg-white p-4 rounded-xl shadow-sm border border-[#bccbb9]/30">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold text-[#3d4a3d] uppercase tracking-wider">
+                    Tanggal
+                  </span>
+                  <span className="text-xs font-bold text-[#0b1c30] flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[16px] text-[#006e2f]">
+                      calendar_month
+                    </span>
+                    {formatDateIndo(bookingDate)}
                   </span>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-bold text-[#3d4a3d] uppercase tracking-wider">Waktu</span>
-                  <span className="text-sm font-bold text-[#0b1c30] flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[18px] text-[#006e2f]">schedule</span>
-                    19:00 - 20:00
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold text-[#3d4a3d] uppercase tracking-wider">
+                    Waktu Main
+                  </span>
+                  <span className="text-xs font-bold text-[#0b1c30] flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[16px] text-[#006e2f]">
+                      schedule
+                    </span>
+                    {startTime} - {endTime}
                   </span>
                 </div>
               </div>
-              
-              <div className="flex flex-col gap-2 bg-white p-6 rounded-lg shadow-sm relative overflow-hidden border border-[#bccbb9]/30">
-                <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-[#006e2f]/10 rounded-full blur-2xl pointer-events-none"></div>
-                <div className="flex justify-between items-center w-full">
-                  <span className="text-sm text-[#3d4a3d] font-medium">Harga (1 Jam)</span>
-                  <span className="text-sm text-[#0b1c30] font-semibold">Rp100.000</span>
+
+              <div className="flex flex-col gap-2 bg-white p-5 rounded-xl shadow-sm border border-[#bccbb9]/30">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-[#3d4a3d]">Durasi Sewa</span>
+                  <span className="font-semibold text-[#0b1c30]">{durationHours} Jam</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-[#3d4a3d]">Tarif per Jam</span>
+                  <span className="font-semibold text-[#0b1c30]">
+                    {formatRupiah(court.price_per_hour)}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center w-full pt-3 border-t border-[#bccbb9]/30 mt-1">
-                  <span className="text-sm font-bold text-[#0b1c30] uppercase tracking-wide">Total</span>
-                  <span className="text-2xl font-bold text-[#006e2f]">Rp100.000</span>
+                  <span className="text-xs font-bold text-[#0b1c30] uppercase tracking-wide">
+                    Total Pembayaran
+                  </span>
+                  <span className="text-xl font-extrabold text-[#006e2f]">
+                    {formatRupiah(totalPrice)}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Panel: Form */}
-          <div className="col-span-1 lg:col-span-7 bg-white rounded-xl shadow-md p-6 lg:p-12 flex flex-col gap-8 border border-[#bccbb9]/30">
-            <div className="flex flex-col gap-1.5">
-              <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30]">Detail Pemesan</h1>
-              <p className="text-sm text-[#3d4a3d]">Masukkan data diri Anda untuk menyelesaikan proses booking.</p>
+          {/* Right Panel: Customer Form */}
+          <div className="col-span-1 lg:col-span-7 bg-white rounded-2xl shadow-md p-6 lg:p-10 flex flex-col gap-6 border border-[#bccbb9]/30">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-xl lg:text-2xl font-bold text-[#0b1c30]">Detail Pemesan & Konfirmasi</h1>
+              <p className="text-xs text-[#3d4a3d]">
+                Periksa data diri dan konfirmasi reservasi lapangan Anda.
+              </p>
             </div>
-            
-            <form className="flex flex-col gap-6 w-full" onSubmit={handleSubmit}>
-              
-              {/* Name Input */}
-              <div className="flex flex-col gap-2 relative group w-full">
-                <label className="text-xs font-bold text-[#3d4a3d] uppercase tracking-wider" htmlFor="fullName">Nama Lengkap</label>
+
+            {/* Error Banner */}
+            {errorMessage && (
+              <div className="p-4 bg-[#ffdad6] text-[#ba1a1a] rounded-xl text-xs font-medium flex items-center gap-2 border border-[#ba1a1a]/30">
+                <span className="material-symbols-outlined text-[20px] shrink-0">error</span>
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full">
+              {/* Name */}
+              <div className="flex flex-col gap-1.5 w-full">
+                <label className="text-xs font-bold text-[#3d4a3d] uppercase tracking-wider">
+                  Nama Pemesan
+                </label>
                 <div className="relative flex items-center w-full">
-                  <span className="material-symbols-outlined absolute left-4 text-[#3d4a3d]/60 group-focus-within:text-[#006e2f] transition-colors">person</span>
-                  <input 
-                    className="w-full bg-[#f8f9ff] text-sm text-[#0b1c30] border border-[#bccbb9]/50 rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:border-[#006e2f] focus:ring-2 focus:ring-[#006e2f]/20 transition-all shadow-sm font-medium" 
-                    id="fullName" 
-                    defaultValue="Tarisha Naila Angelin" 
-                    required 
+                  <span className="material-symbols-outlined absolute left-3.5 text-[#3d4a3d]/60 text-[20px]">
+                    person
+                  </span>
+                  <input
+                    className="w-full bg-[#f8f9ff] text-xs text-[#0b1c30] border border-[#bccbb9]/50 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] font-medium"
+                    defaultValue={user?.name || ''}
+                    disabled
                     type="text"
                   />
                 </div>
               </div>
-              
-              {/* WhatsApp Input */}
-              <div className="flex flex-col gap-2 relative group w-full">
-                <label className="text-xs font-bold text-[#3d4a3d] uppercase tracking-wider" htmlFor="whatsapp">Nomor WhatsApp</label>
+
+              {/* Phone */}
+              <div className="flex flex-col gap-1.5 w-full">
+                <label className="text-xs font-bold text-[#3d4a3d] uppercase tracking-wider">
+                  Nomor WhatsApp / Kontak
+                </label>
                 <div className="relative flex items-center w-full">
-                  <span className="material-symbols-outlined absolute left-4 text-[#3d4a3d]/60 group-focus-within:text-[#006e2f] transition-colors">call</span>
-                  <input 
-                    className="w-full bg-[#f8f9ff] text-sm text-[#0b1c30] border border-[#bccbb9]/50 rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:border-[#006e2f] focus:ring-2 focus:ring-[#006e2f]/20 transition-all shadow-sm font-medium" 
-                    id="whatsapp" 
-                    defaultValue="081234567890" 
-                    required 
+                  <span className="material-symbols-outlined absolute left-3.5 text-[#3d4a3d]/60 text-[20px]">
+                    call
+                  </span>
+                  <input
+                    className="w-full bg-[#f8f9ff] text-xs text-[#0b1c30] border border-[#bccbb9]/50 rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] font-medium"
+                    defaultValue={user?.phone || '08123456789'}
+                    disabled
                     type="tel"
                   />
                 </div>
-                <p className="text-xs text-[#3d4a3d] flex items-center gap-1 mt-1">
-                  <span className="material-symbols-outlined text-[14px]">info</span> Bukti booking akan dikirimkan via WhatsApp.
-                </p>
               </div>
-              
-              {/* Decorative Divider */}
-              <div className="w-full flex items-center gap-4 py-4 opacity-60">
-                <div className="h-px bg-[#bccbb9] flex-1"></div>
-                <span className="material-symbols-outlined text-[#bccbb9]">verified_user</span>
-                <div className="h-px bg-[#bccbb9] flex-1"></div>
+
+              {/* Notes */}
+              <div className="flex flex-col gap-1.5 w-full">
+                <label className="text-xs font-bold text-[#3d4a3d] uppercase tracking-wider">
+                  Catatan Tambahan (Opsional)
+                </label>
+                <textarea
+                  rows={3}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Contoh: Mohon sediakan bola futsal tambahan atau raket sewa."
+                  className="w-full bg-[#f8f9ff] text-xs text-[#0b1c30] border border-[#bccbb9]/50 rounded-xl p-3 focus:outline-none focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] font-medium resize-none"
+                ></textarea>
               </div>
-              
+
+              {/* Guarantee badge */}
+              <div className="p-3 bg-[#e5eeff] rounded-xl flex items-center gap-2.5 text-xs text-[#004b1e] font-medium">
+                <span className="material-symbols-outlined text-[20px] text-[#006e2f] shrink-0">
+                  verified_user
+                </span>
+                <span>
+                  Sistem otomatis mengunci slot jadwal ini sehingga 100% aman dan anti-bentrok.
+                </span>
+              </div>
+
               {/* Actions */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-end items-center w-full mt-2">
-                <button 
-                  className="w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-sm text-[#0b1c30] bg-[#e5eeff] hover:bg-[#d3e4fe] transition-colors shadow-sm" 
+              <div className="flex flex-col sm:flex-row gap-3 justify-end items-center w-full mt-2">
+                <button
                   type="button"
                   onClick={() => router.back()}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs text-[#0b1c30] bg-[#eff4ff] hover:bg-[#dce9ff] transition-colors cursor-pointer"
                 >
-                  Batal
+                  Kembali
                 </button>
-                <button 
-                  className={`w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-sm text-white bg-[#006e2f] hover:bg-[#005321] transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 relative overflow-hidden group ${isSubmitting ? 'opacity-80 cursor-wait' : ''}`} 
+                <button
                   type="submit"
                   disabled={isSubmitting}
+                  className="w-full sm:w-auto px-8 py-3 rounded-xl font-bold text-xs text-white bg-[#006e2f] hover:bg-[#005321] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? (
-                    <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
+                    <>
+                      <span className="material-symbols-outlined animate-spin text-[18px]">
+                        progress_activity
+                      </span>
+                      <span>Memproses Reservasi...</span>
+                    </>
                   ) : (
                     <>
-                      <span className="relative z-10 flex items-center gap-2">
-                        Konfirmasi Booking
-                        <span className="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">arrow_forward</span>
-                      </span>
-                      <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-0"></div>
+                      <span>Konfirmasi & Buat Booking</span>
+                      <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                     </>
                   )}
                 </button>
@@ -205,47 +356,70 @@ export default function KonfirmasiBookingPage() {
         </div>
       </main>
 
-      {/* Success Modal Overlay */}
+      {/* Success Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center">
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-[#0b1c30]/40 backdrop-blur-sm" onClick={handleCloseModal}></div>
-          
-          {/* Modal Content */}
-          <div className="relative bg-white rounded-xl shadow-2xl p-8 md:p-12 flex flex-col items-center gap-6 max-w-md w-[calc(100%-2rem)] mx-auto animate-in zoom-in-95 duration-300 border border-[#bccbb9]/30">
-            
-            <div className="w-20 h-20 rounded-full bg-[#22c55e]/20 flex items-center justify-center shadow-sm mb-2 relative">
-              <div className="absolute inset-0 bg-[#22c55e]/20 rounded-full animate-ping opacity-75"></div>
-              <span className="material-symbols-outlined text-[#006e2f] text-[40px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#0b1c30]/50 backdrop-blur-sm"></div>
+
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col items-center gap-5 max-w-md w-full animate-in zoom-in-95 duration-200 border border-[#bccbb9]/30">
+            <div className="w-16 h-16 rounded-full bg-[#22c55e]/20 flex items-center justify-center text-[#006e2f]">
+              <span className="material-symbols-outlined text-[36px]">check_circle</span>
             </div>
-            
-            <div className="flex flex-col items-center gap-2 text-center">
-              <h3 className="text-2xl font-bold text-[#0b1c30]">Booking Berhasil!</h3>
-              <p className="text-sm text-[#3d4a3d] leading-relaxed">
-                Terima kasih. Bukti booking Anda untuk <strong className="text-[#0b1c30]">Court A</strong> telah dikirimkan ke WhatsApp.
+
+            <div className="text-center">
+              <h3 className="text-xl font-bold text-[#0b1c30]">Reservasi Berhasil Dibuat!</h3>
+              <p className="text-xs text-[#3d4a3d] mt-1 leading-relaxed">
+                Slot jadwal Anda di <strong className="text-[#0b1c30]">{court.name}</strong> telah
+                berhasil dipesan.
               </p>
             </div>
-            
-            <div className="w-full bg-[#f8f9ff] rounded-lg p-4 flex items-center justify-between shadow-sm mt-2 border-l-4 border-[#006e2f]">
+
+            <div className="w-full bg-[#f8f9ff] rounded-xl p-4 flex items-center justify-between border-l-4 border-[#006e2f] border border-[#bccbb9]/30">
               <div className="flex flex-col">
-                <span className="text-xs font-semibold text-[#3d4a3d] uppercase tracking-wider">Kode Booking</span>
-                <span className="text-lg font-bold text-[#0b1c30] font-mono tracking-widest mt-1">LPG-8X2F</span>
+                <span className="text-[10px] font-bold text-[#3d4a3d] uppercase tracking-wider">
+                  Kode Booking
+                </span>
+                <span className="text-base font-extrabold text-[#0b1c30] font-mono tracking-wider mt-0.5">
+                  {createdBookingCode}
+                </span>
               </div>
-              <button className="p-2 rounded-md bg-white text-[#3d4a3d] hover:text-[#006e2f] hover:bg-[#e5eeff] border border-[#bccbb9]/30 transition-colors shadow-sm" title="Salin Kode">
-                <span className="material-symbols-outlined text-[20px]">content_copy</span>
+              <button
+                type="button"
+                onClick={handleCopyCode}
+                className="p-2 rounded-lg bg-white hover:bg-[#e5eeff] text-[#006e2f] border border-[#bccbb9]/30 transition-colors shadow-sm cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                title="Salin Kode"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  {copied ? 'done' : 'content_copy'}
+                </span>
+                <span>{copied ? 'Tersalin' : 'Salin'}</span>
               </button>
             </div>
-            
-            <button 
-              className="w-full mt-4 px-6 py-3 rounded-lg font-bold text-sm text-white bg-[#006e2f] hover:bg-[#005321] transition-all shadow-md"
+
+            <button
+              type="button"
               onClick={handleCloseModal}
+              className="w-full py-3 rounded-xl font-bold text-xs text-white bg-[#006e2f] hover:bg-[#005321] transition-all shadow-md cursor-pointer"
             >
-              Selesai & Kembali ke Booking Saya
+              Lihat Riwayat & E-Ticket
             </button>
           </div>
         </div>
       )}
-
     </div>
+  );
+}
+
+export default function KonfirmasiBookingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#f8f9ff]">
+          <span className="text-sm font-semibold text-[#006e2f]">Memuat Checkout...</span>
+        </div>
+      }
+    >
+      <KonfirmasiBookingContent />
+    </Suspense>
   );
 }

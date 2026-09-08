@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Court;
+use App\Models\CourtOperatingHour;
 use App\Models\Plan;
 use Illuminate\Http\Request;
 
@@ -75,9 +76,24 @@ class CourtController extends Controller
             'status'   => $validated['status'] ?? 'ACTIVE',
         ]);
 
+        // Auto-create default operating hours (Senin-Minggu 08:00 - 22:00) agar langsung bisa dibooking
+        for ($day = 0; $day <= 6; $day++) {
+            CourtOperatingHour::firstOrCreate(
+                [
+                    'court_id'    => $court->court_id,
+                    'day_of_week' => $day,
+                ],
+                [
+                    'open_time'  => '08:00',
+                    'close_time' => '22:00',
+                    'is_closed'  => false,
+                ]
+            );
+        }
+
         return response()->json([
             'success' => true,
-            'data'    => $court,
+            'data'    => $court->load('operatingHours'),
         ], 201);
     }
 

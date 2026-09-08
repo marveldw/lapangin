@@ -26,8 +26,10 @@ php artisan migrate --force || echo "[Entrypoint] Migration notice: Migration wi
 echo "[Entrypoint] Running database seeds..."
 php artisan db:seed --force || true
 
-# Cache config, route, dan view untuk performa production
-echo "[Entrypoint] Optimizing for production..."
+# Publish assets & optimize for production
+echo "[Entrypoint] Publishing assets & optimizing for production..."
+php artisan filament:assets || true
+php artisan livewire:publish --assets || true
 php artisan optimize || true
 
 # Jalankan PHP-FPM di background

@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   // Logika di-upgrade: Cek apakah URL persis SAMA, ATAU berawalan kata yang sama (sub-halaman)
   const getMenuClass = (path: string) => {
@@ -13,6 +15,8 @@ export default function Sidebar() {
       ? 'bg-[#22c55e] text-[#004b1e] font-semibold' 
       : 'text-[#3d4a3d] hover:bg-[#eff4ff] hover:text-[#0b1c30]';
   };
+
+  const planName = user?.subscription?.plan_name || 'FREE';
 
   return (
     <aside className="fixed left-0 top-0 h-full w-72 bg-[#ffffff] z-50 flex flex-col shadow-[1px_0_8px_rgba(0,0,0,0.02)] border-r border-[#bccbb9]/30">
@@ -76,20 +80,26 @@ export default function Sidebar() {
         </Link>
 
         {/* Tombol Logout */}
-        <a 
-          href="http://localhost:8000/logout" 
-          className="flex items-center gap-4 px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-700 font-semibold text-sm transition-all duration-200 mt-4"
+        <button 
+          type="button"
+          onClick={() => logout()}
+          className="w-full flex items-center gap-4 px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-700 font-semibold text-sm transition-all duration-200 mt-4 text-left cursor-pointer"
         >
           <span className="material-symbols-outlined">logout</span>
           <span className="text-sm font-semibold tracking-wide">Keluar (Logout)</span>
-        </a>
+        </button>
       </nav>
 
       {/* Upgrade */}
       <div className="p-6 mt-auto">
         <div className="bg-[#dce9ff] rounded-xl p-4">
-          <p className="text-xs font-medium text-[#3d4a3d] mb-1">Plan: Pro Elite</p>
-          <button className="w-full bg-[#006e2f] text-[#ffffff] py-1.5 rounded-lg text-sm font-semibold tracking-wide hover:bg-[#006e2f]/90 transition-colors">Upgrade Plan</button>
+          <p className="text-xs font-semibold text-[#3d4a3d] mb-1">Paket: {planName}</p>
+          <Link
+            href="/owner/pengaturan"
+            className="block text-center w-full bg-[#006e2f] text-[#ffffff] py-1.5 rounded-lg text-xs font-semibold tracking-wide hover:bg-[#006e2f]/90 transition-colors"
+          >
+            Kelola Langganan
+          </Link>
         </div>
       </div>
     </aside>

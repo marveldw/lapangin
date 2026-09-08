@@ -6,11 +6,13 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { setAuthSession } from "@/lib/auth";
+import { useAuth } from "@/lib/AuthContext";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParam = searchParams.get("redirect");
+  const { refreshUser, setAuth } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,18 +52,19 @@ function LoginForm() {
       // Save token and user profile
       if (data.token && data.user) {
         setAuthSession(data.token, data.user);
+        setAuth(data.token, data.user);
       }
 
       // Smart Redirect based on Role
-      const role = data.user?.role;
+      const role = data.user?.role?.toUpperCase();
       if (role === "ADMIN") {
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
         window.location.href = `${backendUrl}/admin`;
       } else if (role === "OWNER") {
-        router.push(redirectParam || "/owner/dashboard");
+        window.location.href = redirectParam || "/owner/dashboard";
       } else {
         // Customer
-        router.push(redirectParam || "/");
+        window.location.href = redirectParam || "/";
       }
     } catch (err) {
       console.error("Login error:", err);
