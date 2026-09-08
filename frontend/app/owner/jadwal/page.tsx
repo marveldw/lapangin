@@ -16,6 +16,7 @@ interface Court {
   name: string;
   sport_type: string;
   price_per_hour: number;
+  description?: string;
 }
 
 export interface BookingRecord {
@@ -33,26 +34,22 @@ export interface BookingRecord {
   };
 }
 
- function JadwalContent() {
+function JadwalContent() {
   const { token } = useAuth();
 
   const [courts, setCourts] = useState<Court[]>([]);
   const [selectedCourtId, setSelectedCourtId] = useState<number | null>(null);
   const [loadingCourts, setLoadingCourts] = useState(true);
 
-  // Date state
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
-  // Lazy cache & active day bookings
   const [scheduleCache, setScheduleCache] = useState<Record<string, BookingRecord[]>>({});
   const [dayBookings, setDayBookings] = useState<BookingRecord[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
 
-  // Popover state
   const [activePopoverBooking, setActivePopoverBooking] = useState<BookingRecord | null>(null);
 
-  // 1. Fetch owner courts on mount
   useEffect(() => {
     if (!token) return;
     async function loadCourts() {
@@ -75,7 +72,6 @@ export interface BookingRecord {
     loadCourts();
   }, [token]);
 
-  // 2. Lazy load schedule on demand for selected court and date
   const loadSchedule = useCallback(
     async (courtId: number, date: string, force = false) => {
       if (!token) return;
@@ -113,19 +109,29 @@ export interface BookingRecord {
     }
   }, [selectedCourtId, selectedDate, loadSchedule]);
 
-  // Selected Court Object
   const selectedCourt = useMemo(() => {
     return courts.find((c) => c.court_id === selectedCourtId) || courts[0] || null;
   }, [courts, selectedCourtId]);
 
-  // Operating timeline generation: 08:00 - 23:00 (15 hours)
   const timelineHours = useMemo(() => {
+    if (!selectedCourt) return [];
+    
+    let openHour = 8;
+    let closeHour = 22;
+
+    if (selectedCourt.description) {
+      const timeMatch = selectedCourt.description.match(/Jam Operasional:\s*(\d{2}):\d{2}\s*-\s*(\d{2}):\d{2}/);
+      if (timeMatch) {
+        openHour = parseInt(timeMatch[1], 10);
+        closeHour = parseInt(timeMatch[2], 10) - 1; 
+      }
+    }
+
     const hours = [];
-    for (let h = 8; h <= 22; h++) {
+    for (let h = openHour; h <= closeHour; h++) {
       const start = h.toString().padStart(2, '0') + ':00';
       const end = (h + 1).toString().padStart(2, '0') + ':00';
 
-      // Find booking overlapping with this hour
       const matchedBooking = dayBookings.find((b) => {
         const bStart = b.start_time.slice(0, 5);
         const bEnd = b.end_time.slice(0, 5);
@@ -139,9 +145,8 @@ export interface BookingRecord {
       });
     }
     return hours;
-  }, [dayBookings]);
+  }, [dayBookings, selectedCourt]);
 
-  // Metrics for the day
   const { totalHoursBooked, dayRevenue, pendingCount } = useMemo(() => {
     let hours = 0;
     let rev = 0;
@@ -161,7 +166,6 @@ export interface BookingRecord {
     return { totalHoursBooked: hours, dayRevenue: rev, pendingCount: pending };
   }, [dayBookings]);
 
-  // Change date helpers
   const handleShiftDate = (days: number) => {
     const current = new Date(selectedDate);
     current.setDate(current.getDate() + days);
@@ -173,7 +177,6 @@ export interface BookingRecord {
       className="flex flex-col w-full pb-12"
       onClick={() => setActivePopoverBooking(null)}
     >
-      {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-[#0b1c30] mb-1">Jadwal Lapangan</h1>
@@ -225,7 +228,6 @@ export interface BookingRecord {
         </div>
       </div>
 
-      {/* Tabs Lapangan Milik Owner */}
       {loadingCourts ? (
         <div className="p-8 text-center bg-white rounded-2xl border border-[#bccbb9]/30">
           <span className="text-xs font-semibold text-[#006e2f]">Memuat Lapangan...</span>
@@ -246,6 +248,44 @@ export interface BookingRecord {
         </div>
       ) : (
         <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
+              <div className="w-12 h-12 rounded-xl bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center">
+                <span className="material-symbols-outlined text-[24px]">schedule</span>
+              </div>
+              <div>
+                <p className="text-xs text-[#3d4a3d] font-semibold">Total Jam Terisi</p>
+                <p className="text-2xl font-extrabold text-[#0b1c30] mt-0.5">
+                  {totalHoursBooked} Jam
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
+              <div className="w-12 h-12 rounded-xl bg-[#005ac2]/10 text-[#005ac2] flex items-center justify-center">
+                <span className="material-symbols-outlined text-[24px]">payments</span>
+              </div>
+              <div>
+                <p className="text-xs text-[#3d4a3d] font-semibold">Pendapatan Hari Ini</p>
+                <p className="text-2xl font-extrabold text-[#006e2f] mt-0.5">
+                  {formatRupiah(dayRevenue)}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[24px]">pending_actions</span>
+              </div>
+              <div>
+                <p className="text-xs text-[#3d4a3d] font-semibold">Menunggu Konfirmasi</p>
+                <p className="text-2xl font-extrabold text-amber-600 mt-0.5">
+                  {pendingCount} Booking
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white rounded-2xl shadow-sm mb-6 overflow-hidden border border-[#bccbb9]/30">
             <div className="flex overflow-x-auto scrollbar-none">
               {courts.map((court) => {
@@ -271,7 +311,6 @@ export interface BookingRecord {
             </div>
           </div>
 
-          {/* Timeline Grid */}
           <div className="bg-white rounded-2xl shadow-sm p-6 border border-[#bccbb9]/30 relative">
             <div className="flex justify-between items-center mb-6 pb-3 border-b border-[#bccbb9]/30">
               <div className="flex items-center gap-2">
@@ -313,12 +352,10 @@ export interface BookingRecord {
                       key={slot.hourStr}
                       className="py-3 flex items-center gap-4 group hover:bg-[#f8f9ff] px-2 rounded-xl transition-colors relative"
                     >
-                      {/* Jam */}
                       <span className="w-16 font-mono text-xs font-bold text-[#3d4a3d] shrink-0">
                         {slot.hourStr}
                       </span>
 
-                      {/* Content Bar */}
                       <div className="flex-1">
                         {b ? (
                           <div
@@ -374,49 +411,9 @@ export interface BookingRecord {
               </div>
             )}
           </div>
-
-          {/* Bottom Day Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[24px]">schedule</span>
-              </div>
-              <div>
-                <p className="text-xs text-[#3d4a3d] font-semibold">Total Jam Terisi</p>
-                <p className="text-2xl font-extrabold text-[#0b1c30] mt-0.5">
-                  {totalHoursBooked} Jam
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-[#005ac2]/10 text-[#005ac2] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[24px]">payments</span>
-              </div>
-              <div>
-                <p className="text-xs text-[#3d4a3d] font-semibold">Pendapatan Hari Ini</p>
-                <p className="text-2xl font-extrabold text-[#006e2f] mt-0.5">
-                  {formatRupiah(dayRevenue)}
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[24px]">pending_actions</span>
-              </div>
-              <div>
-                <p className="text-xs text-[#3d4a3d] font-semibold">Menunggu Konfirmasi</p>
-                <p className="text-2xl font-extrabold text-amber-600 mt-0.5">
-                  {pendingCount} Booking
-                </p>
-              </div>
-            </div>
-          </div>
         </>
       )}
 
-      {/* Dynamically Loaded Modal for clicked Booking Slot */}
       {activePopoverBooking && (
         <BookingDetailModal
           booking={activePopoverBooking}
@@ -426,6 +423,7 @@ export interface BookingRecord {
     </div>
   );
 }
+
 const OwnerJadwalPage = dynamic(() => Promise.resolve(JadwalContent), {
   ssr: false,
   loading: () => (
