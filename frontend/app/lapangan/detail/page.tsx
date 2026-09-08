@@ -27,8 +27,8 @@ interface BookedSlot {
 }
 
 interface SlotInfo {
-  hourStr: string; // e.g. "08:00"
-  nextHourStr: string; // e.g. "09:00"
+  hourStr: string;
+  nextHourStr: string;
   label: string;
   isBooked: boolean;
   isPast: boolean;
@@ -43,21 +43,19 @@ function DetailLapanganContent() {
   const [loadingCourt, setLoadingCourt] = useState(true);
   const [errorCourt, setErrorCourt] = useState<string | null>(null);
 
-  // Date selection
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
 
-  // Slots state
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
   const [bookedSlots, setBookedSlots] = useState<BookedSlot[]>([]);
+  
+  // Default values
   const [openTime, setOpenTime] = useState('08:00');
   const [closeTime, setCloseTime] = useState('23:00');
 
-  // Selected hour slots (array of strings, e.g. ["18:00", "19:00"])
   const [selectedHours, setSelectedHours] = useState<string[]>([]);
 
-  // 1. Fetch court details
   useEffect(() => {
     if (!courtId) {
       setErrorCourt('ID lapangan tidak ditentukan.');
@@ -71,7 +69,18 @@ function DetailLapanganContent() {
       try {
         const res = await api.get(`/public/courts/${courtId}`);
         if (res.success && res.data) {
-          setCourt(res.data);
+          const courtData = res.data;
+          setCourt(courtData);
+
+          // Extract Operating Hours dynamically from description
+          if (courtData.description) {
+            const timeMatch = courtData.description.match(/Jam Operasional:\s*(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+            if (timeMatch) {
+              setOpenTime(timeMatch[1]);
+              setCloseTime(timeMatch[2]);
+            }
+          }
+
         } else {
           setErrorCourt(res.message || 'Lapangan tidak ditemukan.');
         }
@@ -85,22 +94,17 @@ function DetailLapanganContent() {
     fetchCourt();
   }, [courtId]);
 
-  // 2. Fetch slots for selectedDate
   useEffect(() => {
     if (!courtId || !selectedDate) return;
 
     async function fetchSlots() {
       setSlotsLoading(true);
-      setSelectedHours([]); // reset selection on date change
+      setSelectedHours([]);
       try {
         const res = await api.get(`/public/courts/${courtId}/slots?date=${selectedDate}`);
         if (res.success && res.data) {
           setIsClosed(res.data.is_closed || false);
           setBookedSlots(res.data.booked_slots || []);
-          if (res.data.operating_hours) {
-            setOpenTime(res.data.operating_hours.open_time || '08:00');
-            setCloseTime(res.data.operating_hours.close_time || '23:00');
-          }
         }
       } catch (err) {
         console.error('Failed to load slots:', err);
@@ -112,7 +116,6 @@ function DetailLapanganContent() {
     fetchSlots();
   }, [courtId, selectedDate]);
 
-  // Generate next 10 dates for date tab picker
   const availableDates = useMemo(() => {
     const list = [];
     const now = new Date();
@@ -128,7 +131,6 @@ function DetailLapanganContent() {
     return list;
   }, []);
 
-  // Generate hourly slots
   const allHourlySlots: SlotInfo[] = useMemo(() => {
     const startHour = parseInt(openTime.split(':')[0], 10) || 8;
     const endHour = parseInt(closeTime.split(':')[0], 10) || 23;
@@ -142,12 +144,9 @@ function DetailLapanganContent() {
       const hStr = h.toString().padStart(2, '0') + ':00';
       const nextHStr = (h + 1).toString().padStart(2, '0') + ':00';
 
-      // Check if slot is in the past (for today)
       const isPast = isToday && h <= currentHour;
 
-      // Check conflict with booked slots
       const isBooked = bookedSlots.some((b) => {
-        // e.g. b.start_time <= hStr < b.end_time
         const bStart = b.start_time.slice(0, 5);
         const bEnd = b.end_time.slice(0, 5);
         return hStr < bEnd && nextHStr > bStart && b.status !== 'CANCELLED';
@@ -165,7 +164,6 @@ function DetailLapanganContent() {
     return list;
   }, [openTime, closeTime, bookedSlots, selectedDate, todayStr]);
 
-  // Slot toggle handler
   const handleToggleHour = (hour: string) => {
     if (selectedHours.includes(hour)) {
       setSelectedHours(selectedHours.filter((h) => h !== hour));
@@ -174,11 +172,9 @@ function DetailLapanganContent() {
     }
   };
 
-  // Duration & Pricing calculation
   const durationHours = selectedHours.length;
   const totalPrice = (court?.price_per_hour || 0) * durationHours;
 
-  // Compute start_time and end_time for consecutive range
   const { startTime, endTime } = useMemo(() => {
     if (selectedHours.length === 0) return { startTime: '', endTime: '' };
     const sorted = [...selectedHours].sort();
@@ -233,7 +229,6 @@ function DetailLapanganContent() {
       <Navbar />
 
       <main className="w-full pt-16 bg-[#f8f9ff] flex-1 pb-20">
-        {/* Hero Image */}
         <div className="w-full h-[280px] md:h-[380px] relative overflow-hidden bg-slate-900">
           <img
             src={court.image_url || getCourtFallbackImage(court.sport_type)}
@@ -255,11 +250,8 @@ function DetailLapanganContent() {
           </div>
         </div>
 
-        {/* Main Content Layout */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 -mt-16 relative z-10 flex flex-col lg:flex-row gap-8 items-start">
-          {/* Left Column: Info & Slot Picker */}
           <div className="flex-1 flex flex-col gap-6 w-full">
-            {/* 1. Info Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 md:p-8 flex flex-col md:flex-row gap-6 justify-between">
               <div className="flex flex-col gap-3 flex-1">
                 <div className="flex gap-2 items-center flex-wrap">
@@ -284,13 +276,12 @@ function DetailLapanganContent() {
                   </div>
                 </div>
 
-                <p className="text-xs md:text-sm text-[#3d4a3d] leading-relaxed mt-2">
+                <p className="text-xs md:text-sm text-[#3d4a3d] leading-relaxed mt-2 whitespace-pre-wrap">
                   {court.description ||
                     'Fasilitas olahraga standar dengan pencahayaan optimal dan sirkulasi udara yang baik untuk kenyamanan bermain.'}
                 </p>
               </div>
 
-              {/* Price Tag Box */}
               <div className="bg-[#f8f9ff] border border-[#bccbb9]/40 rounded-2xl p-5 md:w-56 shrink-0 flex flex-col justify-center items-center md:items-end text-center md:text-right gap-1 h-fit">
                 <span className="text-[10px] font-bold tracking-widest text-[#3d4a3d] uppercase">
                   Harga Sewa
@@ -302,7 +293,6 @@ function DetailLapanganContent() {
               </div>
             </div>
 
-            {/* 2. Jadwal Ketersediaan Slot */}
             <div className="bg-white rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 md:p-8 flex flex-col gap-6">
               <div className="flex justify-between items-center">
                 <div>
@@ -313,7 +303,6 @@ function DetailLapanganContent() {
                 </div>
               </div>
 
-              {/* Date Horizontal Picker */}
               <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none">
                 {availableDates.map((item) => {
                   const isSelected = selectedDate === item.iso;
@@ -336,7 +325,6 @@ function DetailLapanganContent() {
                 })}
               </div>
 
-              {/* Legend */}
               <div className="flex flex-wrap justify-between items-center border-t border-[#bccbb9]/30 pt-4 gap-3 text-xs">
                 <span className="font-bold text-[#3d4a3d] uppercase tracking-wider text-[11px]">
                   Jam Operasional ({openTime} - {closeTime})
@@ -357,7 +345,6 @@ function DetailLapanganContent() {
                 </div>
               </div>
 
-              {/* Slot Grid */}
               {isClosed ? (
                 <div className="p-8 text-center bg-[#ffdad6]/20 rounded-xl border border-[#ffdad6] text-[#ba1a1a]">
                   <span className="material-symbols-outlined text-[32px] mb-1">event_busy</span>
@@ -414,7 +401,6 @@ function DetailLapanganContent() {
             </div>
           </div>
 
-          {/* Right Column: Sticky Booking Summary */}
           <aside className="w-full lg:w-[350px] shrink-0 h-fit sticky top-24">
             <div className="bg-white rounded-2xl shadow-xl border border-[#bccbb9]/30 p-6 flex flex-col gap-5">
               <div>

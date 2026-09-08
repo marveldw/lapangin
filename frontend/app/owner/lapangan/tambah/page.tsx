@@ -6,9 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { api } from '@/lib/api';
 import { formatRupiah } from '@/lib/formatters';
-import { getCourtFallbackImage } from '../page';
 
-// Preset Olahraga Populer
 const SPORT_OPTIONS = [
   { label: 'Bulutangkis / Badminton', value: 'Badminton', icon: 'sports_tennis' },
   { label: 'Futsal', value: 'Futsal', icon: 'sports_soccer' },
@@ -20,75 +18,86 @@ const SPORT_OPTIONS = [
   { label: 'Padel', value: 'Padel', icon: 'sports_tennis' },
 ];
 
-// Preset Gambar Berkualitas Tinggi untuk Dipilih
 const PRESET_IMAGES = [
-  {
-    name: 'Badminton Indoor',
-    sport: 'Badminton',
-    url: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    name: 'Futsal Rumput Sintetis',
-    sport: 'Futsal',
-    url: 'https://images.unsplash.com/photo-1529900240051-06c3960f703f?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    name: 'Lapangan Basket Kayu',
-    sport: 'Basket',
-    url: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    name: 'Tenis Lapangan Keras',
-    sport: 'Tenis',
-    url: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    name: 'Mini Soccer Arena',
-    sport: 'Mini Soccer',
-    url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80',
-  },
+  { name: 'Badminton Indoor', sport: 'Badminton', url: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=800&q=80' },
+  { name: 'Futsal Rumput Sintetis', sport: 'Futsal', url: 'https://images.unsplash.com/photo-1529900240051-06c3960f703f?auto=format&fit=crop&w=800&q=80' },
+  { name: 'Lapangan Basket Kayu', sport: 'Basket', url: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=800&q=80' },
+  { name: 'Tenis Lapangan Keras', sport: 'Tenis', url: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=800&q=80' },
+  { name: 'Mini Soccer Arena', sport: 'Mini Soccer', url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80' },
 ];
 
-// Kota Populer Indonesia
-const POPULAR_CITIES = [
-  'Jakarta Selatan',
-  'Jakarta Barat',
-  'Jakarta Pusat',
-  'Jakarta Timur',
-  'Jakarta Utara',
-  'Bandung',
-  'Surabaya',
-  'Semarang',
-  'Tangerang',
-  'Tangerang Selatan',
-  'Bekasi',
-  'Depok',
-  'Bogor',
-  'Yogyakarta',
-  'Surakarta (Solo)',
-  'Malang',
-  'Denpasar (Bali)',
-  'Medan',
-  'Makassar',
+const CITY_DISTRICTS: Record<string, string[]> = {
+  'Jakarta Selatan': ['Cilandak', 'Jagakarsa', 'Kebayoran Baru', 'Kebayoran Lama', 'Mampang Prapatan', 'Pancoran', 'Pasar Minggu', 'Pesanggrahan', 'Setiabudi', 'Tebet'],
+  'Jakarta Barat': ['Cengkareng', 'Grogol Petamburan', 'Taman Sari', 'Tambora', 'Kebon Jeruk', 'Kalideres', 'Palmerah', 'Kembangan'],
+  'Jakarta Pusat': ['Cempaka Putih', 'Gambir', 'Johar Baru', 'Kemayoran', 'Menteng', 'Sawah Besar', 'Senen', 'Tanah Abang'],
+  'Jakarta Timur': ['Cakung', 'Cipayung', 'Ciracas', 'Duren Sawit', 'Jatinegara', 'Kramat Jati', 'Makasar', 'Matraman', 'Pasar Rebo', 'Pulo Gadung'],
+  'Jakarta Utara': ['Cilincing', 'Kelapa Gading', 'Koja', 'Pademangan', 'Penjaringan', 'Tanjung Priok'],
+  'Semarang': ['Banyumanik', 'Candisari', 'Gajahmungkur', 'Gayamsari', 'Genuk', 'Gunungpati', 'Mijen', 'Ngaliyan', 'Pedurungan', 'Semarang Barat', 'Semarang Selatan', 'Semarang Tengah', 'Semarang Timur', 'Semarang Utara', 'Tembalang', 'Tugu'],
+  'Bandung': ['Andir', 'Antapani', 'Arcamanik', 'Astanaanyar', 'Babakan Ciparay', 'Bandung Kidul', 'Bandung Kulon', 'Bandung Wetan', 'Batununggal', 'Bojongloa Kaler', 'Bojongloa Kidul', 'Buahbatu', 'Cibeunying Kaler', 'Cibeunying Kidul', 'Cibiru', 'Cicendo', 'Cidadap', 'Cinambo', 'Coblong', 'Gedebage', 'Kiaracondong', 'Lengkong', 'Mandalajati', 'Panyileukan', 'Rancasari', 'Regol', 'Sukajadi', 'Sukasari', 'Sumur Bandung', 'Ujungberung'],
+  'Surabaya': ['Asemrowo', 'Benowo', 'Bubutan', 'Bulak', 'Dukuh Pakis', 'Gayungan', 'Genteng', 'Gubeng', 'Gunung Anyar', 'Jambangan', 'Karang Pilang', 'Kenjeran', 'Krembangan', 'Lakarsantri', 'Mulyorejo', 'Pabean Cantian', 'Pakal', 'Rungkut', 'Sambikerep', 'Sawahan', 'Semampir', 'Simokerto', 'Sukolilo', 'Sukomanunggal', 'Tambaksari', 'Tandes', 'Tegalsari', 'Tenggilis Mejoyo', 'Wiyung', 'Wonocolo', 'Wonokromo']
+};
+
+const AMENITIES = [
+  { id: 'parking', label: 'Area Parkir Luas', icon: 'local_parking' },
+  { id: 'shower', label: 'Kamar Mandi / Shower', icon: 'shower' },
+  { id: 'toilet', label: 'Toilet Umum', icon: 'wc' },
+  { id: 'canteen', label: 'Kantin / Cafe', icon: 'restaurant' },
+  { id: 'locker', label: 'Loker Barang', icon: 'lock' },
+  { id: 'waiting_room', label: 'Ruang Tunggu / Tribun', icon: 'chair' },
 ];
+
+export function getCourtFallbackImage(sportType?: string): string {
+  const sport = (sportType || '').toLowerCase();
+  if (sport.includes('badminton') || sport.includes('bulutangkis')) {
+    return 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=800&q=80';
+  }
+  if (sport.includes('futsal')) {
+    return 'https://images.unsplash.com/photo-1529900240051-06c3960f703f?auto=format&fit=crop&w=800&q=80';
+  }
+  if (sport.includes('basket')) {
+    return 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=800&q=80';
+  }
+  if (sport.includes('tenis') || sport.includes('tennis')) {
+    return 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=800&q=80';
+  }
+  if (sport.includes('soccer') || sport.includes('sepak bola') || sport.includes('mini soccer')) {
+    return 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80';
+  }
+  if (sport.includes('padel')) {
+    return 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?auto=format&fit=crop&w=800&q=80';
+  }
+  if (sport.includes('voli') || sport.includes('volleyball')) {
+    return 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?auto=format&fit=crop&w=800&q=80';
+  }
+  return 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80';
+}
 
 export default function TambahLapangan() {
   const router = useRouter();
   const { token, refreshUser, user } = useAuth();
 
-  // Form State
   const [name, setName] = useState('');
   const [sportType, setSportType] = useState('');
   const [customSport, setCustomSport] = useState('');
   const [pricePerHour, setPricePerHour] = useState<number | ''>('');
-  const [address, setAddress] = useState('');
+  
+  const [openTime, setOpenTime] = useState('08:00');
+  const [closeTime, setCloseTime] = useState('23:00');
+  
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('');
+  const [address, setAddress] = useState('');
+  
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  
+  // Rule States
+  const [rules, setRules] = useState('- Wajib menggunakan sepatu olahraga khusus indoor.\n- Dilarang membawa makanan berat ke dalam area lapangan.\n- Dilarang merokok di area GOR.');
+  const [refundPolicy, setRefundPolicy] = useState('Booking yang sudah dibayar tidak dapat dibatalkan (Non-refundable). Jika ada kendala cuaca pada lapangan outdoor, jadwal bisa di-reschedule.');
+
+  const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
 
-  // UI & Feedback states
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -96,21 +105,52 @@ export default function TambahLapangan() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   const finalSportType = sportType === 'OTHER' ? customSport : sportType;
+  const availableDistricts = CITY_DISTRICTS[city] || [];
 
-  // Handle Submit Form
+  const handleToggleAmenity = (id: string) => {
+    setSelectedAmenities(prev => 
+      prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
+    );
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const fileList = Array.from(files);
+    fileList.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setSelectedPhotos((prev) => [...prev, reader.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemovePhoto = (indexToRemove: number) => {
+    setSelectedPhotos((prev) => prev.filter((_, i) => i !== indexToRemove));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError(null);
     setFieldErrors({});
     setPlanLimitError(null);
 
-    // Client-side validation
     const errors: Record<string, string> = {};
     if (!name.trim()) errors.name = 'Nama lapangan wajib diisi';
     if (!finalSportType.trim()) errors.sport_type = 'Pilih atau masukkan jenis olahraga';
-    if (!pricePerHour || Number(pricePerHour) <= 0) errors.price_per_hour = 'Harga per jam harus lebih dari 0';
+    
+    if (!pricePerHour || Number(pricePerHour) < 10000) {
+      errors.price_per_hour = 'Tarif sewa minimal Rp 10.000 / jam';
+    } else if (Number(pricePerHour) > 5000000) {
+      errors.price_per_hour = 'Tarif maksimal Rp 5.000.000 / jam. Periksa kembali input Anda.';
+    }
+
+    if (!city.trim()) errors.city = 'Kota/Kabupaten wajib dipilih';
     if (!address.trim()) errors.address = 'Alamat lengkap wajib diisi';
-    if (!city.trim()) errors.city = 'Kota/Kabupaten wajib diisi';
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -125,6 +165,16 @@ export default function TambahLapangan() {
 
     setIsSubmitting(true);
 
+    const baseDescription = description.trim() ? `${description.trim()}\n\n` : '';
+    const rulesSection = rules.trim() ? `Aturan Venue:\n${rules.trim()}\n\n` : '';
+    const refundSection = refundPolicy.trim() ? `Kebijakan Refund & Reschedule:\n${refundPolicy.trim()}` : '';
+
+    const compiledDescription = `Jam Operasional: ${openTime} - ${closeTime}\n${
+      selectedAmenities.length > 0
+        ? `Fasilitas Tersedia: ${selectedAmenities.map(a => AMENITIES.find(x => x.id === a)?.label).join(', ')}.\n\n`
+        : '\n'
+    }${baseDescription}${rulesSection}${refundSection}`;
+
     try {
       const payload = {
         name: name.trim(),
@@ -133,8 +183,10 @@ export default function TambahLapangan() {
         address: address.trim(),
         city: city.trim(),
         district: district.trim() ? district.trim() : null,
-        description: description.trim() ? description.trim() : null,
-        image_url: imageUrl.trim() ? imageUrl.trim() : null,
+        description: compiledDescription ? compiledDescription : null,
+        image_url: selectedPhotos.length > 0 && selectedPhotos[0].startsWith('http')
+          ? selectedPhotos[0]
+          : getCourtFallbackImage(finalSportType),
         status: status,
       };
 
@@ -144,12 +196,10 @@ export default function TambahLapangan() {
         setShowSuccessToast(true);
         if (refreshUser) refreshUser();
 
-        // Redirect to /owner/lapangan after 1.2 seconds
         setTimeout(() => {
           router.push('/owner/lapangan');
         }, 1200);
       } else {
-        // Check if 403 plan limit error or validation error
         if (res?.message && (res.message.includes('Batas maksimal') || res.message.includes('upgrade'))) {
           setPlanLimitError({
             message: res.message,
@@ -176,7 +226,6 @@ export default function TambahLapangan() {
 
   return (
     <div className="flex flex-col w-full gap-8 max-w-5xl mx-auto pb-24">
-      {/* Success Notification */}
       {showSuccessToast && (
         <div className="fixed top-24 right-8 z-50 flex items-center gap-3 px-5 py-4 rounded-xl shadow-xl bg-[#006e2f] text-white border border-[#22c55e]/40 animate-in fade-in slide-in-from-top-4">
           <span className="material-symbols-outlined text-[24px]">check_circle</span>
@@ -187,7 +236,6 @@ export default function TambahLapangan() {
         </div>
       )}
 
-      {/* Plan Limit Error Modal (403) */}
       {planLimitError && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b1c30]/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 sm:p-8 border border-[#bccbb9]/30 flex flex-col gap-4 text-center">
@@ -201,14 +249,10 @@ export default function TambahLapangan() {
               </p>
             </div>
             <div className="bg-[#f8f9ff] p-4 rounded-xl border border-[#bccbb9]/30 text-left flex items-start gap-3">
-              <span className="material-symbols-outlined text-[#006e2f] text-[22px] shrink-0 mt-0.5">
-                stars
-              </span>
+              <span className="material-symbols-outlined text-[#006e2f] text-[22px] shrink-0 mt-0.5">stars</span>
               <div>
                 <p className="text-xs font-bold text-[#0b1c30]">Upgrade ke Paket Pro / Unlimited</p>
-                <p className="text-xs text-[#3d4a3d] mt-0.5">
-                  Dapatkan kuota lapangan tanpa batas, fitur analitik lanjutan, dan sistem booking multi-cabang.
-                </p>
+                <p className="text-xs text-[#3d4a3d] mt-0.5">Dapatkan kuota lapangan tanpa batas, fitur analitik lanjutan, dan sistem booking multi-cabang.</p>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row justify-center gap-3 mt-2">
@@ -231,24 +275,17 @@ export default function TambahLapangan() {
         </div>
       )}
 
-      {/* Page Header */}
       <div className="flex flex-col gap-2">
-        <Link
-          href="/owner/lapangan"
-          className="flex items-center text-[#3d4a3d] hover:text-[#006e2f] transition-colors text-sm font-semibold w-fit group cursor-pointer"
-        >
-          <span className="material-symbols-outlined mr-1 text-[18px] group-hover:-translate-x-1 transition-transform">
-            arrow_back
-          </span>
+        <Link href="/owner/lapangan" className="flex items-center text-[#3d4a3d] hover:text-[#006e2f] transition-colors text-sm font-semibold w-fit group cursor-pointer">
+          <span className="material-symbols-outlined mr-1 text-[18px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
           Kembali ke Manajemen Lapangan
         </Link>
         <h1 className="text-3xl font-bold text-[#0b1c30] tracking-tight mt-2">Tambah Lapangan Baru</h1>
         <p className="text-base text-[#3d4a3d] max-w-2xl">
-          Lengkapi formulir di bawah untuk mendaftarkan fasilitas lapangan olahraga baru. Data akan langsung terhubung ke marketplace dan sistem reservasi Lapangin.
+          Lengkapi formulir di bawah untuk mendaftarkan fasilitas lapangan olahraga baru ke dalam sistem Lapangin.
         </p>
       </div>
 
-      {/* Error Banner */}
       {generalError && (
         <div className="bg-[#ffdad6]/60 border border-[#ba1a1a]/30 p-4 rounded-xl text-[#ba1a1a] flex items-center gap-3">
           <span className="material-symbols-outlined text-[24px] shrink-0">error</span>
@@ -256,9 +293,8 @@ export default function TambahLapangan() {
         </div>
       )}
 
-      {/* Form Tambah Lapangan */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-        {/* Card 1: Informasi Umum Lapangan */}
+        
         <section className="bg-[#ffffff] rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 flex flex-col gap-5">
           <div className="flex items-center gap-3 pb-3 border-b border-[#bccbb9]/20">
             <div className="w-9 h-9 rounded-xl bg-[#22c55e]/20 flex items-center justify-center text-[#006e2f]">
@@ -271,7 +307,6 @@ export default function TambahLapangan() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Nama Lapangan */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-bold text-[#0b1c30]" htmlFor="nama_lapangan">
                 Nama Lapangan <span className="text-[#ba1a1a]">*</span>
@@ -281,17 +316,12 @@ export default function TambahLapangan() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className={`w-full bg-[#f8f9ff] text-[#0b1c30] placeholder:text-[#3d4a3d]/50 px-4 py-3 rounded-xl border ${
-                  fieldErrors.name ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'
-                } focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12`}
+                className={`w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${fieldErrors.name ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12`}
                 placeholder="Contoh: Lapangan Bulutangkis Alpha - Court 1"
               />
-              {fieldErrors.name && (
-                <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.name}</span>
-              )}
+              {fieldErrors.name && <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.name}</span>}
             </div>
 
-            {/* Jenis Olahraga */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-bold text-[#0b1c30]" htmlFor="jenis_olahraga">
                 Jenis Olahraga <span className="text-[#ba1a1a]">*</span>
@@ -301,21 +331,15 @@ export default function TambahLapangan() {
                   id="jenis_olahraga"
                   value={sportType}
                   onChange={(e) => setSportType(e.target.value)}
-                  className={`appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${
-                    fieldErrors.sport_type ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'
-                  } focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer`}
+                  className={`appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${fieldErrors.sport_type ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer`}
                 >
                   <option value="" disabled>Pilih Jenis Olahraga</option>
                   {SPORT_OPTIONS.map((sport) => (
-                    <option key={sport.value} value={sport.value}>
-                      {sport.label}
-                    </option>
+                    <option key={sport.value} value={sport.value}>{sport.label}</option>
                   ))}
                   <option value="OTHER">Lainnya (Tulis Sendiri)...</option>
                 </select>
-                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#3d4a3d] pointer-events-none">
-                  expand_more
-                </span>
+                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#3d4a3d] pointer-events-none">expand_more</span>
               </div>
               {sportType === 'OTHER' && (
                 <input
@@ -326,14 +350,41 @@ export default function TambahLapangan() {
                   className="mt-2 w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-2 rounded-xl border border-[#bccbb9]/40 text-sm focus:outline-none focus:ring-2 focus:ring-[#006e2f]"
                 />
               )}
-              {fieldErrors.sport_type && (
-                <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.sport_type}</span>
-              )}
+              {fieldErrors.sport_type && <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.sport_type}</span>}
             </div>
           </div>
 
-          {/* Harga per Jam */}
-          <div className="flex flex-col gap-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-bold text-[#0b1c30]">
+                Jam Buka <span className="text-[#ba1a1a]">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="time"
+                  value={openTime}
+                  onChange={(e) => setOpenTime(e.target.value)}
+                  className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] text-sm h-12"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-bold text-[#0b1c30]">
+                Jam Tutup <span className="text-[#ba1a1a]">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="time"
+                  value={closeTime}
+                  onChange={(e) => setCloseTime(e.target.value)}
+                  className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] text-sm h-12"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5 w-full md:w-1/2 md:pr-3">
             <div className="flex items-center justify-between">
               <label className="text-sm font-bold text-[#0b1c30]" htmlFor="harga">
                 Tarif Sewa per Jam <span className="text-[#ba1a1a]">*</span>
@@ -345,73 +396,41 @@ export default function TambahLapangan() {
               )}
             </div>
             <div className="relative flex items-center">
-              <span className="absolute left-4 text-[#3d4a3d] font-bold text-sm select-none">
-                Rp
-              </span>
+              <span className="absolute left-4 text-[#3d4a3d] font-bold text-sm select-none">Rp</span>
               <input
                 id="harga"
                 type="number"
-                min="1"
-                step="1000"
+                min="10000"
+                step="5000"
                 value={pricePerHour}
                 onChange={(e) => setPricePerHour(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
-                className={`w-full bg-[#f8f9ff] text-[#0b1c30] placeholder:text-[#3d4a3d]/50 pl-12 pr-4 py-3 rounded-xl border ${
-                  fieldErrors.price_per_hour ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'
-                } focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 font-medium`}
+                className={`w-full bg-[#f8f9ff] text-[#0b1c30] pl-12 pr-4 py-3 rounded-xl border ${fieldErrors.price_per_hour ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 font-medium`}
                 placeholder="100000"
               />
             </div>
-            {fieldErrors.price_per_hour && (
+            {fieldErrors.price_per_hour ? (
               <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.price_per_hour}</span>
+            ) : (
+              <p className="text-xs font-medium text-[#3d4a3d]">Batas maksimal pengisian adalah Rp 5.000.000/jam.</p>
             )}
-            <p className="text-xs font-medium text-[#3d4a3d]">
-              Harga dasar sewa reguler. Anda dapat mengaktifkan jadwal dinamis di menu Jadwal.
-            </p>
           </div>
 
-          {/* Deskripsi Fasilitas */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-bold text-[#0b1c30]" htmlFor="deskripsi">
-              Deskripsi Fasilitas & Keunggulan
-            </label>
-            <textarea
-              id="deskripsi"
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-[#f8f9ff] text-[#0b1c30] placeholder:text-[#3d4a3d]/50 px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y"
-              placeholder="Jelaskan jenis lantai (vinyl/karpet/kayu), penerangan (lux), fasilitas AC, shower air hangat, loker, area parkir, kantin..."
-            />
-          </div>
-
-          {/* Toggle Status Aktif */}
-          <div className="flex items-center justify-between p-4 bg-[#f8f9ff] rounded-xl border border-[#bccbb9]/30 mt-1">
+          <div className="flex items-center justify-between p-4 bg-[#f8f9ff] rounded-xl border border-[#bccbb9]/30 mt-2">
             <div>
               <p className="text-sm font-bold text-[#0b1c30]">Status Awal Lapangan</p>
-              <p className="text-xs text-[#3d4a3d]">
-                {status === 'ACTIVE'
-                  ? 'Langsung aktif dan dapat dipesan oleh pemain setelah disimpan.'
-                  : 'Non-aktif (lapangan tersimpan namun disembunyikan sementara dari booking).'}
-              </p>
+              <p className="text-xs text-[#3d4a3d]">{status === 'ACTIVE' ? 'Langsung aktif dan dapat dipesan oleh pemain setelah disimpan.' : 'Non-aktif (lapangan tersimpan namun disembunyikan sementara).'}</p>
             </div>
             <button
               type="button"
               onClick={() => setStatus(status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5 ${
-                status === 'ACTIVE'
-                  ? 'bg-[#006e2f] text-white hover:bg-[#006e2f]/90'
-                  : 'bg-[#ffdad6] text-[#ba1a1a] hover:bg-red-200'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5 ${status === 'ACTIVE' ? 'bg-[#006e2f] text-white hover:bg-[#006e2f]/90' : 'bg-[#ffdad6] text-[#ba1a1a] hover:bg-red-200'}`}
             >
-              <span className="material-symbols-outlined text-[16px]">
-                {status === 'ACTIVE' ? 'check_circle' : 'pause_circle'}
-              </span>
+              <span className="material-symbols-outlined text-[16px]">{status === 'ACTIVE' ? 'check_circle' : 'pause_circle'}</span>
               <span>{status === 'ACTIVE' ? 'Aktif' : 'Non-Aktif'}</span>
             </button>
           </div>
         </section>
 
-        {/* Card 2: Lokasi & Alamat */}
         <section className="bg-[#ffffff] rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 flex flex-col gap-5">
           <div className="flex items-center gap-3 pb-3 border-b border-[#bccbb9]/20">
             <div className="w-9 h-9 rounded-xl bg-[#005ac2]/15 flex items-center justify-center text-[#005ac2]">
@@ -419,56 +438,57 @@ export default function TambahLapangan() {
             </div>
             <div>
               <h2 className="text-lg font-bold text-[#0b1c30]">2. Lokasi Lapangan</h2>
-              <p className="text-xs text-[#3d4a3d]">Alamat venue agar mudah ditemukan oleh pelanggan di peta.</p>
+              <p className="text-xs text-[#3d4a3d]">Pilih kota dan kecamatan agar lapangan mudah ditemukan di peta pencarian.</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Kota / Kabupaten */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-bold text-[#0b1c30]" htmlFor="kota">
                 Kota / Kabupaten <span className="text-[#ba1a1a]">*</span>
               </label>
               <div className="relative">
-                <input
+                <select
                   id="kota"
-                  type="text"
-                  list="city-options"
                   value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className={`w-full bg-[#f8f9ff] text-[#0b1c30] placeholder:text-[#3d4a3d]/50 px-4 py-3 rounded-xl border ${
-                    fieldErrors.city ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'
-                  } focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12`}
-                  placeholder="Ketik atau pilih kota (cth: Jakarta Selatan)"
-                />
-                <datalist id="city-options">
-                  {POPULAR_CITIES.map((c) => (
-                    <option key={c} value={c} />
+                  onChange={(e) => {
+                    setCity(e.target.value);
+                    setDistrict('');
+                  }}
+                  className={`appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${fieldErrors.city ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer`}
+                >
+                  <option value="" disabled>Pilih Kota / Kabupaten...</option>
+                  {Object.keys(CITY_DISTRICTS).map((c) => (
+                    <option key={c} value={c}>{c}</option>
                   ))}
-                </datalist>
+                </select>
+                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#3d4a3d] pointer-events-none">expand_more</span>
               </div>
-              {fieldErrors.city && (
-                <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.city}</span>
-              )}
+              {fieldErrors.city && <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.city}</span>}
             </div>
 
-            {/* Kecamatan */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-bold text-[#0b1c30]" htmlFor="kecamatan">
-                Kecamatan (Opsional)
+                Kecamatan
               </label>
-              <input
-                id="kecamatan"
-                type="text"
-                value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                className="w-full bg-[#f8f9ff] text-[#0b1c30] placeholder:text-[#3d4a3d]/50 px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12"
-                placeholder="Contoh: Kebayoran Baru / Cilandak"
-              />
+              <div className="relative">
+                <select
+                  id="kecamatan"
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  disabled={!city}
+                  className="appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] disabled:bg-gray-100 disabled:text-gray-400 px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer"
+                >
+                  <option value="">{!city ? 'Pilih Kota terlebih dahulu...' : 'Pilih Kecamatan...'}</option>
+                  {availableDistricts.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#3d4a3d] pointer-events-none">expand_more</span>
+              </div>
             </div>
           </div>
 
-          {/* Alamat Lengkap */}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-bold text-[#0b1c30]" htmlFor="alamat">
               Alamat Lengkap Venue <span className="text-[#ba1a1a]">*</span>
@@ -478,148 +498,198 @@ export default function TambahLapangan() {
               rows={2}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className={`w-full bg-[#f8f9ff] text-[#0b1c30] placeholder:text-[#3d4a3d]/50 px-4 py-3 rounded-xl border ${
-                fieldErrors.address ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'
-              } focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y`}
+              className={`w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${fieldErrors.address ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y`}
               placeholder="Masukkan nama jalan, nomor kavling, nama gedung/gor, patokan terdekat."
             />
-            {fieldErrors.address && (
-              <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.address}</span>
-            )}
+            {fieldErrors.address && <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.address}</span>}
           </div>
         </section>
 
-        {/* Card 3: Foto & Media Visual */}
         <section className="bg-[#ffffff] rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 flex flex-col gap-5">
           <div className="flex items-center gap-3 pb-3 border-b border-[#bccbb9]/20">
             <div className="w-9 h-9 rounded-xl bg-[#82abff]/25 flex items-center justify-center text-[#005ac2]">
               <span className="material-symbols-outlined text-[22px]">add_photo_alternate</span>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-[#0b1c30]">3. Foto Lapangan</h2>
-              <p className="text-xs text-[#3d4a3d]">Pilih foto preset siap pakai atau masukkan link URL foto fasilitas Anda.</p>
+              <h2 className="text-lg font-bold text-[#0b1c30]">3. Fasilitas & Media Visual</h2>
+              <p className="text-xs text-[#3d4a3d]">Pilih fasilitas tambahan dan atur foto untuk menarik perhatian pelanggan.</p>
             </div>
           </div>
 
-          {/* URL Input */}
+          <div className="flex flex-col gap-2 mb-2">
+            <label className="text-sm font-bold text-[#0b1c30]">Fasilitas yang Tersedia</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-1">
+              {AMENITIES.map((amenity) => {
+                const isSelected = selectedAmenities.includes(amenity.id);
+                return (
+                  <button
+                    type="button"
+                    key={amenity.id}
+                    onClick={() => handleToggleAmenity(amenity.id)}
+                    className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-left ${
+                      isSelected 
+                        ? 'bg-[#22c55e]/10 border-[#006e2f]/50 text-[#006e2f]' 
+                        : 'bg-white border-[#bccbb9]/40 text-[#3d4a3d] hover:bg-[#f8f9ff]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">{amenity.icon}</span>
+                    <span className="text-[11px] font-bold leading-tight">{amenity.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-bold text-[#0b1c30]" htmlFor="image_url">
-              URL Foto Lapangan (Opsional)
+            <label className="text-sm font-bold text-[#0b1c30]" htmlFor="deskripsi">
+              Deskripsi Tambahan (Opsional)
             </label>
-            <div className="flex gap-2">
-              <input
-                id="image_url"
-                type="url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                className="flex-1 bg-[#f8f9ff] text-[#0b1c30] placeholder:text-[#3d4a3d]/50 px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12"
-                placeholder="https://images.unsplash.com/..."
-              />
-              {imageUrl && (
-                <button
-                  type="button"
-                  onClick={() => setImageUrl('')}
-                  className="px-4 h-12 rounded-xl bg-[#ffdad6] text-[#ba1a1a] hover:bg-red-200 text-xs font-bold transition-colors cursor-pointer"
-                >
-                  Hapus
-                </button>
-              )}
-            </div>
+            <textarea
+              id="deskripsi"
+              rows={2}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y"
+              placeholder="Tuliskan keunggulan lain: jenis lantai (vinyl/karpet), penerangan (lux)..."
+            />
           </div>
 
-          {/* Pilihan Foto Cepat (Preset Images) */}
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-bold text-[#3d4a3d]">Atau Pilih Foto Berkualitas Tinggi (1-Klik):</p>
+          <div className="flex flex-col gap-3 mt-2 border-t border-[#bccbb9]/20 pt-4">
+            <label
+              htmlFor="multi-photo-upload"
+              className="border-2 border-dashed border-[#bccbb9] hover:border-[#006e2f] bg-[#f8f9ff] hover:bg-[#f0f9f3] rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all text-center"
+            >
+              <div className="w-12 h-12 rounded-full bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center">
+                <span className="material-symbols-outlined text-[28px]">cloud_upload</span>
+              </div>
+              <p className="text-sm font-bold text-[#0b1c30]">Klik untuk Unggah Foto dari Perangkat</p>
+              <p className="text-xs text-[#3d4a3d]">Pilih format PNG, JPG, atau JPEG (Bisa pilih beberapa foto sekaligus)</p>
+              <input
+                id="multi-photo-upload"
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+            </label>
+
+            {selectedPhotos.length > 0 && (
+              <div className="flex flex-col gap-2 mt-2">
+                <p className="text-xs font-bold text-[#0b1c30]">
+                  Foto Terpilih ({selectedPhotos.length} Foto)
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                  {selectedPhotos.map((photo, idx) => (
+                    <div key={idx} className="relative group rounded-xl overflow-hidden border border-[#bccbb9]/40 h-28 bg-[#f8f9ff]">
+                      <img src={photo} alt={`Foto Lapangan ${idx + 1}`} className="w-full h-full object-cover" />
+                      {idx === 0 && (
+                        <span className="absolute bottom-1.5 left-1.5 bg-[#006e2f] text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                          Foto Utama
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePhoto(idx)}
+                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-600/90 hover:bg-red-600 text-white flex items-center justify-center shadow-md transition-all cursor-pointer"
+                        title="Hapus foto"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">close</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2 border-t border-[#bccbb9]/20 pt-4 mt-1">
+            <p className="text-xs font-semibold text-[#3d4a3d]">Atau gunakan foto preset siap pakai:</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
               {PRESET_IMAGES.map((preset) => (
                 <button
                   type="button"
                   key={preset.name}
                   onClick={() => {
-                    setImageUrl(preset.url);
+                    setSelectedPhotos((prev) => [...prev, preset.url]);
                     if (!sportType) setSportType(preset.sport);
                   }}
-                  className={`group relative h-28 rounded-xl overflow-hidden border-2 transition-all cursor-pointer text-left ${
-                    imageUrl === preset.url
-                      ? 'border-[#006e2f] ring-2 ring-[#006e2f]/30 shadow-md'
-                      : 'border-transparent hover:border-[#006e2f]/50'
-                  }`}
+                  className="group relative h-20 rounded-xl overflow-hidden border border-transparent hover:border-[#006e2f] transition-all cursor-pointer text-left"
                 >
-                  <img
-                    src={preset.url}
-                    alt={preset.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-2 flex flex-col justify-end">
-                    <span className="text-[11px] font-bold text-white leading-tight">
-                      {preset.name}
-                    </span>
-                    <span className="text-[9px] text-emerald-300 font-semibold uppercase">
-                      {preset.sport}
-                    </span>
+                  <img src={preset.url} alt={preset.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent p-1.5 flex flex-col justify-end">
+                    <span className="text-[10px] font-bold text-white leading-tight">{preset.name}</span>
                   </div>
-                  {imageUrl === preset.url && (
-                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#006e2f] text-white flex items-center justify-center shadow-sm">
-                      <span className="material-symbols-outlined text-[14px]">check</span>
-                    </div>
-                  )}
                 </button>
               ))}
             </div>
           </div>
+        </section>
 
-          {/* Preview Image Card */}
-          <div className="mt-2 p-4 rounded-xl bg-[#f8f9ff] border border-[#bccbb9]/30 flex flex-col sm:flex-row items-center gap-4">
-            <div className="w-32 h-20 rounded-lg overflow-hidden bg-[#e5eeff] shrink-0 border border-[#bccbb9]/30">
-              <img
-                src={imageUrl || getCourtFallbackImage(finalSportType)}
-                alt="Preview Lapangan"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = getCourtFallbackImage(finalSportType);
-                }}
-              />
+        {/* Section 4: Aturan & Regulasi Venue */}
+        <section className="bg-[#ffffff] rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 flex flex-col gap-5">
+          <div className="flex items-center gap-3 pb-3 border-b border-[#bccbb9]/20">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+              <span className="material-symbols-outlined text-[22px]">gavel</span>
             </div>
-            <div className="text-center sm:text-left">
-              <p className="text-xs font-bold text-[#0b1c30]">Pratinjau Tampilan Visual</p>
-              <p className="text-[11px] text-[#3d4a3d] mt-0.5">
-                {imageUrl
-                  ? 'Foto terpilih akan ditampilkan di kartu lapangan dan halaman booking pelanggan.'
-                  : 'Jika tidak memilih foto, gambar ilustrasi olahraga akan otomatis digunakan sebagai cadangan.'}
-              </p>
+            <div>
+              <h2 className="text-lg font-bold text-[#0b1c30]">4. Aturan & Regulasi Venue</h2>
+              <p className="text-xs text-[#3d4a3d]">Tetapkan aturan bagi pelanggan dan kebijakan refund saat terjadi pembatalan.</p>
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-bold text-[#0b1c30]">
+              Aturan Venue <span className="text-[#ba1a1a]">*</span>
+            </label>
+            <p className="text-[11px] text-[#3d4a3d] mb-1">Beritahu pelanggan apa saja yang diperbolehkan dan dilarang di area lapangan.</p>
+            <textarea
+              rows={4}
+              value={rules}
+              onChange={(e) => setRules(e.target.value)}
+              className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y"
+              placeholder="- Wajib menggunakan sepatu olahraga khusus indoor.&#10;- Dilarang merokok di area GOR."
+              required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5 mt-2">
+            <label className="text-sm font-bold text-[#0b1c30]">
+              Kebijakan Refund & Reschedule <span className="text-[#ba1a1a]">*</span>
+            </label>
+            <p className="text-[11px] text-[#3d4a3d] mb-1">Beri kejelasan kepada pelanggan apakah booking bisa dibatalkan atau diganti jadwalnya.</p>
+            <textarea
+              rows={3}
+              value={refundPolicy}
+              onChange={(e) => setRefundPolicy(e.target.value)}
+              className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y"
+              placeholder="Booking yang sudah dibayar tidak dapat dibatalkan (Non-refundable). Jika ada hujan, jadwal bisa di-reschedule..."
+              required
+            />
           </div>
         </section>
 
-        {/* Sticky Action Footer */}
         <div className="sticky bottom-6 z-30 flex items-center justify-between gap-4 bg-[#ffffff]/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-[#bccbb9]/30">
-          <Link
-            href="/owner/lapangan"
-            className="px-6 py-3 rounded-xl font-semibold text-xs text-[#3d4a3d] hover:bg-[#eff4ff] transition-colors flex items-center justify-center cursor-pointer"
-          >
+          <Link href="/owner/lapangan" className="px-6 py-3 rounded-xl font-semibold text-xs text-[#3d4a3d] hover:bg-[#eff4ff] transition-colors flex items-center justify-center cursor-pointer">
             Batal
           </Link>
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-8 py-3 rounded-xl font-bold text-xs bg-[#006e2f] text-[#ffffff] hover:bg-[#006e2f]/90 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="material-symbols-outlined text-[18px] animate-spin">
-                    progress_activity
-                  </span>
-                  <span>Menyimpan Lapangan...</span>
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-[18px]">save</span>
-                  <span>Simpan & Daftarkan Lapangan</span>
-                </>
-              )}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="px-8 py-3 rounded-xl font-bold text-xs bg-[#006e2f] text-[#ffffff] hover:bg-[#006e2f]/90 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <>
+                <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                <span>Menyimpan Lapangan...</span>
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[18px]">save</span>
+                <span>Simpan & Daftarkan Lapangan</span>
+              </>
+            )}
+          </button>
         </div>
       </form>
     </div>

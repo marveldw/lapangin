@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/AuthContext';
 import { api } from '@/lib/api';
 import { formatRupiah } from '@/lib/formatters';
+import { useDebounce } from '@/lib/useDebounce';
 
 export interface CourtItem {
   court_id: number;
@@ -18,11 +19,50 @@ export interface CourtItem {
   district?: string | null;
   image_url?: string | null;
   status: 'ACTIVE' | 'INACTIVE' | string;
+  booking_count?: number;
   created_at?: string;
   updated_at?: string;
 }
 
-// Fallback image helper berdasarkan jenis olahraga
+const SPORT_OPTIONS = [
+  { label: 'Bulutangkis / Badminton', value: 'Badminton', icon: 'sports_tennis' },
+  { label: 'Futsal', value: 'Futsal', icon: 'sports_soccer' },
+  { label: 'Bola Basket', value: 'Basket', icon: 'sports_basketball' },
+  { label: 'Tenis Lapangan', value: 'Tenis', icon: 'sports_tennis' },
+  { label: 'Mini Soccer', value: 'Mini Soccer', icon: 'sports_soccer' },
+  { label: 'Bola Voli', value: 'Voli', icon: 'sports_volleyball' },
+  { label: 'Tenis Meja / Pingpong', value: 'Tenis Meja', icon: 'sports_baseball' },
+  { label: 'Padel', value: 'Padel', icon: 'sports_tennis' },
+];
+
+const PRESET_IMAGES = [
+  { name: 'Badminton Indoor', sport: 'Badminton', url: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=800&q=80' },
+  { name: 'Futsal Rumput Sintetis', sport: 'Futsal', url: 'https://images.unsplash.com/photo-1529900240051-06c3960f703f?auto=format&fit=crop&w=800&q=80' },
+  { name: 'Lapangan Basket Kayu', sport: 'Basket', url: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=800&q=80' },
+  { name: 'Tenis Lapangan Keras', sport: 'Tenis', url: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=800&q=80' },
+  { name: 'Mini Soccer Arena', sport: 'Mini Soccer', url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80' },
+];
+
+const CITY_DISTRICTS: Record<string, string[]> = {
+  'Jakarta Selatan': ['Cilandak', 'Jagakarsa', 'Kebayoran Baru', 'Kebayoran Lama', 'Mampang Prapatan', 'Pancoran', 'Pasar Minggu', 'Pesanggrahan', 'Setiabudi', 'Tebet'],
+  'Jakarta Barat': ['Cengkareng', 'Grogol Petamburan', 'Taman Sari', 'Tambora', 'Kebon Jeruk', 'Kalideres', 'Palmerah', 'Kembangan'],
+  'Jakarta Pusat': ['Cempaka Putih', 'Gambir', 'Johar Baru', 'Kemayoran', 'Menteng', 'Sawah Besar', 'Senen', 'Tanah Abang'],
+  'Jakarta Timur': ['Cakung', 'Cipayung', 'Ciracas', 'Duren Sawit', 'Jatinegara', 'Kramat Jati', 'Makasar', 'Matraman', 'Pasar Rebo', 'Pulo Gadung'],
+  'Jakarta Utara': ['Cilincing', 'Kelapa Gading', 'Koja', 'Pademangan', 'Penjaringan', 'Tanjung Priok'],
+  'Semarang': ['Banyumanik', 'Candisari', 'Gajahmungkur', 'Gayamsari', 'Genuk', 'Gunungpati', 'Mijen', 'Ngaliyan', 'Pedurungan', 'Semarang Barat', 'Semarang Selatan', 'Semarang Tengah', 'Semarang Timur', 'Semarang Utara', 'Tembalang', 'Tugu'],
+  'Bandung': ['Andir', 'Antapani', 'Arcamanik', 'Astanaanyar', 'Babakan Ciparay', 'Bandung Kidul', 'Bandung Kulon', 'Bandung Wetan', 'Batununggal', 'Bojongloa Kaler', 'Bojongloa Kidul', 'Buahbatu', 'Cibeunying Kaler', 'Cibeunying Kidul', 'Cibiru', 'Cicendo', 'Cidadap', 'Cinambo', 'Coblong', 'Gedebage', 'Kiaracondong', 'Lengkong', 'Mandalajati', 'Panyileukan', 'Rancasari', 'Regol', 'Sukajadi', 'Sukasari', 'Sumur Bandung', 'Ujungberung'],
+  'Surabaya': ['Asemrowo', 'Benowo', 'Bubutan', 'Bulak', 'Dukuh Pakis', 'Gayungan', 'Genteng', 'Gubeng', 'Gunung Anyar', 'Jambangan', 'Karang Pilang', 'Kenjeran', 'Krembangan', 'Lakarsantri', 'Mulyorejo', 'Pabean Cantian', 'Pakal', 'Rungkut', 'Sambikerep', 'Sawahan', 'Semampir', 'Simokerto', 'Sukolilo', 'Sukomanunggal', 'Tambaksari', 'Tandes', 'Tegalsari', 'Tenggilis Mejoyo', 'Wiyung', 'Wonocolo', 'Wonokromo']
+};
+
+const AMENITIES = [
+  { id: 'parking', label: 'Area Parkir Luas', icon: 'local_parking' },
+  { id: 'shower', label: 'Kamar Mandi / Shower', icon: 'shower' },
+  { id: 'toilet', label: 'Toilet Umum', icon: 'wc' },
+  { id: 'canteen', label: 'Kantin / Cafe', icon: 'restaurant' },
+  { id: 'locker', label: 'Loker Barang', icon: 'lock' },
+  { id: 'waiting_room', label: 'Ruang Tunggu / Tribun', icon: 'chair' },
+];
+
 export function getCourtFallbackImage(sportType?: string): string {
   const sport = (sportType || '').toLowerCase();
   if (sport.includes('badminton') || sport.includes('bulutangkis')) {
@@ -56,20 +96,17 @@ export default function DaftarLapangan() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [sportFilter, setSportFilter] = useState<string>('ALL');
 
-  // Action states
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
-  // Delete / Deactivate modal state
   const [courtToDelete, setCourtToDelete] = useState<CourtItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Edit modal state
   const [editingCourt, setEditingCourt] = useState<CourtItem | null>(null);
   const [editFormData, setEditFormData] = useState({
     name: '',
@@ -79,13 +116,20 @@ export default function DaftarLapangan() {
     city: '',
     district: '',
     description: '',
-    image_url: '',
     status: 'ACTIVE',
   });
+  
+  const [editCustomSport, setEditCustomSport] = useState('');
+  const [editOpenTime, setEditOpenTime] = useState('08:00');
+  const [editCloseTime, setEditCloseTime] = useState('23:00');
+  const [editSelectedAmenities, setEditSelectedAmenities] = useState<string[]>([]);
+  const [editSelectedPhotos, setEditSelectedPhotos] = useState<string[]>([]);
+  const [editRules, setEditRules] = useState('');
+  const [editRefundPolicy, setEditRefundPolicy] = useState('');
+
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
-  // Auto-hide toast
   useEffect(() => {
     if (toastMessage) {
       const timer = setTimeout(() => setToastMessage(null), 4000);
@@ -93,7 +137,6 @@ export default function DaftarLapangan() {
     }
   }, [toastMessage]);
 
-  // Fetch courts from backend
   const fetchCourts = async () => {
     if (!token) return;
     setLoading(true);
@@ -121,7 +164,6 @@ export default function DaftarLapangan() {
     }
   }, [token, authLoading]);
 
-  // Toggle status court (ACTIVE <-> INACTIVE)
   const handleToggleStatus = async (court: CourtItem) => {
     if (!token || updatingId) return;
     const newStatus = court.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
@@ -159,7 +201,6 @@ export default function DaftarLapangan() {
     }
   };
 
-  // Confirm delete / deactivation
   const handleConfirmDelete = async () => {
     if (!courtToDelete || !token) return;
     setIsDeleting(true);
@@ -194,33 +235,111 @@ export default function DaftarLapangan() {
     }
   };
 
-  // Open Edit Modal
   const handleOpenEdit = (court: CourtItem) => {
     setEditingCourt(court);
+    
+    let rawDesc = court.description || '';
+    let oTime = '08:00';
+    let cTime = '23:00';
+    let foundAmenities: string[] = [];
+    
+    let eRules = '- Wajib menggunakan sepatu olahraga khusus indoor.\n- Dilarang membawa makanan berat ke dalam area lapangan.\n- Dilarang merokok di area GOR.';
+    let eRefund = 'Booking yang sudah dibayar tidak dapat dibatalkan (Non-refundable). Jika ada kendala cuaca pada lapangan outdoor, jadwal bisa di-reschedule.';
+
+    // Extract Refund Policy (Bottom-up)
+    const refundSplit = rawDesc.split(/Kebijakan Refund & Reschedule:\n/i);
+    if (refundSplit.length > 1) {
+      eRefund = refundSplit[1].trim();
+      rawDesc = refundSplit[0];
+    }
+
+    // Extract Rules
+    const rulesSplit = rawDesc.split(/Aturan Venue:\n/i);
+    if (rulesSplit.length > 1) {
+      eRules = rulesSplit[1].trim();
+      rawDesc = rulesSplit[0];
+    }
+
+    const timeMatch = rawDesc.match(/Jam Operasional:\s*(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+    if (timeMatch) {
+      oTime = timeMatch[1];
+      cTime = timeMatch[2];
+      rawDesc = rawDesc.replace(timeMatch[0], '');
+    }
+
+    const fasMatch = rawDesc.match(/Fasilitas Tersedia:\s*(.*?)\./);
+    if (fasMatch) {
+      const fasString = fasMatch[1];
+      AMENITIES.forEach(a => {
+        if (fasString.includes(a.label)) {
+          foundAmenities.push(a.id);
+        }
+      });
+      rawDesc = rawDesc.replace(/Fasilitas Tersedia:.*?\.\n*/, '');
+    }
+
+    rawDesc = rawDesc.trim();
+
+    const isCustomSport = court.sport_type && !SPORT_OPTIONS.some(s => s.value === court.sport_type);
+
     setEditFormData({
       name: court.name || '',
-      sport_type: court.sport_type || '',
+      sport_type: isCustomSport ? 'OTHER' : (court.sport_type || ''),
       price_per_hour: court.price_per_hour || 0,
       address: court.address || '',
       city: court.city || '',
       district: court.district || '',
-      description: court.description || '',
-      image_url: court.image_url || '',
+      description: rawDesc,
       status: court.status || 'ACTIVE',
     });
+
+    setEditCustomSport(isCustomSport ? court.sport_type : '');
+    setEditOpenTime(oTime);
+    setEditCloseTime(cTime);
+    setEditSelectedAmenities(foundAmenities);
+    setEditSelectedPhotos(court.image_url ? [court.image_url] : []);
+    setEditRules(eRules);
+    setEditRefundPolicy(eRefund);
     setEditErrors({});
   };
 
-  // Save Edit Court
+  const handleToggleEditAmenity = (id: string) => {
+    setEditSelectedAmenities(prev => 
+      prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
+    );
+  };
+
+  const handleEditPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const fileList = Array.from(files);
+    fileList.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          setEditSelectedPhotos((prev) => [...prev, reader.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveEditPhoto = (indexToRemove: number) => {
+    setEditSelectedPhotos((prev) => prev.filter((_, i) => i !== indexToRemove));
+  };
+
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCourt || !token) return;
 
+    const finalEditSportType = editFormData.sport_type === 'OTHER' ? editCustomSport : editFormData.sport_type;
+
     const errors: Record<string, string> = {};
     if (!editFormData.name.trim()) errors.name = 'Nama lapangan wajib diisi';
-    if (!editFormData.sport_type.trim()) errors.sport_type = 'Jenis olahraga wajib diisi';
-    if (!editFormData.price_per_hour || editFormData.price_per_hour <= 0) {
-      errors.price_per_hour = 'Harga per jam harus lebih dari 0';
+    if (!finalEditSportType.trim()) errors.sport_type = 'Jenis olahraga wajib diisi';
+    if (!editFormData.price_per_hour || editFormData.price_per_hour < 10000) {
+      errors.price_per_hour = 'Tarif sewa minimal Rp 10.000 / jam';
     }
     if (!editFormData.address.trim()) errors.address = 'Alamat wajib diisi';
     if (!editFormData.city.trim()) errors.city = 'Kota wajib diisi';
@@ -231,8 +350,33 @@ export default function DaftarLapangan() {
     }
 
     setIsSavingEdit(true);
+
+    const baseDescription = editFormData.description.trim() ? `${editFormData.description.trim()}\n\n` : '';
+    const rulesSection = editRules.trim() ? `Aturan Venue:\n${editRules.trim()}\n\n` : '';
+    const refundSection = editRefundPolicy.trim() ? `Kebijakan Refund & Reschedule:\n${editRefundPolicy.trim()}` : '';
+
+    const compiledDescription = `Jam Operasional: ${editOpenTime} - ${editCloseTime}\n${
+      editSelectedAmenities.length > 0
+        ? `Fasilitas Tersedia: ${editSelectedAmenities.map(a => AMENITIES.find(x => x.id === a)?.label).join(', ')}.\n\n`
+        : '\n'
+    }${baseDescription}${rulesSection}${refundSection}`;
+
     try {
-      const res = await api.put(`/courts/${editingCourt.court_id}`, editFormData, token);
+      const payload = {
+        name: editFormData.name.trim(),
+        sport_type: finalEditSportType.trim(),
+        price_per_hour: Number(editFormData.price_per_hour),
+        address: editFormData.address.trim(),
+        city: editFormData.city.trim(),
+        district: editFormData.district.trim() ? editFormData.district.trim() : null,
+        description: compiledDescription ? compiledDescription : null,
+        image_url: editSelectedPhotos.length > 0 && editSelectedPhotos[0].startsWith('http')
+          ? editSelectedPhotos[0]
+          : getCourtFallbackImage(finalEditSportType),
+        status: editFormData.status,
+      };
+
+      const res = await api.put(`/courts/${editingCourt.court_id}`, payload, token);
 
       if (res?.success && res.data) {
         const updated = res.data;
@@ -261,7 +405,6 @@ export default function DaftarLapangan() {
     }
   };
 
-  // Extract unique sports for filter dropdown
   const uniqueSports = useMemo(() => {
     const sports = new Set<string>();
     courts.forEach((c) => {
@@ -270,10 +413,9 @@ export default function DaftarLapangan() {
     return Array.from(sports);
   }, [courts]);
 
-  // Filtered courts
   const filteredCourts = useMemo(() => {
     return courts.filter((court) => {
-      const query = searchTerm.toLowerCase().trim();
+      const query = debouncedSearch.toLowerCase().trim();
       const matchSearch =
         !query ||
         court.name.toLowerCase().includes(query) ||
@@ -291,7 +433,7 @@ export default function DaftarLapangan() {
 
       return matchSearch && matchStatus && matchSport;
     });
-  }, [courts, searchTerm, statusFilter, sportFilter]);
+  }, [courts, debouncedSearch, statusFilter, sportFilter]);
 
   const totalCourts = courts.length;
   const activeCourts = courts.filter((c) => c.status === 'ACTIVE').length;
@@ -299,7 +441,6 @@ export default function DaftarLapangan() {
 
   return (
     <div className="flex flex-col w-full gap-8 pb-16">
-      {/* Toast Notification */}
       {toastMessage && (
         <div
           className={`fixed top-24 right-8 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg border transition-all transform duration-300 animate-in fade-in slide-in-from-top-4 ${
@@ -321,7 +462,6 @@ export default function DaftarLapangan() {
         </div>
       )}
 
-      {/* Header Halaman */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 relative z-10">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
@@ -344,7 +484,6 @@ export default function DaftarLapangan() {
         </Link>
       </div>
 
-      {/* Quick Stats Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl p-4 border border-[#bccbb9]/30 shadow-sm flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -392,7 +531,6 @@ export default function DaftarLapangan() {
         </div>
       </div>
 
-      {/* Filter & Search Toolbar */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#bccbb9]/30 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
         <div className="relative flex-1">
           <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#3d4a3d]/60 text-[20px]">
@@ -466,7 +604,6 @@ export default function DaftarLapangan() {
         </div>
       </div>
 
-      {/* Content Area */}
       {loading || authLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
@@ -554,21 +691,31 @@ export default function DaftarLapangan() {
             return (
               <div
                 key={court.court_id}
-                className={`bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col overflow-hidden border ${
-                  isActive ? 'border-[#bccbb9]/30' : 'border-amber-200/60 bg-[#fafafa]'
-                } group`}
+                className={`rounded-2xl shadow-sm transition-all duration-300 flex flex-col overflow-hidden border group ${
+                  isActive
+                    ? 'bg-white border-[#bccbb9]/30 hover:shadow-md'
+                    : 'bg-[#f1f4f9] border-[#d1d9e2] opacity-90'
+                }`}
               >
                 <div className="relative h-48 w-full overflow-hidden bg-[#e5eeff]">
                   <img
                     src={imageUrl}
                     alt={court.name}
-                    className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${
-                      !isActive ? 'grayscale-[50%] opacity-80' : ''
+                    className={`w-full h-full object-cover transition-transform duration-700 ${
+                      isActive ? 'group-hover:scale-105' : 'grayscale opacity-60 mix-blend-multiply'
                     }`}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = getCourtFallbackImage(court.sport_type);
                     }}
                   />
+
+                  {!isActive && (
+                    <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-10 pointer-events-none">
+                      <span className="bg-[#0b1c30]/80 text-[#ffffff] text-xs font-bold px-4 py-2 rounded-lg uppercase tracking-widest backdrop-blur-md shadow-sm">
+                        NON-AKTIF
+                      </span>
+                    </div>
+                  )}
 
                   <div className="absolute bottom-3 left-3 z-20 bg-[#0b1c30]/80 backdrop-blur-md text-[#ffffff] text-[11px] font-bold px-3 py-1 rounded-full shadow-sm uppercase tracking-wider">
                     {court.sport_type}
@@ -600,7 +747,7 @@ export default function DaftarLapangan() {
                 </div>
 
                 <div className="p-6 flex flex-col flex-1">
-                  <div className="flex justify-between items-start gap-2 mb-2">
+                  <div className="flex justify-between items-start gap-2">
                     <div>
                       <h3 className="text-xl font-bold text-[#0b1c30] group-hover:text-[#006e2f] transition-colors line-clamp-1">
                         {court.name}
@@ -613,16 +760,27 @@ export default function DaftarLapangan() {
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="text-lg font-bold text-[#006e2f] block leading-tight">
+                      <span className={`text-lg font-bold block leading-tight ${isActive ? 'text-[#006e2f]' : 'text-[#3d4a3d]'}`}>
                         {formatRupiah(court.price_per_hour)}
                       </span>
                       <span className="text-[11px] font-medium text-[#3d4a3d]">/ jam</span>
                     </div>
                   </div>
 
-                  <p className="text-xs text-[#3d4a3d]/80 line-clamp-2 my-2 min-h-[32px]">
-                    {court.description || court.address || 'Tidak ada deskripsi tambahan.'}
-                  </p>
+                  <div className="my-4 flex items-center">
+                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border ${
+                      isActive 
+                        ? 'bg-[#fff4e5] border-[#ffe5b4] text-[#e65c00]' 
+                        : 'bg-[#e2e8f0] border-[#cbd5e1] text-[#64748b]'
+                    }`}>
+                      <span className="material-symbols-outlined text-[16px]">
+                        {isActive ? 'local_fire_department' : 'history'}
+                      </span>
+                      <span className="text-[11px] font-bold">
+                        {court.booking_count || 0}x dipesan
+                      </span>
+                    </div>
+                  </div>
 
                   <div className="mt-auto pt-4 flex items-center justify-between border-t border-[#bccbb9]/20">
                     <div className="flex items-center gap-2">
@@ -646,7 +804,9 @@ export default function DaftarLapangan() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleOpenEdit(court)}
-                        className="w-9 h-9 rounded-xl bg-[#e5eeff] text-[#3d4a3d] flex items-center justify-center hover:bg-[#006e2f] hover:text-white transition-all shadow-sm cursor-pointer"
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all shadow-sm cursor-pointer ${
+                          isActive ? 'bg-[#e5eeff] text-[#3d4a3d] hover:bg-[#006e2f] hover:text-white' : 'bg-white text-[#3d4a3d] hover:bg-gray-200'
+                        }`}
                         title="Edit Data Lapangan"
                       >
                         <span className="material-symbols-outlined text-[18px]">edit</span>
@@ -654,7 +814,9 @@ export default function DaftarLapangan() {
 
                       <button
                         onClick={() => setCourtToDelete(court)}
-                        className="w-9 h-9 rounded-xl bg-[#e5eeff] text-[#3d4a3d] flex items-center justify-center hover:bg-[#ffdad6] hover:text-[#ba1a1a] transition-all shadow-sm cursor-pointer"
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all shadow-sm cursor-pointer ${
+                          isActive ? 'bg-[#e5eeff] text-[#3d4a3d] hover:bg-[#ffdad6] hover:text-[#ba1a1a]' : 'bg-white text-[#3d4a3d] hover:bg-gray-200'
+                        }`}
                         title="Nonaktifkan Lapangan"
                       >
                         <span className="material-symbols-outlined text-[18px]">delete</span>
@@ -683,10 +845,9 @@ export default function DaftarLapangan() {
         </div>
       )}
 
-      {/* MODAL EDIT LAPANGAN */}
       {editingCourt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b1c30]/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-[#bccbb9]/30 flex flex-col">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-[#bccbb9]/30 flex flex-col">
             <div className="p-6 border-b border-[#bccbb9]/20 flex items-center justify-between sticky top-0 bg-white z-10">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-xl bg-[#e5eeff] text-[#006e2f] flex items-center justify-center">
@@ -705,197 +866,387 @@ export default function DaftarLapangan() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="p-6 flex flex-col gap-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-[#0b1c30]">
-                    Nama Lapangan <span className="text-[#ba1a1a]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.name}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, name: e.target.value })
-                    }
-                    className="w-full bg-[#f8f9ff] text-sm text-[#0b1c30] px-3.5 py-2.5 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f]"
-                    placeholder="Contoh: Lapangan Badminton A"
-                  />
-                  {editErrors.name && (
-                    <span className="text-[11px] text-[#ba1a1a] font-medium">{editErrors.name}</span>
+            <form onSubmit={handleSaveEdit} className="p-6 flex flex-col gap-6 bg-[#f8f9ff]">
+              
+              <section className="bg-[#ffffff] rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 flex flex-col gap-5">
+                <div className="flex items-center gap-3 pb-3 border-b border-[#bccbb9]/20">
+                  <div className="w-9 h-9 rounded-xl bg-[#22c55e]/20 flex items-center justify-center text-[#006e2f]">
+                    <span className="material-symbols-outlined text-[22px]">info</span>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-[#0b1c30]">1. Informasi Umum</h2>
+                    <p className="text-xs text-[#3d4a3d]">Nama lapangan, tipe olahraga, dan tarif sewa per jam.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-bold text-[#0b1c30]">
+                      Nama Lapangan <span className="text-[#ba1a1a]">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.name}
+                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                      className={`w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${editErrors.name ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12`}
+                      placeholder="Contoh: Lapangan Badminton A"
+                    />
+                    {editErrors.name && <span className="text-xs font-semibold text-[#ba1a1a]">{editErrors.name}</span>}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-bold text-[#0b1c30]">
+                      Jenis Olahraga <span className="text-[#ba1a1a]">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={editFormData.sport_type}
+                        onChange={(e) => setEditFormData({ ...editFormData, sport_type: e.target.value })}
+                        className={`appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${editErrors.sport_type ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer`}
+                      >
+                        <option value="" disabled>Pilih Jenis Olahraga</option>
+                        {SPORT_OPTIONS.map((sport) => (
+                          <option key={sport.value} value={sport.value}>{sport.label}</option>
+                        ))}
+                        <option value="OTHER">Lainnya (Tulis Sendiri)...</option>
+                      </select>
+                      <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#3d4a3d] pointer-events-none">expand_more</span>
+                    </div>
+                    {editFormData.sport_type === 'OTHER' && (
+                      <input
+                        type="text"
+                        value={editCustomSport}
+                        onChange={(e) => setEditCustomSport(e.target.value)}
+                        placeholder="Ketik jenis olahraga (cth: Squash, Pickleball)"
+                        className="mt-2 w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-2 rounded-xl border border-[#bccbb9]/40 text-sm focus:outline-none focus:ring-2 focus:ring-[#006e2f]"
+                      />
+                    )}
+                    {editErrors.sport_type && <span className="text-xs font-semibold text-[#ba1a1a]">{editErrors.sport_type}</span>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-bold text-[#0b1c30]">
+                      Jam Buka <span className="text-[#ba1a1a]">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="time"
+                        value={editOpenTime}
+                        onChange={(e) => setEditOpenTime(e.target.value)}
+                        className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] text-sm h-12"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-bold text-[#0b1c30]">
+                      Jam Tutup <span className="text-[#ba1a1a]">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="time"
+                        value={editCloseTime}
+                        onChange={(e) => setEditCloseTime(e.target.value)}
+                        className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] text-sm h-12"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5 w-full md:w-1/2 md:pr-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-bold text-[#0b1c30]">
+                      Tarif Sewa per Jam <span className="text-[#ba1a1a]">*</span>
+                    </label>
+                    {editFormData.price_per_hour > 0 && (
+                      <span className="text-xs font-bold text-[#006e2f] bg-[#22c55e]/15 px-2.5 py-0.5 rounded-md">
+                        Preview: {formatRupiah(editFormData.price_per_hour)} / jam
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-4 text-[#3d4a3d] font-bold text-sm select-none">Rp</span>
+                    <input
+                      type="number"
+                      min="10000"
+                      step="5000"
+                      value={editFormData.price_per_hour || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, price_per_hour: parseInt(e.target.value) || 0 })}
+                      className={`w-full bg-[#f8f9ff] text-[#0b1c30] pl-12 pr-4 py-3 rounded-xl border ${editErrors.price_per_hour ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 font-medium`}
+                      placeholder="100000"
+                    />
+                  </div>
+                  {editErrors.price_per_hour ? (
+                    <span className="text-xs font-semibold text-[#ba1a1a]">{editErrors.price_per_hour}</span>
+                  ) : (
+                    <p className="text-xs font-medium text-[#3d4a3d]">Batas maksimal pengisian adalah Rp 5.000.000/jam.</p>
                   )}
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-[#0b1c30]">
-                    Jenis Olahraga <span className="text-[#ba1a1a]">*</span>
-                  </label>
-                  <select
-                    value={editFormData.sport_type}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, sport_type: e.target.value })
-                    }
-                    className="w-full bg-[#f8f9ff] text-sm text-[#0b1c30] px-3.5 py-2.5 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] cursor-pointer"
+                <div className="flex items-center justify-between p-4 bg-[#f8f9ff] rounded-xl border border-[#bccbb9]/30 mt-2">
+                  <div>
+                    <p className="text-sm font-bold text-[#0b1c30]">Status Lapangan</p>
+                    <p className="text-xs text-[#3d4a3d]">{editFormData.status === 'ACTIVE' ? 'Aktif dan dapat dibooking pelanggan' : 'Non-aktif (disembunyikan dari katalog pelanggan)'}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditFormData({ ...editFormData, status: editFormData.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' })}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5 ${editFormData.status === 'ACTIVE' ? 'bg-[#006e2f] text-white hover:bg-[#006e2f]/90' : 'bg-[#ffdad6] text-[#ba1a1a] hover:bg-red-200'}`}
                   >
-                    <option value="">Pilih Olahraga</option>
-                    <option value="Badminton">Badminton</option>
-                    <option value="Futsal">Futsal</option>
-                    <option value="Basket">Basket</option>
-                    <option value="Tenis">Tenis</option>
-                    <option value="Mini Soccer">Mini Soccer</option>
-                    <option value="Voli">Voli</option>
-                    <option value="Tenis Meja">Tenis Meja</option>
-                    <option value="Padel">Padel</option>
-                  </select>
-                  {editErrors.sport_type && (
-                    <span className="text-[11px] text-[#ba1a1a] font-medium">{editErrors.sport_type}</span>
-                  )}
+                    <span className="material-symbols-outlined text-[16px]">{editFormData.status === 'ACTIVE' ? 'check_circle' : 'pause_circle'}</span>
+                    <span>{editFormData.status === 'ACTIVE' ? 'Aktif' : 'Non-Aktif'}</span>
+                  </button>
                 </div>
-              </div>
+              </section>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-[#0b1c30]">
-                  Harga Sewa per Jam (Rp) <span className="text-[#ba1a1a]">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#3d4a3d]">
-                    Rp
-                  </span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={editFormData.price_per_hour || ''}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        price_per_hour: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full bg-[#f8f9ff] text-sm text-[#0b1c30] pl-10 pr-3.5 py-2.5 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f]"
-                    placeholder="100000"
-                  />
+              <section className="bg-[#ffffff] rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 flex flex-col gap-5">
+                <div className="flex items-center gap-3 pb-3 border-b border-[#bccbb9]/20">
+                  <div className="w-9 h-9 rounded-xl bg-[#005ac2]/15 flex items-center justify-center text-[#005ac2]">
+                    <span className="material-symbols-outlined text-[22px]">location_on</span>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-[#0b1c30]">2. Lokasi Lapangan</h2>
+                    <p className="text-xs text-[#3d4a3d]">Pilih kota dan kecamatan agar lapangan mudah ditemukan di peta pencarian.</p>
+                  </div>
                 </div>
-                {editErrors.price_per_hour && (
-                  <span className="text-[11px] text-[#ba1a1a] font-medium">{editErrors.price_per_hour}</span>
-                )}
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-[#0b1c30]">
-                    Kota / Kabupaten <span className="text-[#ba1a1a]">*</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-bold text-[#0b1c30]">
+                      Kota / Kabupaten <span className="text-[#ba1a1a]">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={editFormData.city}
+                        onChange={(e) => {
+                          setEditFormData({ ...editFormData, city: e.target.value, district: '' });
+                        }}
+                        className={`appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${editErrors.city ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer`}
+                      >
+                        <option value="" disabled>Pilih Kota / Kabupaten...</option>
+                        {Object.keys(CITY_DISTRICTS).map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                      <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#3d4a3d] pointer-events-none">expand_more</span>
+                    </div>
+                    {editErrors.city && <span className="text-xs font-semibold text-[#ba1a1a]">{editErrors.city}</span>}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-bold text-[#0b1c30]">
+                      Kecamatan
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={editFormData.district}
+                        onChange={(e) => setEditFormData({ ...editFormData, district: e.target.value })}
+                        disabled={!editFormData.city}
+                        className="appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] disabled:bg-gray-100 disabled:text-gray-400 px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer"
+                      >
+                        <option value="">{!editFormData.city ? 'Pilih Kota terlebih dahulu...' : 'Pilih Kecamatan...'}</option>
+                        {(CITY_DISTRICTS[editFormData.city] || []).map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                      <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#3d4a3d] pointer-events-none">expand_more</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-bold text-[#0b1c30]">
+                    Alamat Lengkap Venue <span className="text-[#ba1a1a]">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={editFormData.city}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, city: e.target.value })
-                    }
-                    className="w-full bg-[#f8f9ff] text-sm text-[#0b1c30] px-3.5 py-2.5 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f]"
-                    placeholder="Contoh: Jakarta Selatan"
+                  <textarea
+                    rows={2}
+                    value={editFormData.address}
+                    onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                    className={`w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${editErrors.address ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y`}
+                    placeholder="Masukkan nama jalan, nomor kavling, nama gedung/gor, patokan terdekat."
                   />
-                  {editErrors.city && (
-                    <span className="text-[11px] text-[#ba1a1a] font-medium">{editErrors.city}</span>
+                  {editErrors.address && <span className="text-xs font-semibold text-[#ba1a1a]">{editErrors.address}</span>}
+                </div>
+              </section>
+
+              <section className="bg-[#ffffff] rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 flex flex-col gap-5">
+                <div className="flex items-center gap-3 pb-3 border-b border-[#bccbb9]/20">
+                  <div className="w-9 h-9 rounded-xl bg-[#82abff]/25 flex items-center justify-center text-[#005ac2]">
+                    <span className="material-symbols-outlined text-[22px]">add_photo_alternate</span>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-[#0b1c30]">3. Fasilitas & Media Visual</h2>
+                    <p className="text-xs text-[#3d4a3d]">Pilih fasilitas tambahan dan atur foto untuk menarik perhatian pelanggan.</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 mb-2">
+                  <label className="text-sm font-bold text-[#0b1c30]">Fasilitas yang Tersedia</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-1">
+                    {AMENITIES.map((amenity) => {
+                      const isSelected = editSelectedAmenities.includes(amenity.id);
+                      return (
+                        <button
+                          type="button"
+                          key={amenity.id}
+                          onClick={() => handleToggleEditAmenity(amenity.id)}
+                          className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-left ${
+                            isSelected 
+                              ? 'bg-[#22c55e]/10 border-[#006e2f]/50 text-[#006e2f]' 
+                              : 'bg-white border-[#bccbb9]/40 text-[#3d4a3d] hover:bg-[#f8f9ff]'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[18px]">{amenity.icon}</span>
+                          <span className="text-[11px] font-bold leading-tight">{amenity.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-bold text-[#0b1c30]">
+                    Deskripsi Tambahan (Opsional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editFormData.description}
+                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                    className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y"
+                    placeholder="Tuliskan keunggulan lain: jenis lantai (vinyl/karpet), penerangan (lux), aturan penggunaan..."
+                  />
+                </div>
+
+                <div className="flex flex-col gap-3 mt-2 border-t border-[#bccbb9]/20 pt-4">
+                  <label
+                    htmlFor="edit-multi-photo-upload"
+                    className="border-2 border-dashed border-[#bccbb9] hover:border-[#006e2f] bg-[#f8f9ff] hover:bg-[#f0f9f3] rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all text-center"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[28px]">cloud_upload</span>
+                    </div>
+                    <p className="text-sm font-bold text-[#0b1c30]">Klik untuk Unggah Foto dari Perangkat</p>
+                    <p className="text-xs text-[#3d4a3d]">Pilih format PNG, JPG, atau JPEG (Bisa pilih beberapa foto sekaligus)</p>
+                    <input
+                      id="edit-multi-photo-upload"
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleEditPhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {editSelectedPhotos.length > 0 && (
+                    <div className="flex flex-col gap-2 mt-2">
+                      <p className="text-xs font-bold text-[#0b1c30]">
+                        Foto Terpilih ({editSelectedPhotos.length} Foto)
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                        {editSelectedPhotos.map((photo, idx) => (
+                          <div key={idx} className="relative group rounded-xl overflow-hidden border border-[#bccbb9]/40 h-28 bg-[#f8f9ff]">
+                            <img src={photo} alt={`Foto Lapangan ${idx + 1}`} className="w-full h-full object-cover" />
+                            {idx === 0 && (
+                              <span className="absolute bottom-1.5 left-1.5 bg-[#006e2f] text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                                Foto Utama
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveEditPhoto(idx)}
+                              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-600/90 hover:bg-red-600 text-white flex items-center justify-center shadow-md transition-all cursor-pointer"
+                              title="Hapus foto"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">close</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-[#0b1c30]">Kecamatan (Opsional)</label>
-                  <input
-                    type="text"
-                    value={editFormData.district}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, district: e.target.value })
-                    }
-                    className="w-full bg-[#f8f9ff] text-sm text-[#0b1c30] px-3.5 py-2.5 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f]"
-                    placeholder="Contoh: Cilandak"
+                <div className="flex flex-col gap-2 border-t border-[#bccbb9]/20 pt-4 mt-1">
+                  <p className="text-xs font-semibold text-[#3d4a3d]">Atau gunakan foto preset siap pakai:</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                    {PRESET_IMAGES.map((preset) => (
+                      <button
+                        type="button"
+                        key={preset.name}
+                        onClick={() => {
+                          setEditSelectedPhotos((prev) => [...prev, preset.url]);
+                          if (!editFormData.sport_type) setEditFormData({ ...editFormData, sport_type: preset.sport });
+                        }}
+                        className="group relative h-20 rounded-xl overflow-hidden border border-transparent hover:border-[#006e2f] transition-all cursor-pointer text-left"
+                      >
+                        <img src={preset.url} alt={preset.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent p-1.5 flex flex-col justify-end">
+                          <span className="text-[10px] font-bold text-white leading-tight">{preset.name}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              {/* Section 4: Aturan & Regulasi Venue */}
+              <section className="bg-[#ffffff] rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 flex flex-col gap-5">
+                <div className="flex items-center gap-3 pb-3 border-b border-[#bccbb9]/20">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                    <span className="material-symbols-outlined text-[22px]">gavel</span>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-[#0b1c30]">4. Aturan & Regulasi Venue</h2>
+                    <p className="text-xs text-[#3d4a3d]">Tetapkan aturan bagi pelanggan dan kebijakan refund saat terjadi pembatalan.</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-bold text-[#0b1c30]">
+                    Aturan Venue <span className="text-[#ba1a1a]">*</span>
+                  </label>
+                  <p className="text-[11px] text-[#3d4a3d] mb-1">Beritahu pelanggan apa saja yang diperbolehkan dan dilarang di area lapangan.</p>
+                  <textarea
+                    rows={4}
+                    value={editRules}
+                    onChange={(e) => setEditRules(e.target.value)}
+                    className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y"
+                    placeholder="- Wajib menggunakan sepatu olahraga khusus indoor.&#10;- Dilarang merokok di area GOR."
+                    required
                   />
                 </div>
-              </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-[#0b1c30]">
-                  Alamat Lengkap <span className="text-[#ba1a1a]">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.address}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, address: e.target.value })
-                  }
-                  className="w-full bg-[#f8f9ff] text-sm text-[#0b1c30] px-3.5 py-2.5 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f]"
-                  placeholder="Jl. RS Fatmawati No. 12, Lantai 2"
-                />
-                {editErrors.address && (
-                  <span className="text-[11px] text-[#ba1a1a] font-medium">{editErrors.address}</span>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-[#0b1c30]">URL Foto Lapangan</label>
-                <input
-                  type="url"
-                  value={editFormData.image_url}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, image_url: e.target.value })
-                  }
-                  className="w-full bg-[#f8f9ff] text-sm text-[#0b1c30] px-3.5 py-2.5 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f]"
-                  placeholder="https://..."
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-[#0b1c30]">Deskripsi Fasilitas</label>
-                <textarea
-                  rows={3}
-                  value={editFormData.description}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, description: e.target.value })
-                  }
-                  className="w-full bg-[#f8f9ff] text-sm text-[#0b1c30] px-3.5 py-2.5 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] resize-y"
-                  placeholder="Jenis lantai, penerangan, AC, shower, loker..."
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-3.5 bg-[#f8f9ff] rounded-xl border border-[#bccbb9]/30">
-                <div>
-                  <p className="text-xs font-bold text-[#0b1c30]">Status Lapangan</p>
-                  <p className="text-[11px] text-[#3d4a3d]">
-                    {editFormData.status === 'ACTIVE'
-                      ? 'Aktif dan dapat dibooking pelanggan'
-                      : 'Non-aktif (disembunyikan dari katalog pelanggan)'}
-                  </p>
+                <div className="flex flex-col gap-1.5 mt-2">
+                  <label className="text-sm font-bold text-[#0b1c30]">
+                    Kebijakan Refund & Reschedule <span className="text-[#ba1a1a]">*</span>
+                  </label>
+                  <p className="text-[11px] text-[#3d4a3d] mb-1">Beri kejelasan kepada pelanggan apakah booking bisa dibatalkan atau diganti jadwalnya.</p>
+                  <textarea
+                    rows={3}
+                    value={editRefundPolicy}
+                    onChange={(e) => setEditRefundPolicy(e.target.value)}
+                    className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y"
+                    placeholder="Booking yang sudah dibayar tidak dapat dibatalkan (Non-refundable). Jika ada hujan, jadwal bisa di-reschedule..."
+                    required
+                  />
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setEditFormData({
-                      ...editFormData,
-                      status: editFormData.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
-                    })
-                  }
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    editFormData.status === 'ACTIVE'
-                      ? 'bg-[#006e2f] text-white'
-                      : 'bg-[#ffdad6] text-[#ba1a1a]'
-                  }`}
-                >
-                  {editFormData.status === 'ACTIVE' ? 'Aktif' : 'Non-Aktif'}
-                </button>
-              </div>
+              </section>
 
-              <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-[#bccbb9]/20">
+              <div className="flex justify-end gap-3 mt-2 pt-4 border-t border-[#bccbb9]/20 sticky bottom-0 bg-[#f8f9ff] pb-2 z-10">
                 <button
                   type="button"
                   onClick={() => setEditingCourt(null)}
                   disabled={isSavingEdit}
-                  className="px-5 py-2.5 rounded-xl text-xs font-semibold text-[#3d4a3d] hover:bg-[#eff4ff] transition-colors cursor-pointer"
+                  className="px-6 py-3 rounded-xl text-xs font-semibold text-[#3d4a3d] hover:bg-[#eff4ff] transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingEdit}
-                  className="px-6 py-2.5 rounded-xl text-xs font-semibold bg-[#006e2f] text-white hover:bg-[#006e2f]/90 transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                  className="px-8 py-3 rounded-xl text-xs font-bold bg-[#006e2f] text-white hover:bg-[#006e2f]/90 transition-all shadow-md flex items-center gap-2 cursor-pointer"
                 >
                   {isSavingEdit ? (
                     <>
@@ -913,43 +1264,6 @@ export default function DaftarLapangan() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL KONFIRMASI DEAKTIVASI */}
-      {courtToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b1c30]/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-[#bccbb9]/30 flex flex-col gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#ffdad6] text-[#ba1a1a] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[28px]">warning</span>
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-[#0b1c30]">Nonaktifkan Lapangan?</h3>
-              <p className="text-xs text-[#3d4a3d] mt-1.5 leading-relaxed">
-                Apakah Anda yakin ingin menonaktifkan{' '}
-                <strong className="text-[#0b1c30] font-semibold">{courtToDelete.name}</strong>?
-                Lapangan ini tidak akan muncul di pencarian booking pelanggan, namun riwayat transaksi tetap tersimpan.
-              </p>
-            </div>
-            <div className="flex justify-end gap-3 mt-3 pt-4 border-t border-[#bccbb9]/20">
-              <button
-                type="button"
-                onClick={() => setCourtToDelete(null)}
-                disabled={isDeleting}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#3d4a3d] hover:bg-[#eff4ff] transition-colors cursor-pointer"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                className="px-5 py-2 rounded-xl text-xs font-semibold bg-[#ba1a1a] text-white hover:bg-red-700 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
-              >
-                {isDeleting ? 'Memproses...' : 'Ya, Nonaktifkan'}
-              </button>
-            </div>
           </div>
         </div>
       )}

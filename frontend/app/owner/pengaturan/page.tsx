@@ -27,14 +27,14 @@ export default function PengaturanPage() {
     <div className="flex flex-col w-full gap-8 pb-12">
       {/* Header Halaman */}
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold text-[#0b1c30]">Pengaturan Venue</h1>
+        <h1 className="text-3xl font-bold text-[#0b1c30]">Pengaturan Profil Owner</h1>
         <p className="text-sm text-[#3d4a3d]">
           Kelola profil venue, rekening pencairan pendapatan, dan informasi paket langganan.
         </p>
       </div>
 
       {/* Tab Navigasi */}
-      <div className="flex items-center gap-6 border-b border-[#bccbb9]/30 text-xs">
+      <div className="flex items-center gap-6 border-b border-[#bccbb9]/30 text-xs overflow-x-auto whitespace-nowrap scrollbar-none">
         <button
           type="button"
           onClick={() => setActiveTab('PROFIL')}
@@ -112,7 +112,7 @@ export default function PengaturanPage() {
                   Email Akun
                 </label>
                 <input
-                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] transition-all shadow-sm font-medium"
+                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] transition-all shadow-sm font-medium opacity-70 cursor-not-allowed"
                   type="email"
                   value={email}
                   disabled
@@ -146,6 +146,13 @@ export default function PengaturanPage() {
 
         {activeTab === 'BANK' && (
           <form onSubmit={handleSave} className="flex flex-col gap-5">
+            <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3 text-amber-800 text-xs mb-2">
+              <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">info</span>
+              <p>
+                Rekening ini akan digunakan oleh Lapangin untuk mentransfer dana pembayaran booking (pencairan otomatis setiap hari Senin).
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-bold text-[#3d4a3d] uppercase tracking-wide">
@@ -161,6 +168,8 @@ export default function PengaturanPage() {
                   <option value="BNI">BNI</option>
                   <option value="BRI">BRI</option>
                   <option value="BSI">Bank Syariah Indonesia</option>
+                  <option value="Jago">Bank Jago</option>
+                  <option value="Seabank">SeaBank</option>
                 </select>
               </div>
 
@@ -169,7 +178,7 @@ export default function PengaturanPage() {
                   Nomor Rekening
                 </label>
                 <input
-                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] font-medium"
+                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] font-medium tracking-wider"
                   type="text"
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value)}
@@ -179,7 +188,7 @@ export default function PengaturanPage() {
 
               <div className="flex flex-col gap-1.5 md:col-span-2">
                 <label className="text-[11px] font-bold text-[#3d4a3d] uppercase tracking-wide">
-                  Nama Pemilik Rekening
+                  Nama Lengkap Pemilik Rekening
                 </label>
                 <input
                   className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] md:w-1/2 font-medium"
@@ -203,37 +212,158 @@ export default function PengaturanPage() {
         )}
 
         {activeTab === 'SECURITY' && (
-          <div className="flex flex-col gap-4 bg-white p-6 rounded-xl border border-[#bccbb9]/30">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[24px]">workspace_premium</span>
+          <div className="flex flex-col gap-6">
+            {/* Status Info Saat Ini */}
+            <div className="flex flex-col gap-4 bg-white p-6 rounded-xl border border-[#bccbb9]/30">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[24px]">workspace_premium</span>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-[#0b1c30]">
+                    Paket Anda Saat Ini: {user?.subscription?.plan_name || 'FREE'}
+                  </h3>
+                  <p className="text-xs text-[#3d4a3d]">
+                    Status:{' '}
+                    <span className="font-bold text-[#006e2f]">
+                      {user?.subscription?.status || 'ACTIVE'}
+                    </span>
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-extrabold text-sm text-[#0b1c30]">
-                  Paket Langganan: {user?.subscription?.plan_name || 'FREE'}
-                </h3>
-                <p className="text-xs text-[#3d4a3d]">
-                  Status:{' '}
-                  <span className="font-bold text-[#006e2f]">
-                    {user?.subscription?.status || 'ACTIVE'}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-[#bccbb9]/30 text-xs">
+                <div className="p-3 bg-[#f8f9ff] rounded-xl flex justify-between">
+                  <span className="text-[#3d4a3d]">Maksimal Lapangan:</span>
+                  <span className="font-bold text-[#0b1c30]">
+                    {user?.subscription?.max_courts ?? 1} Lapangan
                   </span>
-                </p>
+                </div>
+                <div className="p-3 bg-[#f8f9ff] rounded-xl flex justify-between">
+                  <span className="text-[#3d4a3d]">Kuota Booking per Bulan:</span>
+                  <span className="font-bold text-[#0b1c30]">
+                    {user?.subscription?.max_bookings_per_month ?? 30} Booking
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-[#bccbb9]/30 text-xs">
-              <div className="p-3 bg-[#f8f9ff] rounded-xl flex justify-between">
-                <span className="text-[#3d4a3d]">Maksimal Lapangan:</span>
-                <span className="font-bold text-[#0b1c30]">
-                  {user?.subscription?.max_courts ?? 1} Lapangan
-                </span>
+            {/* Price Comparison Plan (3 Kolom) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
+              {/* Free Plan */}
+              <div className="bg-white border border-[#bccbb9]/40 rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">FREE</p>
+                <h4 className="text-lg font-bold text-[#0b1c30] -mt-2">Paket Percobaan</h4>
+                <div className="flex items-end gap-1">
+                  <span className="text-3xl font-extrabold text-[#0b1c30]">Rp 0</span>
+                  <span className="text-xs text-[#3d4a3d] mb-1.5">/ bulan</span>
+                </div>
+                
+                <ul className="text-xs text-[#3d4a3d] flex flex-col gap-4 font-medium flex-1 mt-4">
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Maksimal 1 Lapangan
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Hingga 30 booking/bulan
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Dashboard ringkasan dasar
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Validasi jadwal anti-bentrok
+                  </li>
+                </ul>
+                <button
+                  disabled
+                  className="w-full mt-6 py-3 rounded-xl border-2 border-gray-200 text-gray-400 font-bold text-xs cursor-not-allowed"
+                >
+                  Mulai Free
+                </button>
               </div>
-              <div className="p-3 bg-[#f8f9ff] rounded-xl flex justify-between">
-                <span className="text-[#3d4a3d]">Kuota Booking per Bulan:</span>
-                <span className="font-bold text-[#0b1c30]">
-                  {user?.subscription?.max_bookings_per_month ?? 30} Booking
-                </span>
+
+              {/* Basic Plan (Recommended) */}
+              <div className="bg-white border-2 border-[#006e2f] rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden shadow-lg transform lg:-translate-y-2">
+                <div className="absolute top-0 right-0 left-0 bg-[#006e2f] text-white text-[9px] font-extrabold py-1.5 text-center uppercase tracking-widest">
+                  Rekomendasi
+                </div>
+                <p className="text-[10px] font-bold text-[#006e2f] uppercase tracking-widest mt-4">BASIC</p>
+                <h4 className="text-lg font-bold text-[#0b1c30] -mt-2">Paket Standar</h4>
+                <div className="flex items-end gap-1">
+                  <span className="text-3xl font-extrabold text-[#0b1c30]">Rp 49.000</span>
+                  <span className="text-xs text-[#3d4a3d] mb-1.5">/ bulan</span>
+                </div>
+                
+                <ul className="text-xs text-[#3d4a3d] flex flex-col gap-4 font-medium flex-1 mt-4">
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Hingga 5 Lapangan
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Unlimited Booking
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Dashboard performa lengkap
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Laporan omzet harian & bulanan
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Manajemen status reservasi
+                  </li>
+                </ul>
+                <button
+                  className="w-full mt-6 py-3 rounded-xl bg-[#006e2f] hover:bg-[#005321] text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
+                >
+                  Pilih Basic
+                </button>
               </div>
+
+              {/* Pro Plan */}
+              <div className="bg-white border border-[#bccbb9]/40 rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">PRO</p>
+                <h4 className="text-lg font-bold text-[#0b1c30] -mt-2">Paket Komplit</h4>
+                <div className="flex items-end gap-1">
+                  <span className="text-3xl font-extrabold text-[#0b1c30]">Rp 99.000</span>
+                  <span className="text-xs text-[#3d4a3d] mb-1.5">/ bulan</span>
+                </div>
+                
+                <ul className="text-xs text-[#3d4a3d] flex flex-col gap-4 font-medium flex-1 mt-4">
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Unlimited Lapangan
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Unlimited Booking
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Laporan omzet & rekap data
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Customer Management
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
+                    Advanced Analytics
+                  </li>
+                </ul>
+                <button
+                  className="w-full mt-6 py-3 rounded-xl bg-white border border-[#bccbb9] hover:bg-gray-50 text-[#0b1c30] font-bold text-xs shadow-sm transition-colors cursor-pointer"
+                >
+                  Pilih Pro
+                </button>
+              </div>
+
             </div>
           </div>
         )}

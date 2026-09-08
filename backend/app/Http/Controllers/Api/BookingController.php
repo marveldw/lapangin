@@ -24,15 +24,35 @@ class BookingController extends Controller
             ->orderBy('start_time', 'asc');
 
         if ($user->role === 'OWNER') {
-            $query->whereHas('court', function ($q) use ($user) {
-                $q->where('owner_id', $user->user_id);
-            });
+            $courtIds = Court::where('owner_id', $user->user_id)->pluck('court_id');
+            if ($courtIds->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'data'    => [
+                        'data'  => [],
+                        'total' => 0,
+                    ],
+                ]);
+            }
+            $query->whereIn('court_id', $courtIds);
         } else {
             // Customer / Regular user sees their own bookings
             $query->where('user_id', $user->user_id);
         }
 
-        $bookings = $query->paginate(25);
+        // Query Filters (Lazy Load & Fast Targeted Fetch)
+        if ($request->filled('court_id')) {
+            $query->where('court_id', (int) $request->query('court_id'));
+        }
+        if ($request->filled('booking_date')) {
+            $query->whereDate('booking_date', $request->query('booking_date'));
+        }
+        if ($request->filled('status')) {
+            $query->where('status', strtoupper($request->query('status')));
+        }
+
+        $limit = min(100, max(1, (int) $request->query('limit', 25)));
+        $bookings = $query->paginate($limit);
 
         return response()->json([
             'success' => true,

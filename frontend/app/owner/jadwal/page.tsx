@@ -1,19 +1,25 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/lib/AuthContext';
 import { api } from '@/lib/api';
 import { formatRupiah, formatDateIndo } from '@/lib/formatters';
+
+const BookingDetailModal = dynamic(() => import('./BookingDetailModal'), {
+  ssr: false,
+});
 
 interface Court {
   court_id: number;
   name: string;
   sport_type: string;
   price_per_hour: number;
+  description?: string;
 }
 
-interface BookingRecord {
+export interface BookingRecord {
   booking_id: number;
   booking_code: string;
   court_id: number;
@@ -28,25 +34,22 @@ interface BookingRecord {
   };
 }
 
-export default function OwnerJadwalPage() {
+function JadwalContent() {
   const { token } = useAuth();
 
   const [courts, setCourts] = useState<Court[]>([]);
   const [selectedCourtId, setSelectedCourtId] = useState<number | null>(null);
   const [loadingCourts, setLoadingCourts] = useState(true);
 
-  // Date state
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
-  // Bookings for the venue
-  const [venueBookings, setVenueBookings] = useState<BookingRecord[]>([]);
+  const [scheduleCache, setScheduleCache] = useState<Record<string, BookingRecord[]>>({});
+  const [dayBookings, setDayBookings] = useState<BookingRecord[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
 
-  // Popover state
   const [activePopoverBooking, setActivePopoverBooking] = useState<BookingRecord | null>(null);
 
-  // 1. Fetch owner courts
   useEffect(() => {
     if (!token) return;
     async function loadCourts() {
@@ -69,54 +72,66 @@ export default function OwnerJadwalPage() {
     loadCourts();
   }, [token]);
 
-  // 2. Fetch bookings for the owner
-  const fetchOwnerBookings = async () => {
-    if (!token) return;
-    setLoadingBookings(true);
-    try {
-      const res = await api.get('/bookings', token);
-      if (res.success && res.data) {
-        const items = Array.isArray(res.data.data) ? res.data.data : res.data;
-        setVenueBookings(items || []);
+  const loadSchedule = useCallback(
+    async (courtId: number, date: string, force = false) => {
+      if (!token) return;
+      const cacheKey = `${courtId}_${date}`;
+
+      if (!force && scheduleCache[cacheKey]) {
+        setDayBookings(scheduleCache[cacheKey]);
+        return;
       }
-    } catch (err) {
-      console.error('Failed to load bookings:', err);
-    } finally {
-      setLoadingBookings(false);
-    }
-  };
+
+      setLoadingBookings(true);
+      try {
+        const res = await api.get(
+          `/bookings?court_id=${courtId}&booking_date=${date}&limit=100`,
+          token
+        );
+        if (res.success && res.data) {
+          const items: BookingRecord[] = Array.isArray(res.data.data) ? res.data.data : res.data;
+          const active = (items || []).filter((b) => b.status !== 'CANCELLED');
+          setScheduleCache((prev) => ({ ...prev, [cacheKey]: active }));
+          setDayBookings(active);
+        }
+      } catch (err) {
+        console.error('Failed to load schedule:', err);
+      } finally {
+        setLoadingBookings(false);
+      }
+    },
+    [token, scheduleCache]
+  );
 
   useEffect(() => {
-    if (token) {
-      fetchOwnerBookings();
+    if (selectedCourtId && selectedDate) {
+      loadSchedule(selectedCourtId, selectedDate);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [selectedCourtId, selectedDate, loadSchedule]);
 
-  // Selected Court Object
   const selectedCourt = useMemo(() => {
     return courts.find((c) => c.court_id === selectedCourtId) || courts[0] || null;
   }, [courts, selectedCourtId]);
 
-  // Bookings on selectedDate for selectedCourt
-  const dayBookings = useMemo(() => {
-    if (!selectedCourt) return [];
-    return venueBookings.filter(
-      (b) =>
-        b.court_id === selectedCourt.court_id &&
-        b.booking_date === selectedDate &&
-        b.status !== 'CANCELLED'
-    );
-  }, [venueBookings, selectedCourt, selectedDate]);
-
-  // Operating timeline generation: 08:00 - 23:00 (15 hours)
   const timelineHours = useMemo(() => {
+    if (!selectedCourt) return [];
+    
+    let openHour = 8;
+    let closeHour = 22;
+
+    if (selectedCourt.description) {
+      const timeMatch = selectedCourt.description.match(/Jam Operasional:\s*(\d{2}):\d{2}\s*-\s*(\d{2}):\d{2}/);
+      if (timeMatch) {
+        openHour = parseInt(timeMatch[1], 10);
+        closeHour = parseInt(timeMatch[2], 10) - 1; 
+      }
+    }
+
     const hours = [];
-    for (let h = 8; h <= 22; h++) {
+    for (let h = openHour; h <= closeHour; h++) {
       const start = h.toString().padStart(2, '0') + ':00';
       const end = (h + 1).toString().padStart(2, '0') + ':00';
 
-      // Find booking overlapping with this hour
       const matchedBooking = dayBookings.find((b) => {
         const bStart = b.start_time.slice(0, 5);
         const bEnd = b.end_time.slice(0, 5);
@@ -130,9 +145,8 @@ export default function OwnerJadwalPage() {
       });
     }
     return hours;
-  }, [dayBookings]);
+  }, [dayBookings, selectedCourt]);
 
-  // Metrics for the day
   const { totalHoursBooked, dayRevenue, pendingCount } = useMemo(() => {
     let hours = 0;
     let rev = 0;
@@ -152,7 +166,6 @@ export default function OwnerJadwalPage() {
     return { totalHoursBooked: hours, dayRevenue: rev, pendingCount: pending };
   }, [dayBookings]);
 
-  // Change date helpers
   const handleShiftDate = (days: number) => {
     const current = new Date(selectedDate);
     current.setDate(current.getDate() + days);
@@ -164,7 +177,6 @@ export default function OwnerJadwalPage() {
       className="flex flex-col w-full pb-12"
       onClick={() => setActivePopoverBooking(null)}
     >
-      {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-[#0b1c30] mb-1">Jadwal Lapangan</h1>
@@ -216,7 +228,6 @@ export default function OwnerJadwalPage() {
         </div>
       </div>
 
-      {/* Tabs Lapangan Milik Owner */}
       {loadingCourts ? (
         <div className="p-8 text-center bg-white rounded-2xl border border-[#bccbb9]/30">
           <span className="text-xs font-semibold text-[#006e2f]">Memuat Lapangan...</span>
@@ -237,6 +248,44 @@ export default function OwnerJadwalPage() {
         </div>
       ) : (
         <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
+              <div className="w-12 h-12 rounded-xl bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center">
+                <span className="material-symbols-outlined text-[24px]">schedule</span>
+              </div>
+              <div>
+                <p className="text-xs text-[#3d4a3d] font-semibold">Total Jam Terisi</p>
+                <p className="text-2xl font-extrabold text-[#0b1c30] mt-0.5">
+                  {totalHoursBooked} Jam
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
+              <div className="w-12 h-12 rounded-xl bg-[#005ac2]/10 text-[#005ac2] flex items-center justify-center">
+                <span className="material-symbols-outlined text-[24px]">payments</span>
+              </div>
+              <div>
+                <p className="text-xs text-[#3d4a3d] font-semibold">Pendapatan Hari Ini</p>
+                <p className="text-2xl font-extrabold text-[#006e2f] mt-0.5">
+                  {formatRupiah(dayRevenue)}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[24px]">pending_actions</span>
+              </div>
+              <div>
+                <p className="text-xs text-[#3d4a3d] font-semibold">Menunggu Konfirmasi</p>
+                <p className="text-2xl font-extrabold text-amber-600 mt-0.5">
+                  {pendingCount} Booking
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white rounded-2xl shadow-sm mb-6 overflow-hidden border border-[#bccbb9]/30">
             <div className="flex overflow-x-auto scrollbar-none">
               {courts.map((court) => {
@@ -262,7 +311,6 @@ export default function OwnerJadwalPage() {
             </div>
           </div>
 
-          {/* Timeline Grid */}
           <div className="bg-white rounded-2xl shadow-sm p-6 border border-[#bccbb9]/30 relative">
             <div className="flex justify-between items-center mb-6 pb-3 border-b border-[#bccbb9]/30">
               <div className="flex items-center gap-2">
@@ -304,12 +352,10 @@ export default function OwnerJadwalPage() {
                       key={slot.hourStr}
                       className="py-3 flex items-center gap-4 group hover:bg-[#f8f9ff] px-2 rounded-xl transition-colors relative"
                     >
-                      {/* Jam */}
                       <span className="w-16 font-mono text-xs font-bold text-[#3d4a3d] shrink-0">
                         {slot.hourStr}
                       </span>
 
-                      {/* Content Bar */}
                       <div className="flex-1">
                         {b ? (
                           <div
@@ -365,114 +411,31 @@ export default function OwnerJadwalPage() {
               </div>
             )}
           </div>
-
-          {/* Bottom Day Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[24px]">schedule</span>
-              </div>
-              <div>
-                <p className="text-xs text-[#3d4a3d] font-semibold">Total Jam Terisi</p>
-                <p className="text-2xl font-extrabold text-[#0b1c30] mt-0.5">
-                  {totalHoursBooked} Jam
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-[#005ac2]/10 text-[#005ac2] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[24px]">payments</span>
-              </div>
-              <div>
-                <p className="text-xs text-[#3d4a3d] font-semibold">Pendapatan Hari Ini</p>
-                <p className="text-2xl font-extrabold text-[#006e2f] mt-0.5">
-                  {formatRupiah(dayRevenue)}
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[24px]">pending_actions</span>
-              </div>
-              <div>
-                <p className="text-xs text-[#3d4a3d] font-semibold">Menunggu Konfirmasi</p>
-                <p className="text-2xl font-extrabold text-amber-600 mt-0.5">
-                  {pendingCount} Booking
-                </p>
-              </div>
-            </div>
-          </div>
         </>
       )}
 
-      {/* Popover Modal for clicked Booking Slot */}
       {activePopoverBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setActivePopoverBooking(null)}
-          ></div>
-          <div className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full flex flex-col gap-4 animate-in zoom-in-95 duration-150 border border-[#bccbb9]/30">
-            <div className="flex justify-between items-start border-b border-[#bccbb9]/30 pb-3">
-              <div>
-                <h3 className="text-base font-bold text-[#0b1c30]">
-                  {activePopoverBooking.customer?.name || 'Pelanggan'}
-                </h3>
-                <span className="font-mono text-xs text-[#006e2f] font-bold">
-                  #{activePopoverBooking.booking_code}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActivePopoverBooking(null)}
-                className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-[#3d4a3d]">Waktu</span>
-                <span className="font-bold">
-                  {activePopoverBooking.start_time.slice(0, 5)} -{' '}
-                  {activePopoverBooking.end_time.slice(0, 5)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#3d4a3d]">No. WhatsApp</span>
-                <span className="font-bold">
-                  {activePopoverBooking.customer?.phone || '-'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#3d4a3d]">Tarif Sewa</span>
-                <span className="font-extrabold text-[#006e2f]">
-                  {formatRupiah(activePopoverBooking.price)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#3d4a3d]">Status</span>
-                <span className="font-bold">{activePopoverBooking.status}</span>
-              </div>
-            </div>
-
-            {activePopoverBooking.customer?.phone && (
-              <a
-                href={`https://wa.me/${activePopoverBooking.customer.phone.replace(/^0/, '62')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 w-full py-2.5 rounded-xl bg-[#25D366] text-white font-bold text-xs flex items-center justify-center gap-2 hover:opacity-90 shadow-sm"
-              >
-                <span className="material-symbols-outlined text-[18px]">chat</span>
-                <span>Hubungi via WhatsApp</span>
-              </a>
-            )}
-          </div>
-        </div>
+        <BookingDetailModal
+          booking={activePopoverBooking}
+          onClose={() => setActivePopoverBooking(null)}
+        />
       )}
     </div>
   );
 }
+
+const OwnerJadwalPage = dynamic(() => Promise.resolve(JadwalContent), {
+  ssr: false,
+  loading: () => (
+    <div className="flex justify-center items-center h-[60vh] w-full">
+      <div className="flex flex-col items-center gap-3 text-[#006e2f]">
+        <span className="material-symbols-outlined animate-spin text-[40px]">
+          progress_activity
+        </span>
+        <span className="font-bold text-sm">Menyiapkan Papan Jadwal...</span>
+      </div>
+    </div>
+  ),
+});
+
+export default OwnerJadwalPage;

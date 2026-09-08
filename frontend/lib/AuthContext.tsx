@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       localStorage.setItem('lapangin_token', newToken);
       localStorage.setItem('lapangin_user', JSON.stringify(newUser));
-      document.cookie = `lapangin_token=${newToken}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `lapangin_token=${encodeURIComponent(newToken)}; path=/; max-age=604800; SameSite=Lax`;
     }
   };
 
@@ -128,8 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('lapangin_token');
       localStorage.removeItem('lapangin_user');
-      document.cookie = 'lapangin_token=; path=/; max-age=0; SameSite=Lax';
-      window.location.href = '/';
+      document.cookie = `lapangin_token=; path=/; max-age=0; SameSite=Lax`;
+      window.location.href = '/login';
     }
   };
 

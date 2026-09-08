@@ -12,6 +12,9 @@ export default function RegisterPage() {
   const [role, setRole] = useState<'OWNER' | 'CUSTOMER'>('OWNER');
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
@@ -65,7 +68,6 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-[#f8f9ff] flex items-center justify-center p-4 py-12">
       <div className="w-full max-w-lg bg-white rounded-2xl p-8 shadow-sm border border-[#bccbb9]/20">
         
-        {/* Header Logo */}
         <div className="flex flex-col items-center mb-6 text-center">
           <div className="flex items-center gap-2 mb-2">
             <img src="/logo.png" alt="Lapangin" className="h-9 w-auto object-contain" />
@@ -75,7 +77,6 @@ export default function RegisterPage() {
           <p className="text-xs text-[#3d4a3d] mt-1">Gabung sekarang dan kelola reservasi lapangan dengan mudah</p>
         </div>
 
-        {/* Role Selector Tabs */}
         <div className="mb-6 bg-[#eff4ff] p-1.5 rounded-xl flex gap-1">
           <button
             type="button"
@@ -104,7 +105,6 @@ export default function RegisterPage() {
           </button>
         </div>
 
-        {/* Alert Error */}
         {errorMsg && (
           <div className="mb-6 p-3.5 bg-[#ffdad6] text-[#ba1a1a] rounded-xl text-sm font-medium flex items-start gap-2 border border-[#ba1a1a]/20">
             <span className="material-symbols-outlined text-[20px] shrink-0 mt-0.5">error</span>
@@ -123,7 +123,6 @@ export default function RegisterPage() {
 
         <form onSubmit={handleRegister} className="flex flex-col gap-4">
           
-          {/* Nama Lengkap */}
           <div>
             <label className="block text-xs font-semibold text-[#3d4a3d] mb-1 uppercase tracking-wider">
               {role === 'OWNER' ? 'Nama Pemilik / Nama GOR' : 'Nama Lengkap'}
@@ -138,7 +137,6 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* Email & No Telepon */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-[#3d4a3d] mb-1 uppercase tracking-wider">
@@ -169,40 +167,62 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Password & Konfirmasi */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-[#3d4a3d] mb-1 uppercase tracking-wider">
                 Password
               </label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 8 karakter"
-                className="w-full px-4 py-2.5 rounded-xl border border-[#bccbb9]/50 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none text-sm text-[#0b1c30] bg-[#ffffff] transition-all"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Min. 8 karakter"
+                  className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-[#bccbb9]/50 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none text-sm text-[#0b1c30] bg-[#ffffff] transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3d4a3d] hover:text-[#006e2f] focus:outline-none flex items-center justify-center"
+                  tabIndex={-1}
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    {showPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#3d4a3d] mb-1 uppercase tracking-wider">
                 Ulangi Password
               </label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={passwordConfirmation}
-                onChange={(e) => setPasswordConfirmation(e.target.value)}
-                placeholder="Ulangi password"
-                className="w-full px-4 py-2.5 rounded-xl border border-[#bccbb9]/50 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none text-sm text-[#0b1c30] bg-[#ffffff] transition-all"
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  minLength={8}
+                  value={passwordConfirmation}
+                  onChange={(e) => setPasswordConfirmation(e.target.value)}
+                  placeholder="Ulangi password"
+                  className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-[#bccbb9]/50 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none text-sm text-[#0b1c30] bg-[#ffffff] transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3d4a3d] hover:text-[#006e2f] focus:outline-none flex items-center justify-center"
+                  tabIndex={-1}
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Benefit Badge Info */}
           {role === 'OWNER' && (
             <div className="p-3 bg-[#e5eeff] rounded-xl flex items-center gap-2.5 text-xs text-[#004b1e] font-medium mt-1">
               <span className="material-symbols-outlined text-[20px] text-[#006e2f] shrink-0">verified</span>

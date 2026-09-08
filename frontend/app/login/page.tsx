@@ -1,18 +1,17 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, ArrowRight } from "lucide-react";
-import { setAuthSession } from "@/lib/auth";
 import { useAuth } from "@/lib/AuthContext";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParam = searchParams.get("redirect");
-  const { refreshUser, setAuth } = useAuth();
+  const { login, user, token, isLoading: authLoading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,42 +20,33 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Auto redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && token && user) {
+      if (user.role?.toUpperCase() === "OWNER") {
+        router.push(redirectParam || "/owner/dashboard");
+      } else {
+        router.push(redirectParam || "/lapangan");
+      }
+    }
+  }, [user, token, authLoading, router, redirectParam]);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMessage(null);
     setIsLoading(true);
 
     try {
-      const rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-      const apiUrl = rawUrl.endsWith("/api") ? rawUrl : `${rawUrl}/api`;
-      const res = await fetch(`${apiUrl}/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          password,
-        }),
-      });
+      const res = await login(email.trim(), password);
 
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        setErrorMessage(data.message || "Email atau password yang Anda masukkan salah.");
+      if (!res.success) {
+        setErrorMessage(res.message || "Email atau password yang Anda masukkan salah.");
         setIsLoading(false);
         return;
       }
 
-      // Save token and user profile
-      if (data.token && data.user) {
-        setAuthSession(data.token, data.user);
-        setAuth(data.token, data.user);
-      }
-
       // Smart Redirect based on Role
-      const role = data.user?.role?.toUpperCase();
+      const role = res.role?.toUpperCase();
       if (role === "ADMIN") {
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
         window.location.href = `${backendUrl}/admin`;
@@ -64,7 +54,7 @@ function LoginForm() {
         window.location.href = redirectParam || "/owner/dashboard";
       } else {
         // Customer
-        window.location.href = redirectParam || "/";
+        window.location.href = redirectParam || "/lapangan";
       }
     } catch (err) {
       console.error("Login error:", err);
