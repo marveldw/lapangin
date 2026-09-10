@@ -15,6 +15,7 @@ interface BookingRecord {
   start_time: string;
   end_time: string;
   price: number;
+  payment_method?: 'QRIS' | 'ON_SITE' | string;
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | string;
   notes: string | null;
   court?: {
@@ -286,6 +287,9 @@ export default function OwnerBookingPage() {
                   <th className="p-4 font-bold text-xs text-[#3d4a3d] whitespace-nowrap">
                     Jadwal Main
                   </th>
+                  <th className="p-4 font-bold text-xs text-[#3d4a3d] whitespace-nowrap">
+                    Metode Bayar
+                  </th>
                   <th className="p-4 font-bold text-xs text-[#3d4a3d] whitespace-nowrap text-right">
                     Total
                   </th>
@@ -343,6 +347,27 @@ export default function OwnerBookingPage() {
                           </span>
                         </div>
                       </td>
+                      <td className="p-4 whitespace-nowrap">
+                        {b.payment_method === 'QRIS' ? (
+                          <div className="flex flex-col items-start gap-0.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-50 text-red-700 text-[10px] font-extrabold border border-red-200">
+                              <span>QRIS</span>
+                            </span>
+                            <span className="text-[10px] text-gray-400 font-medium">
+                              {isConfirmed ? 'Otomatis Lunas' : 'Menunggu Bayar'}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-start gap-0.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200">
+                              <span>Bayar di Tempat</span>
+                            </span>
+                            <span className="text-[10px] text-amber-700 font-medium">
+                              {isConfirmed ? 'Lunas di Kasir' : 'Perlu Konfirmasi'}
+                            </span>
+                          </div>
+                        )}
+                      </td>
                       <td className="p-4 text-right font-extrabold text-[#006e2f]">
                         {formatRupiah(b.price)}
                       </td>
@@ -364,20 +389,25 @@ export default function OwnerBookingPage() {
                         )}
                       </td>
                       <td className="p-4 pr-6 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-end gap-1.5">
-                          {isPending && (
+                        <div className="flex justify-end gap-1.5 items-center">
+                          {isPending && b.payment_method === 'ON_SITE' && (
                             <button
                               type="button"
                               disabled={actionLoadingId === b.booking_id}
                               onClick={() => handleUpdateStatus(b.booking_id, 'CONFIRMED')}
-                              title="Konfirmasi Pembayaran"
+                              title="Konfirmasi Pembayaran di Tempat"
                               className="px-2.5 py-1 rounded-lg bg-[#006e2f] text-white hover:bg-[#005321] text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
                             >
                               <span className="material-symbols-outlined text-[14px]">
                                 check_circle
                               </span>
-                              <span>Konfirmasi</span>
+                              <span>{actionLoadingId === b.booking_id ? 'Menyimpan...' : 'Konfirmasi Bayar'}</span>
                             </button>
+                          )}
+                          {isPending && b.payment_method === 'QRIS' && (
+                            <span className="text-[10px] text-gray-400 italic">
+                              Auto-confirm via QRIS
+                            </span>
                           )}
                           <button
                             type="button"
@@ -440,6 +470,14 @@ export default function OwnerBookingPage() {
                 <span className="font-bold">{selectedBooking.status}</span>
               </div>
               <div className="flex justify-between border-b border-[#bccbb9]/20 pb-2">
+                <span className="text-[#3d4a3d]">Metode Pembayaran</span>
+                <span className="font-bold">
+                  {selectedBooking.payment_method === 'QRIS'
+                    ? 'QRIS Dinamis (Otomatis)'
+                    : 'Bayar di Tempat (Tunai di Kasir)'}
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-[#bccbb9]/20 pb-2">
                 <span className="text-[#3d4a3d]">Nama Pelanggan</span>
                 <span className="font-bold">{selectedBooking.customer?.name || '-'}</span>
               </div>
@@ -488,7 +526,9 @@ export default function OwnerBookingPage() {
                     onClick={() => handleUpdateStatus(selectedBooking.booking_id, 'CONFIRMED')}
                     className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#006e2f] hover:bg-[#005321] transition-all shadow-md cursor-pointer"
                   >
-                    Konfirmasi Pembayaran
+                    {selectedBooking.payment_method === 'ON_SITE'
+                      ? 'Konfirmasi Pembayaran di Lokasi'
+                      : 'Konfirmasi Manual'}
                   </button>
                 </>
               )}

@@ -1,6 +1,8 @@
 # Documentation & Tools
 /docs/
 /postman/
+*.postman_collection.json
+api.json
 
 # Dependencies
 **/node_modules/

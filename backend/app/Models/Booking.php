@@ -30,6 +30,7 @@ class Booking extends Model
         'start_time',
         'end_time',
         'price',
+        'payment_method',
         'status',
         'notes',
     ];

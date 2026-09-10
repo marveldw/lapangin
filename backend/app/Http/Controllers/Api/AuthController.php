@@ -156,6 +156,7 @@ class AuthController extends Controller
                 'phone'        => $user->phone,
                 'status'       => $user->status,
                 'subscription' => ($user->role === 'OWNER' && $activeSubscription) ? [
+                    'plan_id'                => $activeSubscription->plan_id,
                     'plan_name'              => $activeSubscription->plan->name ?? null,
                     'max_courts'             => $activeSubscription->plan->max_courts ?? null,
                     'max_bookings_per_month' => $activeSubscription->plan->max_bookings_per_month ?? null,

@@ -11,9 +11,10 @@ export interface User {
   phone?: string;
   status?: string;
   subscription?: {
+    plan_id?: number;
     plan_name: string;
-    max_courts: number;
-    max_bookings_per_month: number;
+    max_courts: number | null;
+    max_bookings_per_month: number | null;
     status: string;
   } | null;
 }
@@ -51,7 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       localStorage.setItem('lapangin_token', newToken);
       localStorage.setItem('lapangin_user', JSON.stringify(newUser));
-      document.cookie = `lapangin_token=${encodeURIComponent(newToken)}; path=/; max-age=604800; SameSite=Lax`;
+      const isSecure = window.location.protocol === 'https:';
+      document.cookie = `lapangin_token=${encodeURIComponent(newToken)}; path=/; max-age=604800; SameSite=Lax${isSecure ? '; Secure' : ''}`;
     }
   };
 
@@ -128,7 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('lapangin_token');
       localStorage.removeItem('lapangin_user');
-      document.cookie = `lapangin_token=; path=/; max-age=0; SameSite=Lax`;
+      const isSecure = window.location.protocol === 'https:';
+      document.cookie = `lapangin_token=; path=/; max-age=0; SameSite=Lax${isSecure ? '; Secure' : ''}`;
       window.location.href = '/login';
     }
   };

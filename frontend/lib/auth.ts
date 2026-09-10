@@ -37,14 +37,16 @@ export function setAuthSession(token: string, user: User) {
   if (typeof window === "undefined") return;
   localStorage.setItem(AUTH_TOKEN_KEY, token);
   localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
-  document.cookie = `${AUTH_TOKEN_KEY}=${encodeURIComponent(token)}; path=/; max-age=604800; SameSite=Lax`;
+  const isSecure = window.location.protocol === "https:";
+  document.cookie = `${AUTH_TOKEN_KEY}=${encodeURIComponent(token)}; path=/; max-age=604800; SameSite=Lax${isSecure ? "; Secure" : ""}`;
 }
 
 export function clearAuthSession() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(AUTH_USER_KEY);
-  document.cookie = `${AUTH_TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;
+  const isSecure = window.location.protocol === "https:";
+  document.cookie = `${AUTH_TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax${isSecure ? "; Secure" : ""}`;
 }
 
 export async function logoutUser(): Promise<void> {

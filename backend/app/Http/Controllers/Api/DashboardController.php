@@ -49,6 +49,8 @@ class DashboardController extends Controller
             ", [$today, $today, $startOfMonth, $endOfMonth])
             ->first();
 
+        $wallet = \App\Models\Wallet::firstOrCreate(['owner_id' => $ownerId]);
+
         return response()->json([
             'success' => true,
             'data'    => [
@@ -57,6 +59,8 @@ class DashboardController extends Controller
                 'today_bookings'  => (int) ($stats->today_bookings ?? 0),
                 'today_revenue'   => (int) ($stats->today_revenue ?? 0),
                 'monthly_revenue' => (int) ($stats->monthly_revenue ?? 0),
+                'wallet_balance'  => (int) $wallet->balance,
+                'locked_balance'  => (int) $wallet->locked_balance,
             ],
         ]);
     }

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import QrisPaymentModal from '@/components/QrisPaymentModal';
 import { useAuth } from '@/lib/AuthContext';
 import { api } from '@/lib/api';
 import { formatRupiah, formatDateIndo, getCourtFallbackImage } from '@/lib/formatters';
@@ -18,6 +19,7 @@ interface BookingItem {
   start_time: string;
   end_time: string;
   price: number;
+  payment_method?: 'QRIS' | 'ON_SITE' | string;
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | string;
   notes: string | null;
   court?: {
@@ -46,6 +48,55 @@ export default function CustomerBookingPage() {
 
   // Cancellation state
   const [cancellingId, setCancellingId] = useState<number | null>(null);
+
+  // QRIS Payment Modal state
+  const [activeQrisBooking, setActiveQrisBooking] = useState<BookingItem | null>(null);
+  const [qrisData, setQrisData] = useState<{
+    orderId: string;
+    grossAmount: number;
+    qrUrl: string;
+    qrString?: string;
+    expiresAt?: string;
+  } | null>(null);
+  const [payingBookingId, setPayingBookingId] = useState<number | null>(null);
+
+  const handlePayQris = async (booking: BookingItem) => {
+    if (!token) return;
+    setPayingBookingId(booking.booking_id);
+    try {
+      const res = await api.post(`/bookings/${booking.booking_id}/pay`, {}, token);
+      if (res.success && res.data) {
+        setQrisData({
+          orderId: res.data.order_id,
+          grossAmount: res.data.gross_amount,
+          qrUrl: res.data.qr_url,
+          qrString: res.data.qr_string,
+          expiresAt: res.data.expires_at,
+        });
+        setActiveQrisBooking(booking);
+      } else {
+        alert(res.message || 'Gagal memuat QRIS pembayaran.');
+      }
+    } catch (err) {
+      alert('Terjadi kesalahan jaringan saat memuat QRIS.');
+    } finally {
+      setPayingBookingId(null);
+    }
+  };
+
+  const handleQrisSuccess = () => {
+    if (activeQrisBooking) {
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.booking_id === activeQrisBooking.booking_id
+            ? { ...b, status: 'CONFIRMED', payment_method: 'QRIS' }
+            : b
+        )
+      );
+    }
+    setActiveQrisBooking(null);
+    setQrisData(null);
+  };
 
   useEffect(() => {
     if (!authLoading && !token) {
@@ -233,6 +284,16 @@ export default function CustomerBookingPage() {
                         <h3 className="text-lg font-bold text-[#0b1c30] truncate">
                           {b.court?.name || 'Lapangan Olahraga'}
                         </h3>
+                        {/* Payment Method Badge */}
+                        {b.payment_method === 'QRIS' ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200 flex items-center gap-1">
+                            <span>QRIS Dinamis</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
+                            <span>Bayar di Tempat</span>
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 mt-1 text-xs">
@@ -263,18 +324,24 @@ export default function CustomerBookingPage() {
                     </div>
 
                     {/* Actions & Status Badge */}
-                    <div className="w-full md:w-auto flex flex-col items-end gap-2.5 flex-shrink-0 border-t md:border-t-0 md:border-l border-[#bccbb9]/40 pt-4 md:pt-0 md:pl-6">
+                    <div className="w-full md:w-auto flex flex-col items-end gap-2 flex-shrink-0 border-t md:border-t-0 md:border-l border-[#bccbb9]/40 pt-4 md:pt-0 md:pl-6">
                       {isConfirmed && (
                         <div className="bg-[#22c55e]/15 text-[#004b1e] px-3 py-1 rounded-full inline-flex items-center gap-1.5 border border-[#22c55e]/30">
                           <span className="w-2 h-2 rounded-full bg-[#006e2f]"></span>
-                          <span className="text-xs font-bold">Dikonfirmasi</span>
+                          <span className="text-xs font-bold">
+                            {b.payment_method === 'QRIS' ? 'Lunas (QRIS Otomatis)' : 'Dikonfirmasi (Lunas)'}
+                          </span>
                         </div>
                       )}
 
                       {isPending && (
                         <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full inline-flex items-center gap-1.5 border border-amber-200">
                           <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                          <span className="text-xs font-bold">Menunggu Konfirmasi</span>
+                          <span className="text-xs font-bold">
+                            {b.payment_method === 'QRIS'
+                              ? 'Menunggu Pembayaran'
+                              : 'Menunggu Konfirmasi Admin'}
+                          </span>
                         </div>
                       )}
 
@@ -285,17 +352,41 @@ export default function CustomerBookingPage() {
                         </div>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={() => setTicketModalBooking(b)}
-                        className="w-full md:w-36 px-4 py-2 rounded-xl border-2 border-[#006e2f] text-[#006e2f] font-bold text-xs hover:bg-[#006e2f]/5 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">
-                          confirmation_number
-                        </span>
-                        <span>Lihat E-Ticket</span>
-                      </button>
+                      {/* Tombol Bayar Sekarang (Khusus QRIS pending) */}
+                      {isPending && b.payment_method === 'QRIS' && (
+                        <button
+                          type="button"
+                          disabled={payingBookingId === b.booking_id}
+                          onClick={() => handlePayQris(b)}
+                          className="w-full md:w-36 px-4 py-2 rounded-xl bg-[#006e2f] hover:bg-[#005321] text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">qr_code_2</span>
+                          <span>{payingBookingId === b.booking_id ? 'Memuat...' : 'Bayar QRIS'}</span>
+                        </button>
+                      )}
 
+                      {/* Catatan Bayar di Tempat */}
+                      {isPending && b.payment_method === 'ON_SITE' && (
+                        <p className="text-[10px] text-amber-800 text-right max-w-[150px] leading-tight">
+                          Bayar tunai di lokasi venue saat tiba.
+                        </p>
+                      )}
+
+                      {/* E-Ticket Button (Hanya jika confirmed) */}
+                      {isConfirmed && (
+                        <button
+                          type="button"
+                          onClick={() => setTicketModalBooking(b)}
+                          className="w-full md:w-36 px-4 py-2 rounded-xl border-2 border-[#006e2f] text-[#006e2f] font-bold text-xs hover:bg-[#006e2f]/5 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">
+                            confirmation_number
+                          </span>
+                          <span>Lihat E-Ticket</span>
+                        </button>
+                      )}
+
+                      {/* Cancel Button */}
                       {isPending && (
                         <button
                           type="button"
@@ -315,6 +406,24 @@ export default function CustomerBookingPage() {
           </div>
         </div>
       </main>
+
+      {/* Dynamic QRIS Payment Modal */}
+      {qrisData && activeQrisBooking && (
+        <QrisPaymentModal
+          isOpen={!!qrisData}
+          onClose={() => {
+            setQrisData(null);
+            setActiveQrisBooking(null);
+          }}
+          orderId={qrisData.orderId}
+          grossAmount={qrisData.grossAmount}
+          qrUrl={qrisData.qrUrl}
+          qrString={qrisData.qrString}
+          expiresAt={qrisData.expiresAt}
+          title={`Booking #${activeQrisBooking.booking_code}`}
+          onSuccess={handleQrisSuccess}
+        />
+      )}
 
       {/* E-Ticket Modal */}
       {ticketModalBooking && (

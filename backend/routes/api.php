@@ -6,8 +6,10 @@ use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\CourtController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\PublicCourtController;
+use App\Http\Controllers\Api\WalletController;
 
 // ==========================================
 // PUBLIC ROUTES (Dapat diakses tanpa login)
@@ -22,7 +24,7 @@ Route::get('/plans', [PlanController::class, 'index'])
     ->middleware('throttle:60,1');
 
 // Public — Marketplace Browsing & Cek Jadwal (Tanpa Login, Rate Limit 60/menit)
-Route::prefix('public')->middleware('throttle:60,1')->group(function () {
+Route::prefix('public')->middleware('throttle:120,1')->group(function () {
     // Browse semua lapangan (filter: city, district, sport_type, search)
     Route::get('/courts', [PublicCourtController::class, 'index']);
     Route::get('/courts/{id}', [PublicCourtController::class, 'show'])->whereNumber('id');
@@ -37,6 +39,12 @@ Route::prefix('public')->middleware('throttle:60,1')->group(function () {
 });
 
 // ==========================================
+// PAYMENT WEBHOOK & POLLING STATUS (PUBLIC)
+// ==========================================
+Route::post('/payments/webhook', [PaymentController::class, 'webhook']);
+Route::get('/payments/{orderId}/status', [PaymentController::class, 'checkStatus']);
+
+// ==========================================
 // PROTECTED ROUTES (Wajib Login via Sanctum)
 // ==========================================
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
@@ -49,6 +57,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::get('/bookings/{id}', [BookingController::class, 'show'])->whereNumber('id');
     Route::put('/bookings/{id}', [BookingController::class, 'update'])->whereNumber('id');
+
+    // Payments via Dynamic QRIS (Customer Booking & Owner Subscription)
+    Route::post('/bookings/{id}/pay', [PaymentController::class, 'payBooking'])->whereNumber('id');
+    Route::post('/subscriptions/{planId}/pay', [PaymentController::class, 'paySubscription'])->whereNumber('planId');
 
     // ==========================================
     // OWNER & ADMIN ONLY ROUTES
@@ -69,5 +81,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
         // Dashboard Analytics (Owner)
         Route::get('/dashboard', [DashboardController::class, 'index']);
+
+        // Wallet & Withdrawal (Owner)
+        Route::get('/owner/wallet', [WalletController::class, 'getWallet']);
+        Route::post('/owner/withdraw', [WalletController::class, 'requestWithdraw']);
     });
 });
