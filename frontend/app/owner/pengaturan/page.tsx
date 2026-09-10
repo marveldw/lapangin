@@ -38,7 +38,7 @@ export default function PengaturanPage() {
       description: 'Paket Percobaan',
       price: 0,
       max_courts: 1,
-      max_bookings_per_month: 30,
+      max_bookings_per_month: null,
       is_active: true,
     },
     {
@@ -88,7 +88,7 @@ export default function PengaturanPage() {
   }, []);
 
   const handleSelectPlan = async (plan: PlanData) => {
-    const currentPlanName = user?.subscription?.plan_name?.toUpperCase() || 'FREE';
+    const currentPlanName = (user?.subscription?.plan_name || (user as any)?.plan || 'FREE').toUpperCase();
     if (currentPlanName === plan.name.toUpperCase()) {
       return;
     }
@@ -346,10 +346,23 @@ export default function PengaturanPage() {
         )}
 
         {activeTab === 'SECURITY' && (() => {
-          const currentPlanName = user?.subscription?.plan_name?.toUpperCase() || 'FREE';
+          const currentPlanName = (
+            user?.subscription?.plan_name ||
+            (user as any)?.plan ||
+            'FREE'
+          ).toUpperCase();
+
           const freePlan = plans.find((p) => p.name.toUpperCase() === 'FREE') || plans[0];
           const basicPlan = plans.find((p) => p.name.toUpperCase() === 'BASIC') || plans[1];
           const proPlan = plans.find((p) => p.name.toUpperCase() === 'PRO') || plans[2];
+
+          // Fungsi dinamis menentukan batas lapangan sesuai paket aktif
+          const getCourtsLimitText = () => {
+            if (currentPlanName === 'FREE') return '1 Lapangan';
+            if (currentPlanName === 'BASIC') return 'Hingga 5 Lapangan';
+            if (currentPlanName === 'PRO') return 'Unlimited Lapangan';
+            return user?.subscription?.max_courts ? `${user.subscription.max_courts} Lapangan` : 'Unlimited Lapangan';
+          };
 
           return (
             <div className="flex flex-col gap-6">
@@ -386,10 +399,10 @@ export default function PengaturanPage() {
                 </div>
               )}
 
-              {/* Status Info Saat Ini */}
-              <div className="flex flex-col gap-4 bg-white p-6 rounded-xl border border-[#bccbb9]/30">
+              {/* Status Info Saat Ini (Kuota Booking Sudah Dihapus, Kapasitas Lapangan Dinamis) */}
+              <div className="flex flex-col gap-4 bg-white p-6 rounded-xl border border-[#bccbb9]/30 shadow-xs">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-[24px]">workspace_premium</span>
                   </div>
                   <div>
@@ -405,31 +418,20 @@ export default function PengaturanPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-[#bccbb9]/30 text-xs">
-                  <div className="p-3 bg-[#f8f9ff] rounded-xl flex justify-between">
-                    <span className="text-[#3d4a3d]">Maksimal Lapangan:</span>
-                    <span className="font-bold text-[#0b1c30]">
-                      {user?.subscription?.max_courts !== null && user?.subscription?.max_courts !== undefined
-                        ? `${user.subscription.max_courts} Lapangan`
-                        : currentPlanName === 'FREE'
-                        ? '1 Lapangan'
-                        : 'Unlimited Lapangan'}
+                <div className="pt-3 border-t border-[#bccbb9]/30 text-xs">
+                  <div className="p-3.5 bg-[#f8f9ff] rounded-xl flex items-center justify-between border border-[#bccbb9]/20">
+                    <span className="text-[#3d4a3d] font-medium flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#006e2f] text-[18px]">stadium</span>
+                      Batas Kapasitas Lapangan:
                     </span>
-                  </div>
-                  <div className="p-3 bg-[#f8f9ff] rounded-xl flex justify-between">
-                    <span className="text-[#3d4a3d]">Kuota Booking per Bulan:</span>
-                    <span className="font-bold text-[#0b1c30]">
-                      {user?.subscription?.max_bookings_per_month !== null && user?.subscription?.max_bookings_per_month !== undefined
-                        ? `${user.subscription.max_bookings_per_month} Booking`
-                        : currentPlanName === 'FREE'
-                        ? '30 Booking'
-                        : 'Unlimited Booking'}
+                    <span className="font-extrabold text-[#006e2f] text-sm">
+                      {getCourtsLimitText()}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Price Comparison Plan (3 Kolom) */}
+              {/* Price Comparison Plan (3 Kolom - Kuota Booking Per Bulan Dihapus) */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
                 {/* Free Plan */}
                 <div className="bg-white border border-[#bccbb9]/40 rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden">
@@ -447,10 +449,6 @@ export default function PengaturanPage() {
                     </li>
                     <li className="flex items-center gap-2.5">
                       <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
-                      Hingga 30 booking/bulan
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
                       Dashboard ringkasan dasar
                     </li>
                     <li className="flex items-center gap-2.5">
@@ -458,6 +456,7 @@ export default function PengaturanPage() {
                       Validasi jadwal anti-bentrok
                     </li>
                   </ul>
+
                   {currentPlanName === 'FREE' ? (
                     <button
                       disabled
@@ -497,10 +496,6 @@ export default function PengaturanPage() {
                     </li>
                     <li className="flex items-center gap-2.5">
                       <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
-                      Unlimited Booking
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
                       Dashboard performa lengkap
                     </li>
                     <li className="flex items-center gap-2.5">
@@ -512,6 +507,7 @@ export default function PengaturanPage() {
                       Manajemen status reservasi
                     </li>
                   </ul>
+
                   {currentPlanName === 'BASIC' ? (
                     <button
                       disabled
@@ -555,10 +551,6 @@ export default function PengaturanPage() {
                     </li>
                     <li className="flex items-center gap-2.5">
                       <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
-                      Unlimited Booking
-                    </li>
-                    <li className="flex items-center gap-2.5">
-                      <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
                       Laporan omzet & rekap data
                     </li>
                     <li className="flex items-center gap-2.5">
@@ -570,6 +562,7 @@ export default function PengaturanPage() {
                       Advanced Analytics
                     </li>
                   </ul>
+
                   {currentPlanName === 'PRO' ? (
                     <button
                       disabled
@@ -596,7 +589,6 @@ export default function PengaturanPage() {
                     </button>
                   )}
                 </div>
-
               </div>
             </div>
           );

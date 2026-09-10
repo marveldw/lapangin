@@ -233,16 +233,20 @@ export default function PelangganPage() {
                       {cust.created_at ? formatDateIndo(cust.created_at) : '-'}
                     </td>
                     <td className="px-6 py-4 pr-6 text-right">
+                      {/* Tombol Aksi: Persis sama dengan halaman Booking */}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleViewCustomer(cust.customer_id);
                         }}
-                        className="px-3 py-1.5 rounded-lg bg-[#f8f9ff] hover:bg-[#e5eeff] text-[#006e2f] border border-[#bccbb9]/30 font-bold text-[11px] transition-colors cursor-pointer inline-flex items-center gap-1"
+                        title="Lihat Riwayat Pelanggan"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-[#006e2f] bg-emerald-50/80 hover:bg-[#006e2f] hover:text-white border border-emerald-200/80 hover:border-[#006e2f] transition-all duration-200 shadow-2xs hover:shadow-sm cursor-pointer group active:scale-95"
                       >
-                        <span className="material-symbols-outlined text-[16px]">visibility</span>
-                        <span>Riwayat</span>
+                        <span className="material-symbols-outlined text-[15px] text-[#006e2f] group-hover:text-white transition-colors duration-200">
+                          visibility
+                        </span>
+                        <span className="tracking-wide">Lihat</span>
                       </button>
                     </td>
                   </tr>
