@@ -40,7 +40,7 @@ function KonfirmasiBookingContent() {
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Payment method state ('QRIS' or 'ON_SITE')
+  // Payment method state
   const [paymentMethod, setPaymentMethod] = useState<'QRIS' | 'ON_SITE'>('QRIS');
   const [qrisData, setQrisData] = useState<{
     orderId: string;
@@ -51,14 +51,14 @@ function KonfirmasiBookingContent() {
   } | null>(null);
   const [showQrisModal, setShowQrisModal] = useState(false);
 
-  // 1. Check auth
+  // 1. Auth Guard
   useEffect(() => {
     if (!authLoading && !token) {
       router.push(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
     }
   }, [token, authLoading, router]);
 
-  // 2. Fetch court info
+  // 2. Fetch Court Info
   useEffect(() => {
     if (!courtId) {
       setLoadingCourt(false);
@@ -82,11 +82,17 @@ function KonfirmasiBookingContent() {
     fetchCourt();
   }, [courtId]);
 
-  // 3. Calculate duration & price
+  // 3. Kalkulasi Durasi & Total Biaya (Aman untuk jam malam / tengah malam)
   const { durationHours, totalPrice } = useMemo(() => {
     if (!startTime || !endTime || !court) return { durationHours: 1, totalPrice: 0 };
     const startH = parseInt(startTime.split(':')[0], 10);
-    const endH = parseInt(endTime.split(':')[0], 10);
+    let endH = parseInt(endTime.split(':')[0], 10);
+
+    // Jika jam selesai 00:00, 24:00, atau 23:59, hitung sebagai jam ke-24
+    if (endTime === '00:00' || endTime === '24:00' || endTime === '23:59' || (endH === 0 && startH > 0)) {
+      endH = 24;
+    }
+
     const hours = Math.max(1, endH - startH);
     return {
       durationHours: hours,
@@ -94,7 +100,7 @@ function KonfirmasiBookingContent() {
     };
   }, [startTime, endTime, court]);
 
-  // 4. Handle submit booking
+  // 4. Submit Booking
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!courtId || !bookingDate || !startTime || !endTime) {
@@ -105,12 +111,15 @@ function KonfirmasiBookingContent() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    // Normalisasi: jika jam selesai adalah 00:00 atau 24:00, ubah ke 23:59 agar lolos validasi after:start_time di Laravel
+    const normalizedEndTime = (endTime === '00:00' || endTime === '24:00') ? '23:59' : endTime;
+
     try {
       const payload = {
         court_id: parseInt(courtId, 10),
         booking_date: bookingDate,
         start_time: startTime,
-        end_time: endTime,
+        end_time: normalizedEndTime,
         notes: notes.trim() || undefined,
         payment_method: paymentMethod,
       };
@@ -122,7 +131,6 @@ function KonfirmasiBookingContent() {
         setCreatedBookingCode(booking.booking_code || 'LPG-SUCCESS');
 
         if (paymentMethod === 'QRIS') {
-          // Buat Dynamic QRIS via Payment Gateway Midtrans
           try {
             const payRes = await api.post(`/bookings/${booking.booking_id}/pay`, {}, token);
             if (payRes.success && payRes.data) {
@@ -139,18 +147,22 @@ function KonfirmasiBookingContent() {
               setErrorMessage(payRes.message || 'Booking berhasil dibuat, namun gagal memuat QRIS. Anda dapat membayarnya di menu Booking Saya.');
               setShowModal(true);
             }
-          } catch (payErr) {
+          } catch {
             setErrorMessage('Gagal memuat QRIS pembayaran. Anda dapat melanjutkan pembayaran di menu Booking Saya.');
             setShowModal(true);
           }
         } else {
-          // Bayar di Tempat (ON_SITE)
           setShowModal(true);
         }
       } else {
-        setErrorMessage(res.message || 'Gagal membuat reservasi. Silakan coba kembali.');
+        if (res.errors) {
+          const detailMsgs = Object.values(res.errors).flat().join(' | ');
+          setErrorMessage(detailMsgs || res.message || 'Gagal membuat reservasi.');
+        } else {
+          setErrorMessage(res.message || 'Gagal membuat reservasi. Silakan coba kembali.');
+        }
       }
-    } catch (err) {
+    } catch {
       setErrorMessage('Terjadi kendala jaringan saat menghubungi server.');
     } finally {
       setIsSubmitting(false);
@@ -199,6 +211,8 @@ function KonfirmasiBookingContent() {
     );
   }
 
+  const displayEndTime = endTime === '23:59' ? '00:00' : endTime;
+
   return (
     <div className="bg-[#f8f9ff] font-sans text-[#0b1c30] min-h-screen flex flex-col relative">
       <Navbar />
@@ -206,7 +220,7 @@ function KonfirmasiBookingContent() {
       <main className="w-full pt-16 bg-[#f8f9ff] flex-1 flex flex-col relative">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-10 z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Panel: Booking Details Card */}
-          <div className="col-span-1 lg:col-span-5 bg-[#e5eeff] rounded-2xl shadow-sm overflow-hidden sticky top-24 border border-[#bccbb9]/30">
+          <div className="col-span-1 lg:col-span-5 bg-[#e5eeff] rounded-2xl shadow-sm overflow-hidden lg:sticky lg:top-24 border border-[#bccbb9]/30">
             <div className="h-44 w-full relative overflow-hidden bg-slate-900">
               <img
                 src={court.image_url || getCourtFallbackImage(court.sport_type)}
@@ -256,7 +270,7 @@ function KonfirmasiBookingContent() {
                     <span className="material-symbols-outlined text-[16px] text-[#006e2f]">
                       schedule
                     </span>
-                    {startTime} - {endTime}
+                    {startTime} - {displayEndTime}
                   </span>
                 </div>
               </div>
@@ -347,95 +361,68 @@ function KonfirmasiBookingContent() {
                   rows={3}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Contoh: Mohon sediakan bola futsal tambahan atau raket sewa."
+                  placeholder="Contoh: Mohon sediakan bola tambahan atau raket sewa."
                   className="w-full bg-[#f8f9ff] text-xs text-[#0b1c30] border border-[#bccbb9]/50 rounded-xl p-3 focus:outline-none focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] font-medium resize-none"
                 ></textarea>
               </div>
 
               {/* Pilihan Metode Pembayaran */}
-              <div className="flex flex-col gap-3 w-full">
-                <label className="text-xs font-bold text-[#3d4a3d] uppercase tracking-wider flex items-center justify-between">
-                  <span>Pilih Metode Pembayaran</span>
-                  <span className="text-[11px] font-normal text-gray-500 lowercase">Wajib dipilih</span>
+              <div className="flex flex-col gap-2 w-full">
+                <label className="text-xs font-bold text-[#3d4a3d] uppercase tracking-wider">
+                  Metode Pembayaran
                 </label>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Opsi 1: QRIS Dinamis */}
                   <div
                     onClick={() => setPaymentMethod('QRIS')}
-                    className={`relative p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                    className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
                       paymentMethod === 'QRIS'
-                        ? 'border-[#006e2f] bg-[#f0fdf4] shadow-sm'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                        ? 'border-[#006e2f] bg-[#006e2f]/5 ring-1 ring-[#006e2f]'
+                        : 'border-[#bccbb9]/50 hover:border-gray-400 bg-white'
                     }`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="px-2 py-0.5 rounded bg-red-600 text-white font-black text-[10px] tracking-wider">
-                          QRIS
-                        </div>
-                        <span className="text-xs font-bold text-[#0b1c30]">QRIS Dinamis</span>
+                    <div className="mt-0.5 flex items-center justify-center shrink-0">
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        paymentMethod === 'QRIS' ? 'border-[#006e2f]' : 'border-gray-300'
+                      }`}>
+                        {paymentMethod === 'QRIS' && <div className="w-2 h-2 rounded-full bg-[#006e2f]" />}
                       </div>
-                      <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-[#006e2f] text-white">
-                        Otomatis
-                      </span>
                     </div>
-
-                    <p className="text-[11px] text-gray-500 leading-relaxed">
-                      Scan via BCA, Mandiri, BRI, GoPay, OVO, Dana. <strong>Otomatis lunas seketika</strong> tanpa perlu konfirmasi admin.
-                    </p>
-
-                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#006e2f]">
-                      <span className="material-symbols-outlined text-[14px]">bolt</span>
-                      <span>Konfirmasi Instan 24 Jam</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs font-bold text-[#0b1c30]">QRIS</span>
+                      <span className="text-[11px] text-gray-500 leading-tight">
+                        GoPay, OVO, Dana, BCA, Mandiri & m-Banking lainnya
+                      </span>
                     </div>
                   </div>
 
-                  {/* Opsi 2: Bayar di Tempat */}
                   <div
                     onClick={() => setPaymentMethod('ON_SITE')}
-                    className={`relative p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                    className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
                       paymentMethod === 'ON_SITE'
-                        ? 'border-[#006e2f] bg-[#f0fdf4] shadow-sm'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                        ? 'border-[#006e2f] bg-[#006e2f]/5 ring-1 ring-[#006e2f]'
+                        : 'border-[#bccbb9]/50 hover:border-gray-400 bg-white'
                     }`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[#006e2f] text-[20px]">
-                          payments
-                        </span>
-                        <span className="text-xs font-bold text-[#0b1c30]">Bayar di Tempat</span>
+                    <div className="mt-0.5 flex items-center justify-center shrink-0">
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                        paymentMethod === 'ON_SITE' ? 'border-[#006e2f]' : 'border-gray-300'
+                      }`}>
+                        {paymentMethod === 'ON_SITE' && <div className="w-2 h-2 rounded-full bg-[#006e2f]" />}
                       </div>
-                      <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
-                        Manual
-                      </span>
                     </div>
-
-                    <p className="text-[11px] text-gray-500 leading-relaxed">
-                      Bayar tunai saat Anda tiba di lokasi. <strong>Memerlukan konfirmasi manual</strong> dari pihak admin venue.
-                    </p>
-
-                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-700">
-                      <span className="material-symbols-outlined text-[14px]">hourglass_top</span>
-                      <span>Konfirmasi oleh Admin</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs font-bold text-[#0b1c30]">Bayar di Tempat</span>
+                      <span className="text-[11px] text-gray-500 leading-tight">
+                        Bayar tunai ke pengelola saat tiba di venue
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Guarantee badge */}
-              <div className="p-3 bg-[#e5eeff] rounded-xl flex items-center gap-2.5 text-xs text-[#004b1e] font-medium">
-                <span className="material-symbols-outlined text-[20px] text-[#006e2f] shrink-0">
-                  verified_user
-                </span>
-                <span>
-                  Sistem otomatis mengunci slot jadwal ini sehingga 100% aman dan anti-bentrok.
-                </span>
-              </div>
-
               {/* Actions */}
-              <div className="flex flex-col sm:flex-row gap-3 justify-end items-center w-full mt-2">
+              <div className="flex flex-col sm:flex-row gap-3 justify-end items-center w-full mt-4">
                 <button
                   type="button"
                   onClick={() => router.back()}
@@ -456,15 +443,9 @@ function KonfirmasiBookingContent() {
                       <span>Memproses Booking...</span>
                     </>
                   ) : paymentMethod === 'QRIS' ? (
-                    <>
-                      <span>Lanjut Bayar via QRIS</span>
-                      <span className="material-symbols-outlined text-[18px]">qr_code_2</span>
-                    </>
+                    <span>Lanjut Bayar via QRIS</span>
                   ) : (
-                    <>
-                      <span>Konfirmasi (Bayar di Tempat)</span>
-                      <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                    </>
+                    <span>Konfirmasi Booking</span>
                   )}
                 </button>
               </div>
@@ -479,7 +460,6 @@ function KonfirmasiBookingContent() {
           isOpen={showQrisModal}
           onClose={() => {
             setShowQrisModal(false);
-            // Tetap arahkan ke riwayat booking agar pengguna bisa bayar nanti
             router.push('/customer/booking');
           }}
           orderId={qrisData.orderId}
@@ -520,7 +500,7 @@ function KonfirmasiBookingContent() {
                 ) : (
                   <>
                     Slot jadwal Anda di <strong className="text-[#0b1c30]">{court.name}</strong> telah
-                    didaftarkan. Silakan lakukan pembayaran di lokasi saat tiba. Booking akan dikonfirmasi oleh pengelola venue.
+                    didaftarkan. Silakan lakukan pembayaran di lokasi saat tiba.
                   </>
                 )}
               </p>

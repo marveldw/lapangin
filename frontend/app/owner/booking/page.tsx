@@ -98,36 +98,64 @@ export default function OwnerBookingPage() {
     }
   };
 
-  // Export CSV
+  // Export CSV Rapi & Kompatibel Excel
   const handleExportCSV = () => {
-    if (bookings.length === 0) {
+    if (filteredBookings.length === 0) {
       alert('Tidak ada data booking untuk diekspor.');
       return;
     }
 
-    const headers = ['Booking ID', 'Kode Booking', 'Pelanggan', 'No HP', 'Lapangan', 'Olahraga', 'Tanggal', 'Jam Mulai', 'Jam Selesai', 'Harga', 'Status'];
+    const headers = [
+      'Booking ID',
+      'Kode Booking',
+      'Nama Pelanggan',
+      'No. WhatsApp',
+      'Nama Lapangan',
+      'Jenis Olahraga',
+      'Tanggal Main',
+      'Jam Mulai',
+      'Jam Selesai',
+      'Total Biaya (Rp)',
+      'Metode Pembayaran',
+      'Status Booking',
+    ];
+
     const rows = filteredBookings.map((b) => [
       b.booking_id,
-      b.booking_code,
-      `"${b.customer?.name || '-'}"`,
-      `"${b.customer?.phone || '-'}"`,
-      `"${b.court?.name || '-'}"`,
-      b.court?.sport_type || '-',
+      `"${b.booking_code}"`,
+      `"${(b.customer?.name || '-').replace(/"/g, '""')}"`,
+      `="${b.customer?.phone || '-'}"`, // Mengunci format teks agar angka 0 di depan nomor HP tidak hilang
+      `"${(b.court?.name || '-').replace(/"/g, '""')}"`,
+      `"${b.court?.sport_type || '-'}"`,
       b.booking_date,
-      b.start_time,
-      b.end_time,
-      b.price,
+      b.start_time ? b.start_time.slice(0, 5) : '-',
+      b.end_time ? b.end_time.slice(0, 5) : '-',
+      Math.abs(b.price || 0), // Memastikan harga tidak minus
+      `"${b.payment_method === 'QRIS' ? 'QRIS (Otomatis)' : 'Bayar di Tempat'}"`,
       b.status,
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    // Instruksi sep=, memaksa Excel otomatis membagi ke kolom A, B, C, dst.
+    const csvContent =
+      'sep=,\r\n' +
+      [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+
+    // Menambahkan BOM \uFEFF agar encoding UTF-8 terbaca sempurna oleh Windows Excel
+    const blob = new Blob(['\uFEFF' + csvContent], {
+      type: 'text/csv;charset=utf-8;',
+    });
+
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `lapangin-bookings-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('href', url);
+    link.setAttribute(
+      'download',
+      `lapangin-bookings-${new Date().toISOString().split('T')[0]}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Filter & Search Logic
@@ -389,14 +417,14 @@ export default function OwnerBookingPage() {
                         )}
                       </td>
                       <td className="p-4 pr-6 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-end gap-1.5 items-center">
+                        <div className="flex justify-end gap-2 items-center">
                           {isPending && b.payment_method === 'ON_SITE' && (
                             <button
                               type="button"
                               disabled={actionLoadingId === b.booking_id}
                               onClick={() => handleUpdateStatus(b.booking_id, 'CONFIRMED')}
                               title="Konfirmasi Pembayaran di Tempat"
-                              className="px-2.5 py-1 rounded-lg bg-[#006e2f] text-white hover:bg-[#005321] text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-sm"
+                              className="px-3 py-1.5 rounded-xl bg-[#006e2f] text-white hover:bg-[#005321] text-[11px] font-bold transition-all duration-200 cursor-pointer flex items-center gap-1.5 shadow-sm hover:shadow active:scale-95"
                             >
                               <span className="material-symbols-outlined text-[14px]">
                                 check_circle
@@ -405,19 +433,22 @@ export default function OwnerBookingPage() {
                             </button>
                           )}
                           {isPending && b.payment_method === 'QRIS' && (
-                            <span className="text-[10px] text-gray-400 italic">
+                            <span className="text-[10px] text-gray-400 italic mr-1">
                               Auto-confirm via QRIS
                             </span>
                           )}
+
+                          {/* Tombol Aksi Cantik & Elegan */}
                           <button
                             type="button"
                             onClick={() => setSelectedBooking(b)}
-                            title="Detail"
-                            className="w-7 h-7 rounded-lg hover:bg-[#e5eeff] text-[#3d4a3d] flex items-center justify-center transition-colors cursor-pointer"
+                            title="Lihat Detail Booking"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-[#006e2f] bg-emerald-50/80 hover:bg-[#006e2f] hover:text-white border border-emerald-200/80 hover:border-[#006e2f] transition-all duration-200 shadow-2xs hover:shadow-sm cursor-pointer group active:scale-95"
                           >
-                            <span className="material-symbols-outlined text-[18px]">
+                            <span className="material-symbols-outlined text-[15px] text-[#006e2f] group-hover:text-white transition-colors duration-200">
                               visibility
                             </span>
+                            <span className="tracking-wide">Lihat</span>
                           </button>
                         </div>
                       </td>

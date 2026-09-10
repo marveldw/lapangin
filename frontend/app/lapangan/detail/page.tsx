@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Navbar from '@/components/Navbar';
 import { api } from '@/lib/api';
 import { formatRupiah, formatDateIndo, getCourtFallbackImage } from '@/lib/formatters';
 
@@ -17,6 +16,8 @@ interface CourtDetail {
   city: string | null;
   district: string | null;
   image_url: string | null;
+  open_time?: string | null;
+  close_time?: string | null;
   operating_hours?: any[];
 }
 
@@ -50,12 +51,12 @@ function DetailLapanganContent() {
   const [isClosed, setIsClosed] = useState(false);
   const [bookedSlots, setBookedSlots] = useState<BookedSlot[]>([]);
   
-  // Default values
   const [openTime, setOpenTime] = useState('08:00');
-  const [closeTime, setCloseTime] = useState('23:00');
+  const [closeTime, setCloseTime] = useState('22:00');
 
   const [selectedHours, setSelectedHours] = useState<string[]>([]);
 
+  // 1. Fetch Informasi Dasar Lapangan
   useEffect(() => {
     if (!courtId) {
       setErrorCourt('ID lapangan tidak ditentukan.');
@@ -72,15 +73,18 @@ function DetailLapanganContent() {
           const courtData = res.data;
           setCourt(courtData);
 
-          // Extract Operating Hours dynamically from description
-          if (courtData.description) {
-            const timeMatch = courtData.description.match(/Jam Operasional:\s*(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+          // Prioritas 1: Baca langsung jika kolom open_time/close_time tersedia
+          if (courtData.open_time) setOpenTime(courtData.open_time.slice(0, 5));
+          if (courtData.close_time) setCloseTime(courtData.close_time.slice(0, 5));
+
+          // Prioritas 2: Ekstrak dari deskripsi jika belum ada kolom langsung
+          if (!courtData.open_time && courtData.description) {
+            const timeMatch = courtData.description.match(/Jam Operasional:\s*(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/i);
             if (timeMatch) {
               setOpenTime(timeMatch[1]);
               setCloseTime(timeMatch[2]);
             }
           }
-
         } else {
           setErrorCourt(res.message || 'Lapangan tidak ditemukan.');
         }
@@ -94,6 +98,7 @@ function DetailLapanganContent() {
     fetchCourt();
   }, [courtId]);
 
+  // 2. Fetch Ketersediaan Slot & Jam Operasional Harian Dinamis dari Backend
   useEffect(() => {
     if (!courtId || !selectedDate) return;
 
@@ -105,6 +110,16 @@ function DetailLapanganContent() {
         if (res.success && res.data) {
           setIsClosed(res.data.is_closed || false);
           setBookedSlots(res.data.booked_slots || []);
+
+          // SINKRONISASI DINAMIS DARI DATABASE OPERATING_HOURS BACKEND
+          if (res.data.operating_hours) {
+            if (res.data.operating_hours.open_time) {
+              setOpenTime(res.data.operating_hours.open_time.slice(0, 5));
+            }
+            if (res.data.operating_hours.close_time) {
+              setCloseTime(res.data.operating_hours.close_time.slice(0, 5));
+            }
+          }
         }
       } catch (err) {
         console.error('Failed to load slots:', err);
@@ -116,6 +131,7 @@ function DetailLapanganContent() {
     fetchSlots();
   }, [courtId, selectedDate]);
 
+  // Kalender 10 Hari ke Depan
   const availableDates = useMemo(() => {
     const list = [];
     const now = new Date();
@@ -131,25 +147,35 @@ function DetailLapanganContent() {
     return list;
   }, []);
 
+  // 3. Generator Slot Jam: 100% Mengikuti Batas Buka & Tutup Backend
   const allHourlySlots: SlotInfo[] = useMemo(() => {
     const startHour = parseInt(openTime.split(':')[0], 10) || 8;
-    const endHour = parseInt(closeTime.split(':')[0], 10) || 23;
-    const list: SlotInfo[] = [];
+    let endHour = parseInt(closeTime.split(':')[0], 10) || 22;
 
+    // Normalisasi jam malam: jika tutup jam 23:59 atau 00:00, slot terakhir bisa mencapai jam 24 (00:00)
+    if (closeTime === '23:59' || closeTime === '00:00' || closeTime === '24:00') {
+      endHour = 24;
+    }
+
+    const list: SlotInfo[] = [];
     const now = new Date();
     const isToday = selectedDate === todayStr;
     const currentHour = now.getHours();
 
+    // Loop berhenti di batas jam tutup, sehingga slot di luar jam operasional TIDAK MUNGKIN muncul
     for (let h = startHour; h < endHour; h++) {
       const hStr = h.toString().padStart(2, '0') + ':00';
-      const nextHStr = (h + 1).toString().padStart(2, '0') + ':00';
+      const nextH = h + 1;
+      const nextHStr = nextH === 24 ? '00:00' : nextH.toString().padStart(2, '0') + ':00';
 
       const isPast = isToday && h <= currentHour;
 
       const isBooked = bookedSlots.some((b) => {
         const bStart = b.start_time.slice(0, 5);
         const bEnd = b.end_time.slice(0, 5);
-        return hStr < bEnd && nextHStr > bStart && b.status !== 'CANCELLED';
+        const effectiveEnd = nextHStr === '00:00' ? '24:00' : nextHStr;
+        const effectiveBEnd = bEnd === '00:00' ? '24:00' : bEnd;
+        return hStr < effectiveBEnd && effectiveEnd > bStart && b.status !== 'CANCELLED';
       });
 
       list.push({
@@ -163,6 +189,17 @@ function DetailLapanganContent() {
 
     return list;
   }, [openTime, closeTime, bookedSlots, selectedDate, todayStr]);
+
+  // Memperbarui teks deskripsi agar angka jam operasionalnya selalu sinkron dengan database aktif
+  const displayDescription = useMemo(() => {
+    if (!court?.description) {
+      return 'Fasilitas olahraga standar dengan pencahayaan optimal dan sirkulasi udara yang baik untuk kenyamanan bermain.';
+    }
+    return court.description.replace(
+      /Jam Operasional:\s*\d{2}:\d{2}\s*-\s*\d{2}:\d{2}/i,
+      `Jam Operasional: ${openTime} - ${closeTime}`
+    );
+  }, [court?.description, openTime, closeTime]);
 
   const handleToggleHour = (hour: string) => {
     if (selectedHours.includes(hour)) {
@@ -180,7 +217,8 @@ function DetailLapanganContent() {
     const sorted = [...selectedHours].sort();
     const start = sorted[0];
     const lastHour = parseInt(sorted[sorted.length - 1].split(':')[0], 10);
-    const end = (lastHour + 1).toString().padStart(2, '0') + ':00';
+    const nextH = lastHour + 1;
+    const end = nextH === 24 ? '00:00' : nextH.toString().padStart(2, '0') + ':00';
     return { startTime: start, endTime: end };
   }, [selectedHours]);
 
@@ -226,7 +264,46 @@ function DetailLapanganContent() {
 
   return (
     <div className="bg-[#f8f9ff] font-sans text-[#0b1c30] min-h-screen flex flex-col">
-      <Navbar />
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 w-full z-50 bg-[#f4f6fa]/95 backdrop-blur-md border-b border-gray-200/50 shadow-xs">
+        <div className="h-16 max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-9 h-9 rounded-xl bg-white shadow-xs border border-gray-200 flex items-center justify-center p-1.5 transition-transform group-hover:scale-105">
+              <img src="/logo.png" alt="Lapangin Logo" className="w-full h-full object-contain" />
+            </div>
+            <span className="text-[19px] font-extrabold text-[#0b1c30] tracking-tight">
+              Lapangin
+            </span>
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-9">
+            <Link href="/" className="text-[14px] font-medium text-slate-600 hover:text-[#0b1c30] transition-colors">
+              Beranda
+            </Link>
+            <Link href="/lapangan" className="text-[14px] font-bold text-[#0b1c30] transition-colors">
+              Sewa Lapangan
+            </Link>
+            <Link href="/partner" className="text-[14px] font-medium text-slate-600 hover:text-[#0b1c30] transition-colors">
+              Partner With Us
+            </Link>
+          </nav>
+
+          <div className="hidden md:flex items-center gap-5">
+            <Link
+              href="/login"
+              className="text-[14px] font-semibold text-slate-700 hover:text-[#0b1c30] transition-colors"
+            >
+              Masuk
+            </Link>
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center bg-[#0b1c30] hover:bg-slate-800 text-white font-semibold px-6 py-2.5 rounded-full text-[14px] transition-all shadow-sm"
+            >
+              Daftar
+            </Link>
+          </div>
+        </div>
+      </header>
 
       <main className="w-full pt-16 bg-[#f8f9ff] flex-1 pb-20">
         <div className="w-full h-[280px] md:h-[380px] relative overflow-hidden bg-slate-900">
@@ -277,8 +354,7 @@ function DetailLapanganContent() {
                 </div>
 
                 <p className="text-xs md:text-sm text-[#3d4a3d] leading-relaxed mt-2 whitespace-pre-wrap">
-                  {court.description ||
-                    'Fasilitas olahraga standar dengan pencahayaan optimal dan sirkulasi udara yang baik untuk kenyamanan bermain.'}
+                  {displayDescription}
                 </p>
               </div>
 
@@ -294,15 +370,34 @@ function DetailLapanganContent() {
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 md:p-8 flex flex-col gap-6">
-              <div className="flex justify-between items-center">
+              {/* Header Booking & Date Selector */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                   <h3 className="font-bold text-lg text-[#0b1c30]">Pilih Tanggal & Jam Main</h3>
                   <p className="text-xs text-[#3d4a3d] mt-0.5">
                     Pilih slot waktu yang tersedia untuk melakukan booking
                   </p>
                 </div>
+
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#006e2f] text-[18px] pointer-events-none">
+                    calendar_month
+                  </span>
+                  <input
+                    type="date"
+                    min={todayStr}
+                    value={selectedDate}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setSelectedDate(e.target.value);
+                      }
+                    }}
+                    className="pl-9 pr-4 py-2 bg-white border border-[#bccbb9]/60 rounded-xl text-sm font-bold text-[#0b1c30] outline-none focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] transition-all cursor-pointer shadow-sm hover:border-[#006e2f]"
+                  />
+                </div>
               </div>
 
+              {/* Slider Tanggal */}
               <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none">
                 {availableDates.map((item) => {
                   const isSelected = selectedDate === item.iso;
@@ -325,8 +420,10 @@ function DetailLapanganContent() {
                 })}
               </div>
 
+              {/* Baris Status & Jam Operasional Aktif */}
               <div className="flex flex-wrap justify-between items-center border-t border-[#bccbb9]/30 pt-4 gap-3 text-xs">
-                <span className="font-bold text-[#3d4a3d] uppercase tracking-wider text-[11px]">
+                <span className="font-bold text-[#3d4a3d] uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-[#006e2f]">schedule</span>
                   Jam Operasional ({openTime} - {closeTime})
                 </span>
                 <div className="flex items-center gap-4">
@@ -345,6 +442,7 @@ function DetailLapanganContent() {
                 </div>
               </div>
 
+              {/* Grid Slot Jam */}
               {isClosed ? (
                 <div className="p-8 text-center bg-[#ffdad6]/20 rounded-xl border border-[#ffdad6] text-[#ba1a1a]">
                   <span className="material-symbols-outlined text-[32px] mb-1">event_busy</span>
@@ -401,6 +499,7 @@ function DetailLapanganContent() {
             </div>
           </div>
 
+          {/* Panel Ringkasan Booking */}
           <aside className="w-full lg:w-[350px] shrink-0 h-fit sticky top-24">
             <div className="bg-white rounded-2xl shadow-xl border border-[#bccbb9]/30 p-6 flex flex-col gap-5">
               <div>

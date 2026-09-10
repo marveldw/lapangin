@@ -11,16 +11,20 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const getMenuClass = (path: string) => {
     const isActive = pathname === path || pathname.startsWith(`${path}/`);
     return isActive 
-      ? 'bg-[#22c55e] text-[#004b1e] font-semibold' 
+      ? 'bg-[#006e2f] text-white font-semibold shadow-sm' 
       : 'text-[#3d4a3d] hover:bg-[#eff4ff] hover:text-[#0b1c30]';
   };
 
-  const planName = user?.subscription?.plan_name || 'FREE';
+  const planName = (
+    user?.subscription?.plan_name || 
+    (user as any)?.plan || 
+    'FREE'
+  ).toUpperCase();
 
   return (
     <>
@@ -53,53 +57,57 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto scrollbar-none pb-4">
           <Link onClick={() => setIsOpen(false)} href="/owner/dashboard" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/dashboard')}`}>
             <span className="material-symbols-outlined">dashboard</span>
-            <span className="text-sm font-semibold tracking-wide">Dashboard</span>
+            <span className="text-sm tracking-wide">Dashboard</span>
           </Link>
           <Link onClick={() => setIsOpen(false)} href="/owner/lapangan" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/lapangan')}`}>
             <span className="material-symbols-outlined">stadium</span>
-            <span className="text-sm font-semibold tracking-wide">Lapangan</span>
+            <span className="text-sm tracking-wide">Lapangan</span>
           </Link>
           <Link onClick={() => setIsOpen(false)} href="/owner/jadwal" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/jadwal')}`}>
             <span className="material-symbols-outlined">calendar_month</span>
-            <span className="text-sm font-semibold tracking-wide">Jadwal</span>
+            <span className="text-sm tracking-wide">Jadwal</span>
           </Link>
           <Link onClick={() => setIsOpen(false)} href="/owner/booking" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/booking')}`}>
             <span className="material-symbols-outlined">confirmation_number</span>
-            <span className="text-sm font-semibold tracking-wide">Booking</span>
+            <span className="text-sm tracking-wide">Booking</span>
           </Link>
           <Link onClick={() => setIsOpen(false)} href="/owner/pendapatan" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/pendapatan')}`}>
             <span className="material-symbols-outlined">payments</span>
-            <span className="text-sm font-semibold tracking-wide">Pendapatan</span>
+            <span className="text-sm tracking-wide">Pendapatan</span>
           </Link>
           <Link onClick={() => setIsOpen(false)} href="/owner/pelanggan" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/pelanggan')}`}>
             <span className="material-symbols-outlined">group</span>
-            <span className="text-sm font-semibold tracking-wide">Pelanggan</span>
+            <span className="text-sm tracking-wide">Pelanggan</span>
           </Link>
           <Link onClick={() => setIsOpen(false)} href="/owner/pengaturan" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/pengaturan')}`}>
             <span className="material-symbols-outlined">settings</span>
-            <span className="text-sm font-semibold tracking-wide">Pengaturan</span>
+            <span className="text-sm tracking-wide">Pengaturan</span>
           </Link>
         </nav>
 
-        {/* Area Bawah: Upgrade & Logout */}
+        {/* Area Bawah: Upgrade Dinamis */}
         <div className="p-6 mt-auto border-t border-[#bccbb9]/20 flex flex-col gap-4 bg-[#f8f9ff]/50">
-          <div className="bg-[#dce9ff] rounded-xl p-4">
-            <p className="text-xs font-semibold text-[#3d4a3d] mb-1">Paket: {planName}</p>
+          <div className="p-3 bg-[#e5eeff] rounded-xl flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[#3d4a3d]">Paket Anda:</span>
+              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                planName === 'PRO' 
+                  ? 'bg-amber-100 text-amber-800' 
+                  : planName === 'BASIC' 
+                  ? 'bg-blue-100 text-blue-800' 
+                  : 'bg-gray-200 text-gray-700'
+              }`}>
+                {planName}
+              </span>
+            </div>
+
             <Link
               href="/owner/pengaturan"
-              className="block text-center w-full bg-[#006e2f] text-[#ffffff] py-1.5 rounded-lg text-xs font-semibold tracking-wide hover:bg-[#006e2f]/90 transition-colors"
+              className="w-full py-1.5 mt-1 bg-[#006e2f] hover:bg-[#005321] text-white text-center rounded-lg text-xs font-bold transition-all shadow-xs"
             >
               Kelola Langganan
             </Link>
           </div>
-          
-          <button 
-            onClick={() => logout()}
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-[#ba1a1a] hover:bg-[#ffdad6] font-bold text-sm transition-all duration-200 cursor-pointer shadow-sm border border-[#ba1a1a]/20"
-          >
-            <span className="material-symbols-outlined text-[20px]">logout</span>
-            <span>Keluar (Logout)</span>
-          </button>
         </div>
       </aside>
     </>
