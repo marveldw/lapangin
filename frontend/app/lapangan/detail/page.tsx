@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Navbar from '@/components/Navbar';
 import { api } from '@/lib/api';
 import { formatRupiah, formatDateIndo, getCourtFallbackImage } from '@/lib/formatters';
 
@@ -50,7 +49,6 @@ function DetailLapanganContent() {
   const [isClosed, setIsClosed] = useState(false);
   const [bookedSlots, setBookedSlots] = useState<BookedSlot[]>([]);
   
-  // Default values
   const [openTime, setOpenTime] = useState('08:00');
   const [closeTime, setCloseTime] = useState('23:00');
 
@@ -72,7 +70,6 @@ function DetailLapanganContent() {
           const courtData = res.data;
           setCourt(courtData);
 
-          // Extract Operating Hours dynamically from description
           if (courtData.description) {
             const timeMatch = courtData.description.match(/Jam Operasional:\s*(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
             if (timeMatch) {
@@ -80,7 +77,6 @@ function DetailLapanganContent() {
               setCloseTime(timeMatch[2]);
             }
           }
-
         } else {
           setErrorCourt(res.message || 'Lapangan tidak ditemukan.');
         }
@@ -226,7 +222,49 @@ function DetailLapanganContent() {
 
   return (
     <div className="bg-[#f8f9ff] font-sans text-[#0b1c30] min-h-screen flex flex-col">
-      <Navbar />
+      {/* HEADER HARDCODE - SESUAI PERMINTAAN TANPA IMPORT NAVBAR KOMPONEN */}
+      <header className="fixed top-0 left-0 right-0 w-full z-50 bg-[#f4f6fa]/95 backdrop-blur-md border-b border-gray-200/50 shadow-xs">
+        <div className="h-16 max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
+          {/* Logo & Brand Name */}
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-9 h-9 rounded-xl bg-white shadow-xs border border-gray-200 flex items-center justify-center p-1.5 transition-transform group-hover:scale-105">
+              <img src="/logo.png" alt="Lapangin Logo" className="w-full h-full object-contain" />
+            </div>
+            <span className="text-[19px] font-extrabold text-[#0b1c30] tracking-tight">
+              Lapangin
+            </span>
+          </Link>
+
+          {/* Desktop Nav Links */}
+          <nav className="hidden md:flex items-center gap-9">
+            <Link href="/" className="text-[14px] font-medium text-slate-600 hover:text-[#0b1c30] transition-colors">
+              Beranda
+            </Link>
+            <Link href="/lapangan" className="text-[14px] font-bold text-[#0b1c30] transition-colors">
+              Sewa Lapangan
+            </Link>
+            <Link href="/partner" className="text-[14px] font-medium text-slate-600 hover:text-[#0b1c30] transition-colors">
+              Partner With Us
+            </Link>
+          </nav>
+
+          {/* Desktop Auth Section (Masuk & Daftar) */}
+          <div className="hidden md:flex items-center gap-5">
+            <Link
+              href="/login"
+              className="text-[14px] font-semibold text-slate-700 hover:text-[#0b1c30] transition-colors"
+            >
+              Masuk
+            </Link>
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center bg-[#0b1c30] hover:bg-slate-800 text-white font-semibold px-6 py-2.5 rounded-full text-[14px] transition-all shadow-sm"
+            >
+              Daftar
+            </Link>
+          </div>
+        </div>
+      </header>
 
       <main className="w-full pt-16 bg-[#f8f9ff] flex-1 pb-20">
         <div className="w-full h-[280px] md:h-[380px] relative overflow-hidden bg-slate-900">
@@ -294,12 +332,32 @@ function DetailLapanganContent() {
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 md:p-8 flex flex-col gap-6">
-              <div className="flex justify-between items-center">
+              
+              {/* HEADER BAGIAN BOOKING DAN KALENDER */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                   <h3 className="font-bold text-lg text-[#0b1c30]">Pilih Tanggal & Jam Main</h3>
                   <p className="text-xs text-[#3d4a3d] mt-0.5">
                     Pilih slot waktu yang tersedia untuk melakukan booking
                   </p>
+                </div>
+
+                {/* TAMBAHAN FITUR KALENDER BEBAS PILIH BULAN */}
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#006e2f] text-[18px] pointer-events-none">
+                    calendar_month
+                  </span>
+                  <input
+                    type="date"
+                    min={todayStr}
+                    value={selectedDate}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setSelectedDate(e.target.value);
+                      }
+                    }}
+                    className="pl-9 pr-4 py-2 bg-white border border-[#bccbb9]/60 rounded-xl text-sm font-bold text-[#0b1c30] outline-none focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] transition-all cursor-pointer shadow-sm hover:border-[#006e2f]"
+                  />
                 </div>
               </div>
 
