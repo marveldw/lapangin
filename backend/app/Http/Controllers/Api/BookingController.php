@@ -215,7 +215,7 @@ class BookingController extends Controller
                 'start_time'     => $validated['start_time'],
                 'end_time'       => $validated['end_time'],
                 'price'          => $price,
-                'payment_method' => $validated['payment_method'] ?? 'ON_SITE',
+                'payment_method' => (($validated['payment_method'] ?? 'ON_SITE') === 'MIDTRANS_QRIS' ? 'QRIS' : ($validated['payment_method'] ?? 'ON_SITE')),
                 'status'         => 'PENDING',
                 'notes'          => $validated['notes'] ?? null,
             ]);
