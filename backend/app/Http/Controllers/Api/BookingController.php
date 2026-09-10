@@ -65,6 +65,11 @@ class BookingController extends Controller
     {
         $user = $request->user();
 
+        // Normalize midnight end_time (00:00 or 24:00) to 23:59 so it passes after:start_time and date_format:H:i
+        if ($request->input('end_time') === '00:00' || $request->input('end_time') === '24:00') {
+            $request->merge(['end_time' => '23:59']);
+        }
+
         $validated = $request->validate([
             'court_id'     => 'required|integer|exists:courts,court_id',
             'booking_date' => 'required|date|after_or_equal:today',
@@ -159,11 +164,15 @@ class BookingController extends Controller
             $closeTime = Carbon::parse($operatingHour->close_time)->format('H:i');
 
             // Support both same-day operating hours and overnight operating hours
-            $isOvernight = $closeTime <= $openTime;
+            // If close_time is 00:00, it represents midnight (end of day 23:59)
+            $isMidnightClose = ($closeTime === '00:00');
+            $effectiveCloseTime = $isMidnightClose ? '23:59' : $closeTime;
+
+            $isOvernight = !$isMidnightClose && ($closeTime <= $openTime);
             $isOutsideHours = false;
 
             if (!$isOvernight) {
-                if ($validated['start_time'] < $openTime || $validated['end_time'] > $closeTime) {
+                if ($validated['start_time'] < $openTime || $validated['end_time'] > $effectiveCloseTime) {
                     $isOutsideHours = true;
                 }
             } else {
@@ -200,7 +209,12 @@ class BookingController extends Controller
             // 6 — Calculate price
             $start = Carbon::createFromFormat('H:i', $validated['start_time']);
             $end   = Carbon::createFromFormat('H:i', $validated['end_time']);
-            $hours = abs($start->diffInMinutes($end)) / 60;
+            $diffMinutes = abs($start->diffInMinutes($end));
+            // If normalized to 23:59 (e.g. 59 minutes diff), count as full hour
+            if ($validated['end_time'] === '23:59' && ($diffMinutes % 60 === 59)) {
+                $diffMinutes += 1;
+            }
+            $hours = max(1, (int) round($diffMinutes / 60));
             $price = (int) round($court->price_per_hour * $hours);
 
             // 7 — Create booking record

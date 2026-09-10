@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
@@ -105,7 +105,59 @@ export default function TambahLapangan() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   const finalSportType = sportType === 'OTHER' ? customSport : sportType;
-  const availableDistricts = CITY_DISTRICTS[city] || [];
+
+  const [cityList, setCityList] = useState<string[]>([]);
+  const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+
+  // 1. Fetch cities on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadCities() {
+      setLoadingCities(true);
+      try {
+        const res = await api.get('/public/cities');
+        if (isMounted && res.success && Array.isArray(res.data)) {
+          setCityList(res.data.filter(Boolean));
+        }
+      } catch (err) {
+        console.error('Failed to load cities:', err);
+      } finally {
+        if (isMounted) setLoadingCities(false);
+      }
+    }
+    loadCities();
+    return () => { isMounted = false; };
+  }, []);
+
+  // 2. Fetch districts when city changes
+  useEffect(() => {
+    if (!city) {
+      setAvailableDistricts([]);
+      setDistrict('');
+      return;
+    }
+    let isMounted = true;
+    async function loadDistricts() {
+      setLoadingDistricts(true);
+      try {
+        const res = await api.get(`/public/cities/${encodeURIComponent(city)}/districts`);
+        if (isMounted && res.success && Array.isArray(res.data)) {
+          setAvailableDistricts(res.data.filter(Boolean));
+        } else if (isMounted) {
+          setAvailableDistricts(CITY_DISTRICTS[city] || []);
+        }
+      } catch (err) {
+        console.error('Failed to load districts:', err);
+        if (isMounted) setAvailableDistricts(CITY_DISTRICTS[city] || []);
+      } finally {
+        if (isMounted) setLoadingDistricts(false);
+      }
+    }
+    loadDistricts();
+    return () => { isMounted = false; };
+  }, [city]);
 
   const handleToggleAmenity = (id: string) => {
     setSelectedAmenities(prev => 
@@ -458,7 +510,7 @@ export default function TambahLapangan() {
                   className={`appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${fieldErrors.city ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer`}
                 >
                   <option value="" disabled>Pilih Kota / Kabupaten...</option>
-                  {Object.keys(CITY_DISTRICTS).map((c) => (
+                  {(cityList.length > 0 ? cityList : Object.keys(CITY_DISTRICTS)).map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
@@ -476,10 +528,18 @@ export default function TambahLapangan() {
                   id="kecamatan"
                   value={district}
                   onChange={(e) => setDistrict(e.target.value)}
-                  disabled={!city}
+                  disabled={!city || loadingDistricts}
                   className="appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] disabled:bg-gray-100 disabled:text-gray-400 px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer"
                 >
-                  <option value="">{!city ? 'Pilih Kota terlebih dahulu...' : 'Pilih Kecamatan...'}</option>
+                  <option value="">
+                    {!city
+                      ? 'Pilih Kota terlebih dahulu...'
+                      : loadingDistricts
+                        ? 'Memuat daftar kecamatan...'
+                        : availableDistricts.length === 0
+                          ? 'Tidak ada kecamatan ditemukan'
+                          : 'Pilih Kecamatan...'}
+                  </option>
                   {availableDistricts.map((d) => (
                     <option key={d} value={d}>{d}</option>
                   ))}

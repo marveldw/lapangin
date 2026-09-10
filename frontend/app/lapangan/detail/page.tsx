@@ -129,7 +129,8 @@ function DetailLapanganContent() {
 
   const allHourlySlots: SlotInfo[] = useMemo(() => {
     const startHour = parseInt(openTime.split(':')[0], 10) || 8;
-    const endHour = parseInt(closeTime.split(':')[0], 10) || 23;
+    const rawEnd = parseInt(closeTime.split(':')[0], 10);
+    const endHour = (rawEnd === 0 || closeTime.startsWith('00:')) ? 24 : (rawEnd || 23);
     const list: SlotInfo[] = [];
 
     const now = new Date();
@@ -138,14 +139,17 @@ function DetailLapanganContent() {
 
     for (let h = startHour; h < endHour; h++) {
       const hStr = h.toString().padStart(2, '0') + ':00';
-      const nextHStr = (h + 1).toString().padStart(2, '0') + ':00';
+      const nextH = h + 1;
+      const nextHStr = nextH === 24 ? '00:00' : nextH.toString().padStart(2, '0') + ':00';
 
       const isPast = isToday && h <= currentHour;
 
       const isBooked = bookedSlots.some((b) => {
         const bStart = b.start_time.slice(0, 5);
         const bEnd = b.end_time.slice(0, 5);
-        return hStr < bEnd && nextHStr > bStart && b.status !== 'CANCELLED';
+        const normSlotEnd = nextH === 24 ? '24:00' : nextHStr;
+        const normBEnd = (bEnd === '00:00' || bEnd === '23:59' || bEnd === '24:00') ? '24:00' : bEnd;
+        return hStr < normBEnd && normSlotEnd > bStart && b.status !== 'CANCELLED';
       });
 
       list.push({
@@ -176,7 +180,8 @@ function DetailLapanganContent() {
     const sorted = [...selectedHours].sort();
     const start = sorted[0];
     const lastHour = parseInt(sorted[sorted.length - 1].split(':')[0], 10);
-    const end = (lastHour + 1).toString().padStart(2, '0') + ':00';
+    const nextH = lastHour + 1;
+    const end = nextH === 24 ? '23:59' : nextH.toString().padStart(2, '0') + ':00';
     return { startTime: start, endTime: end };
   }, [selectedHours]);
 
