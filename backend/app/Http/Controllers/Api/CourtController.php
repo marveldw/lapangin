@@ -9,6 +9,8 @@ use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class CourtController extends Controller
 {
@@ -38,9 +40,12 @@ class CourtController extends Controller
             'address'        => 'required|string|max:255',
             'city'           => 'required|string|max:100',
             'district'       => 'nullable|string|max:100',
-            'image_url'      => 'nullable|url|max:255',
+            'image'          => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'image_url'      => 'nullable|string|max:5000000',
             'status'         => 'in:ACTIVE,INACTIVE',
         ]);
+
+        $this->resolveImageUrl($request, $validated);
 
         return DB::transaction(function () use ($user, $validated) {
             // Lock user row untuk menserialisasi pengecekan kuota paket dan mencegah race condition
@@ -69,7 +74,6 @@ class CourtController extends Controller
 
             $currentCourts = Court::where('owner_id', $lockedUser->user_id)
                 ->where('status', 'ACTIVE')
-                ->lockForUpdate()
                 ->count();
 
             if ($maxCourts !== null && $currentCourts >= $maxCourts) {
@@ -150,9 +154,12 @@ class CourtController extends Controller
             'address'        => 'sometimes|string|max:255',
             'city'           => 'sometimes|string|max:100',
             'district'       => 'nullable|string|max:100',
-            'image_url'      => 'nullable|url|max:255',
+            'image'          => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'image_url'      => 'nullable|string|max:5000000',
             'status'         => 'sometimes|in:ACTIVE,INACTIVE',
         ]);
+
+        $this->resolveImageUrl($request, $validated);
 
         $court->update($validated);
 
@@ -182,5 +189,61 @@ class CourtController extends Controller
             'success' => true,
             'message' => 'Lapangan berhasil dinonaktifkan.',
         ]);
+    }
+
+    // POST /api/courts/upload-image — dedicated secure photo upload
+    public function uploadImage(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|file|image|mimes:jpeg,png,jpg,webp|max:2048',
+        ]);
+
+        // Simpan dengan nama hash acak (keamanan: mencegah path traversal dan script eksekusi)
+        $path = $request->file('image')->store('courts', 'public');
+        $url  = url('storage/' . $path);
+
+        return response()->json([
+            'success'   => true,
+            'message'   => 'Foto lapangan berhasil diunggah.',
+            'image_url' => $url,
+            'path'      => $path,
+        ]);
+    }
+
+    // Helper: Validasi & ekstrak file upload fisik / Base64 Data URL menjadi URL Storage aman
+    private function resolveImageUrl(Request $request, array &$validated): void
+    {
+        // 1. File fisik diunggah via multipart/form-data
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('courts', 'public');
+            $validated['image_url'] = url('storage/' . $path);
+        }
+        // 2. Base64 Data URL (misal dari FileReader JS frontend)
+        elseif (!empty($validated['image_url']) && preg_match('/^data:image\/(jpeg|png|jpg|webp);base64,/', $validated['image_url'])) {
+            $parts  = explode(',', $validated['image_url'], 2);
+            $binary = base64_decode($parts[1] ?? '', true);
+
+            // Batasi ukuran maksimal 2MB (2 * 1024 * 1024 bytes)
+            if ($binary !== false && strlen($binary) <= 2 * 1024 * 1024) {
+                // Verifikasi MIME type asli dari binary (keamanan: cegah spoofing file script/virus)
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mime  = finfo_buffer($finfo, $binary);
+                finfo_close($finfo);
+
+                $allowedMimes = [
+                    'image/jpeg' => 'jpg',
+                    'image/png'  => 'png',
+                    'image/webp' => 'webp',
+                ];
+
+                if (isset($allowedMimes[$mime])) {
+                    $filename = 'courts/' . Str::random(40) . '.' . $allowedMimes[$mime];
+                    Storage::disk('public')->put($filename, $binary);
+                    $validated['image_url'] = url('storage/' . $filename);
+                }
+            }
+        }
+
+        unset($validated['image']);
     }
 }
