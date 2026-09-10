@@ -217,28 +217,35 @@ export default function TambahLapangan() {
 
     setIsSubmitting(true);
 
+    const normalizedCloseTime = closeTime === '00:00' ? '23:59' : closeTime;
+
     const baseDescription = description.trim() ? `${description.trim()}\n\n` : '';
     const rulesSection = rules.trim() ? `Aturan Venue:\n${rules.trim()}\n\n` : '';
     const refundSection = refundPolicy.trim() ? `Kebijakan Refund & Reschedule:\n${refundPolicy.trim()}` : '';
 
-    const compiledDescription = `Jam Operasional: ${openTime} - ${closeTime}\n${
+    const compiledDescription = `Jam Operasional: ${openTime} - ${normalizedCloseTime}\n${
       selectedAmenities.length > 0
         ? `Fasilitas Tersedia: ${selectedAmenities.map(a => AMENITIES.find(x => x.id === a)?.label).join(', ')}.\n\n`
         : '\n'
     }${baseDescription}${rulesSection}${refundSection}`;
+
+    // Validasi URL: Hanya kirim string URL asli ke database Laravel (mencegah error Base64)
+    const validImageUrl = selectedPhotos.length > 0 && selectedPhotos[0].startsWith('http')
+      ? selectedPhotos[0]
+      : getCourtFallbackImage(finalSportType);
 
     try {
       const payload = {
         name: name.trim(),
         sport_type: finalSportType.trim(),
         price_per_hour: Number(pricePerHour),
+        open_time: openTime,
+        close_time: normalizedCloseTime,
         address: address.trim(),
         city: city.trim(),
         district: district.trim() ? district.trim() : null,
         description: compiledDescription ? compiledDescription : null,
-        image_url: selectedPhotos.length > 0 && selectedPhotos[0].startsWith('http')
-          ? selectedPhotos[0]
-          : getCourtFallbackImage(finalSportType),
+        image_url: validImageUrl,
         status: status,
       };
 
@@ -259,18 +266,27 @@ export default function TambahLapangan() {
           });
         } else if (res?.errors) {
           const backendErrors: Record<string, string> = {};
+          const errorDetails: string[] = [];
+
           Object.keys(res.errors).forEach((k) => {
-            backendErrors[k] = Array.isArray(res.errors[k]) ? res.errors[k][0] : res.errors[k];
+            const msg = Array.isArray(res.errors[k]) ? res.errors[k][0] : res.errors[k];
+            backendErrors[k] = msg;
+            errorDetails.push(`${k}: ${msg}`);
           });
+
           setFieldErrors(backendErrors);
-          setGeneralError('Harap periksa kembali isian formulir di bawah.');
+          // Menampilkan error spesifik dari Laravel langsung di banner merah atas
+          setGeneralError(`Validasi gagal: ${errorDetails.join(' | ')}`);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
           setGeneralError(res?.message || 'Gagal menambahkan lapangan baru.');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       }
     } catch (err) {
       console.error('Error submitting court:', err);
       setGeneralError('Terjadi gangguan jaringan saat mengirim data. Silakan coba lagi.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSubmitting(false);
     }
@@ -339,14 +355,16 @@ export default function TambahLapangan() {
       </div>
 
       {generalError && (
-        <div className="bg-[#ffdad6]/60 border border-[#ba1a1a]/30 p-4 rounded-xl text-[#ba1a1a] flex items-center gap-3">
-          <span className="material-symbols-outlined text-[24px] shrink-0">error</span>
-          <p className="text-sm font-semibold">{generalError}</p>
+        <div className="bg-[#ffdad6]/80 border border-[#ba1a1a]/40 p-4 rounded-xl text-[#ba1a1a] flex items-start gap-3 shadow-sm">
+          <span className="material-symbols-outlined text-[24px] shrink-0 mt-0.5">error</span>
+          <div className="flex flex-col">
+            <p className="text-sm font-bold">Terjadi Kesalahan</p>
+            <p className="text-xs font-medium mt-0.5">{generalError}</p>
+          </div>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-        
         <section className="bg-[#ffffff] rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 flex flex-col gap-5">
           <div className="flex items-center gap-3 pb-3 border-b border-[#bccbb9]/20">
             <div className="w-9 h-9 rounded-xl bg-[#22c55e]/20 flex items-center justify-center text-[#006e2f]">
@@ -416,9 +434,10 @@ export default function TambahLapangan() {
                   type="time"
                   value={openTime}
                   onChange={(e) => setOpenTime(e.target.value)}
-                  className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] text-sm h-12"
+                  className={`w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${fieldErrors.open_time ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] text-sm h-12`}
                 />
               </div>
+              {fieldErrors.open_time && <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.open_time}</span>}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -430,9 +449,10 @@ export default function TambahLapangan() {
                   type="time"
                   value={closeTime}
                   onChange={(e) => setCloseTime(e.target.value)}
-                  className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] text-sm h-12"
+                  className={`w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${fieldErrors.close_time ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] text-sm h-12`}
                 />
               </div>
+              {fieldErrors.close_time && <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.close_time}</span>}
             </div>
           </div>
 
@@ -634,6 +654,10 @@ export default function TambahLapangan() {
               />
             </label>
 
+            {fieldErrors.image_url && (
+              <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.image_url}</span>
+            )}
+
             {selectedPhotos.length > 0 && (
               <div className="flex flex-col gap-2 mt-2">
                 <p className="text-xs font-bold text-[#0b1c30]">
@@ -671,7 +695,7 @@ export default function TambahLapangan() {
                   type="button"
                   key={preset.name}
                   onClick={() => {
-                    setSelectedPhotos((prev) => [...prev, preset.url]);
+                    setSelectedPhotos((prev) => [preset.url, ...prev]);
                     if (!sportType) setSportType(preset.sport);
                   }}
                   className="group relative h-20 rounded-xl overflow-hidden border border-transparent hover:border-[#006e2f] transition-all cursor-pointer text-left"
@@ -686,7 +710,6 @@ export default function TambahLapangan() {
           </div>
         </section>
 
-        {/* Section 4: Aturan & Regulasi Venue */}
         <section className="bg-[#ffffff] rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 flex flex-col gap-5">
           <div className="flex items-center gap-3 pb-3 border-b border-[#bccbb9]/20">
             <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
@@ -723,7 +746,7 @@ export default function TambahLapangan() {
               value={refundPolicy}
               onChange={(e) => setRefundPolicy(e.target.value)}
               className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y"
-              placeholder="Booking yang sudah dibayar tidak dapat dibatalkan (Non-refundable). Jika ada hujan, jadwal bisa di-reschedule..."
+              placeholder="Booking yang sudah dibayar tidak dapat dibatalkan (Non-refundable). Jika ada kendala cuaca pada lapangan outdoor, jadwal bisa di-reschedule..."
               required
             />
           </div>

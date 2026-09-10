@@ -40,7 +40,7 @@ function KonfirmasiBookingContent() {
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Payment method state ('QRIS' or 'ON_SITE')
+  // Payment method state
   const [paymentMethod, setPaymentMethod] = useState<'QRIS' | 'ON_SITE'>('QRIS');
   const [qrisData, setQrisData] = useState<{
     orderId: string;
@@ -51,14 +51,14 @@ function KonfirmasiBookingContent() {
   } | null>(null);
   const [showQrisModal, setShowQrisModal] = useState(false);
 
-  // 1. Check auth
+  // 1. Auth Guard
   useEffect(() => {
     if (!authLoading && !token) {
       router.push(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`);
     }
   }, [token, authLoading, router]);
 
-  // 2. Fetch court info
+  // 2. Fetch Court Info
   useEffect(() => {
     if (!courtId) {
       setLoadingCourt(false);
@@ -82,11 +82,17 @@ function KonfirmasiBookingContent() {
     fetchCourt();
   }, [courtId]);
 
-  // 3. Calculate duration & price
+  // 3. Kalkulasi Durasi & Total Biaya (Aman untuk jam malam / tengah malam)
   const { durationHours, totalPrice } = useMemo(() => {
     if (!startTime || !endTime || !court) return { durationHours: 1, totalPrice: 0 };
     const startH = parseInt(startTime.split(':')[0], 10);
-    const endH = parseInt(endTime.split(':')[0], 10);
+    let endH = parseInt(endTime.split(':')[0], 10);
+
+    // Jika jam selesai 00:00, 24:00, atau 23:59, hitung sebagai jam ke-24
+    if (endTime === '00:00' || endTime === '24:00' || endTime === '23:59' || (endH === 0 && startH > 0)) {
+      endH = 24;
+    }
+
     const hours = Math.max(1, endH - startH);
     return {
       durationHours: hours,
@@ -94,7 +100,7 @@ function KonfirmasiBookingContent() {
     };
   }, [startTime, endTime, court]);
 
-  // 4. Handle submit booking
+  // 4. Submit Booking
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!courtId || !bookingDate || !startTime || !endTime) {
@@ -105,12 +111,15 @@ function KonfirmasiBookingContent() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    // Normalisasi: jika jam selesai adalah 00:00 atau 24:00, ubah ke 23:59 agar lolos validasi after:start_time di Laravel
+    const normalizedEndTime = (endTime === '00:00' || endTime === '24:00') ? '23:59' : endTime;
+
     try {
       const payload = {
         court_id: parseInt(courtId, 10),
         booking_date: bookingDate,
         start_time: startTime,
-        end_time: endTime,
+        end_time: normalizedEndTime,
         notes: notes.trim() || undefined,
         payment_method: paymentMethod,
       };
@@ -138,7 +147,7 @@ function KonfirmasiBookingContent() {
               setErrorMessage(payRes.message || 'Booking berhasil dibuat, namun gagal memuat QRIS. Anda dapat membayarnya di menu Booking Saya.');
               setShowModal(true);
             }
-          } catch (payErr) {
+          } catch {
             setErrorMessage('Gagal memuat QRIS pembayaran. Anda dapat melanjutkan pembayaran di menu Booking Saya.');
             setShowModal(true);
           }
@@ -146,9 +155,14 @@ function KonfirmasiBookingContent() {
           setShowModal(true);
         }
       } else {
-        setErrorMessage(res.message || 'Gagal membuat reservasi. Silakan coba kembali.');
+        if (res.errors) {
+          const detailMsgs = Object.values(res.errors).flat().join(' | ');
+          setErrorMessage(detailMsgs || res.message || 'Gagal membuat reservasi.');
+        } else {
+          setErrorMessage(res.message || 'Gagal membuat reservasi. Silakan coba kembali.');
+        }
       }
-    } catch (err) {
+    } catch {
       setErrorMessage('Terjadi kendala jaringan saat menghubungi server.');
     } finally {
       setIsSubmitting(false);
@@ -197,13 +211,15 @@ function KonfirmasiBookingContent() {
     );
   }
 
+  const displayEndTime = endTime === '23:59' ? '00:00' : endTime;
+
   return (
     <div className="bg-[#f8f9ff] font-sans text-[#0b1c30] min-h-screen flex flex-col relative">
       <Navbar />
 
       <main className="w-full pt-16 bg-[#f8f9ff] flex-1 flex flex-col relative">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-10 z-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Panel: Booking Details Card (Hanya sticky di layar desktop lg:) */}
+          {/* Left Panel: Booking Details Card */}
           <div className="col-span-1 lg:col-span-5 bg-[#e5eeff] rounded-2xl shadow-sm overflow-hidden lg:sticky lg:top-24 border border-[#bccbb9]/30">
             <div className="h-44 w-full relative overflow-hidden bg-slate-900">
               <img
@@ -254,7 +270,7 @@ function KonfirmasiBookingContent() {
                     <span className="material-symbols-outlined text-[16px] text-[#006e2f]">
                       schedule
                     </span>
-                    {startTime} - {endTime}
+                    {startTime} - {displayEndTime}
                   </span>
                 </div>
               </div>
@@ -291,6 +307,7 @@ function KonfirmasiBookingContent() {
               </p>
             </div>
 
+            {/* Error Banner */}
             {errorMessage && (
               <div className="p-4 bg-[#ffdad6] text-[#ba1a1a] rounded-xl text-xs font-medium flex items-center gap-2 border border-[#ba1a1a]/30">
                 <span className="material-symbols-outlined text-[20px] shrink-0">error</span>
