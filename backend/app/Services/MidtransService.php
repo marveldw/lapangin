@@ -45,14 +45,13 @@ class MidtransService
     ): array {
         $this->initConfiguration();
 
+        $acquirer = config('services.midtrans.acquirer', 'gopay');
+
         $params = [
             'payment_type' => 'qris',
             'transaction_details' => [
                 'order_id'     => $orderId,
                 'gross_amount' => $grossAmount,
-            ],
-            'qris' => [
-                'acquirer' => config('services.midtrans.acquirer', 'airpay shopee'),
             ],
             'customer_details' => [
                 'first_name' => $customerDetails['first_name'] ?? 'Pelanggan',
@@ -61,11 +60,27 @@ class MidtransService
             ],
         ];
 
+        if (!empty($acquirer)) {
+            $params['qris'] = [
+                'acquirer' => $acquirer,
+            ];
+        }
+
         if (!empty($itemDetails)) {
             $params['item_details'] = $itemDetails;
         }
 
-        $response = CoreApi::charge($params);
+        try {
+            $response = CoreApi::charge($params);
+        } catch (Exception $e) {
+            // Jika acquirer tertentu gagal (misal 402 Payment channel is not activated), coba otomatis tanpa parameter acquirer
+            if (str_contains($e->getMessage(), '402') || str_contains($e->getMessage(), 'not activated')) {
+                unset($params['qris']);
+                $response = CoreApi::charge($params);
+            } else {
+                throw $e;
+            }
+        }
 
         // Convert object to array for easy handling if needed
         $resArray = json_decode(json_encode($response), true);
@@ -74,11 +89,16 @@ class MidtransService
         $qrUrl = null;
         if (!empty($resArray['actions']) && is_array($resArray['actions'])) {
             foreach ($resArray['actions'] as $action) {
-                if (($action['name'] ?? '') === 'generate-qr-code') {
+                if (in_array($action['name'] ?? '', ['generate-qr-code', 'generate-qr-code-v2'])) {
                     $qrUrl = $action['url'] ?? null;
                     break;
                 }
             }
+        }
+
+        $qrString = $resArray['qr_string'] ?? null;
+        if (!$qrUrl && !empty($qrString)) {
+            $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($qrString);
         }
 
         return [
@@ -87,7 +107,7 @@ class MidtransService
             'gross_amount'     => (int) ($resArray['gross_amount'] ?? $grossAmount),
             'status'           => strtoupper($resArray['transaction_status'] ?? 'PENDING'),
             'qr_url'           => $qrUrl,
-            'qr_string'        => $resArray['qr_string'] ?? null,
+            'qr_string'        => $qrString,
             'expires_at'       => $resArray['expiry_time'] ?? null,
             'payload_response' => $resArray,
         ];

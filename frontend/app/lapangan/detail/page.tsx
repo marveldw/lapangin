@@ -153,7 +153,7 @@ function DetailLapanganContent() {
     let endHour = parseInt(closeTime.split(':')[0], 10) || 22;
 
     // Normalisasi jam malam: jika tutup jam 23:59 atau 00:00, slot terakhir bisa mencapai jam 24 (00:00)
-    if (closeTime === '23:59' || closeTime === '00:00' || closeTime === '24:00') {
+    if (closeTime === '23:59' || closeTime === '00:00' || closeTime === '24:00' || closeTime.startsWith('00:')) {
       endHour = 24;
     }
 
@@ -173,8 +173,8 @@ function DetailLapanganContent() {
       const isBooked = bookedSlots.some((b) => {
         const bStart = b.start_time.slice(0, 5);
         const bEnd = b.end_time.slice(0, 5);
-        const effectiveEnd = nextHStr === '00:00' ? '24:00' : nextHStr;
-        const effectiveBEnd = bEnd === '00:00' ? '24:00' : bEnd;
+        const effectiveEnd = (nextH === 24 || nextHStr === '00:00') ? '24:00' : nextHStr;
+        const effectiveBEnd = (bEnd === '00:00' || bEnd === '23:59' || bEnd === '24:00') ? '24:00' : bEnd;
         return hStr < effectiveBEnd && effectiveEnd > bStart && b.status !== 'CANCELLED';
       });
 

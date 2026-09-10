@@ -130,6 +130,54 @@ export default function DaftarLapangan() {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
+  const [cityList, setCityList] = useState<string[]>([]);
+  const [editDistricts, setEditDistricts] = useState<string[]>([]);
+  const [loadingEditDistricts, setLoadingEditDistricts] = useState(false);
+
+  // 1. Fetch cities on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadCities() {
+      try {
+        const res = await api.get('/public/cities');
+        if (isMounted && res.success && Array.isArray(res.data)) {
+          setCityList(res.data.filter(Boolean));
+        }
+      } catch (err) {
+        console.error('Failed to load cities:', err);
+      }
+    }
+    loadCities();
+    return () => { isMounted = false; };
+  }, []);
+
+  // 2. Fetch districts when editFormData.city changes
+  useEffect(() => {
+    if (!editFormData.city) {
+      setEditDistricts([]);
+      return;
+    }
+    let isMounted = true;
+    async function loadDistricts() {
+      setLoadingEditDistricts(true);
+      try {
+        const res = await api.get(`/public/cities/${encodeURIComponent(editFormData.city)}/districts`);
+        if (isMounted && res.success && Array.isArray(res.data)) {
+          setEditDistricts(res.data.filter(Boolean));
+        } else if (isMounted) {
+          setEditDistricts(CITY_DISTRICTS[editFormData.city] || []);
+        }
+      } catch (err) {
+        console.error('Failed to load edit districts:', err);
+        if (isMounted) setEditDistricts(CITY_DISTRICTS[editFormData.city] || []);
+      } finally {
+        if (isMounted) setLoadingEditDistricts(false);
+      }
+    }
+    loadDistricts();
+    return () => { isMounted = false; };
+  }, [editFormData.city]);
+
   useEffect(() => {
     if (toastMessage) {
       const timer = setTimeout(() => setToastMessage(null), 4000);
@@ -1026,7 +1074,7 @@ export default function DaftarLapangan() {
                         className={`appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${editErrors.city ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer`}
                       >
                         <option value="" disabled>Pilih Kota / Kabupaten...</option>
-                        {Object.keys(CITY_DISTRICTS).map((c) => (
+                        {(cityList.length > 0 ? cityList : Object.keys(CITY_DISTRICTS)).map((c) => (
                           <option key={c} value={c}>{c}</option>
                         ))}
                       </select>
@@ -1043,11 +1091,19 @@ export default function DaftarLapangan() {
                       <select
                         value={editFormData.district}
                         onChange={(e) => setEditFormData({ ...editFormData, district: e.target.value })}
-                        disabled={!editFormData.city}
+                        disabled={!editFormData.city || loadingEditDistricts}
                         className="appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] disabled:bg-gray-100 disabled:text-gray-400 px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer"
                       >
-                        <option value="">{!editFormData.city ? 'Pilih Kota terlebih dahulu...' : 'Pilih Kecamatan...'}</option>
-                        {(CITY_DISTRICTS[editFormData.city] || []).map((d) => (
+                        <option value="">
+                          {!editFormData.city
+                            ? 'Pilih Kota terlebih dahulu...'
+                            : loadingEditDistricts
+                              ? 'Memuat daftar kecamatan...'
+                              : editDistricts.length === 0
+                                ? 'Tidak ada kecamatan ditemukan'
+                                : 'Pilih Kecamatan...'}
+                        </option>
+                        {editDistricts.map((d) => (
                           <option key={d} value={d}>{d}</option>
                         ))}
                       </select>

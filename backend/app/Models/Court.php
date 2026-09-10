@@ -32,8 +32,23 @@ class Court extends Model
         'city',
         'district',
         'image_url',
+        'image',
         'status',
     ];
+
+    protected $appends = [
+        'image',
+    ];
+
+    public function getImageAttribute()
+    {
+        return $this->image_url;
+    }
+
+    public function setImageAttribute($value)
+    {
+        $this->attributes['image_url'] = $value;
+    }
 
     public function owner()
     {

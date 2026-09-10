@@ -69,9 +69,19 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         // Courts Management (Owner)
         Route::get('/courts', [CourtController::class, 'index']);
         Route::post('/courts', [CourtController::class, 'store']);
+        Route::post('/courts/upload-image', [CourtController::class, 'uploadImage']);
         Route::get('/courts/{id}', [CourtController::class, 'show'])->whereNumber('id');
         Route::put('/courts/{id}', [CourtController::class, 'update'])->whereNumber('id');
         Route::delete('/courts/{id}', [CourtController::class, 'destroy'])->whereNumber('id');
+
+        // Aliases for /owner/courts (to support both conventions)
+        Route::get('/owner/courts', [CourtController::class, 'index']);
+        Route::post('/owner/courts', [CourtController::class, 'store']);
+        Route::post('/owner/courts/upload-image', [CourtController::class, 'uploadImage']);
+        Route::get('/owner/courts/{id}', [CourtController::class, 'show'])->whereNumber('id');
+        Route::put('/owner/courts/{id}', [CourtController::class, 'update'])->whereNumber('id');
+        Route::delete('/owner/courts/{id}', [CourtController::class, 'destroy'])->whereNumber('id');
+        Route::post('/upload/image', [CourtController::class, 'uploadImage']);
 
         // Customers Management (Owner)
         Route::get('/customers', [CustomerController::class, 'index']);

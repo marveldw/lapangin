@@ -65,6 +65,11 @@ class BookingController extends Controller
     {
         $user = $request->user();
 
+        // Normalize midnight end_time (00:00 or 24:00) to 23:59 so it passes after:start_time and date_format:H:i
+        if ($request->input('end_time') === '00:00' || $request->input('end_time') === '24:00') {
+            $request->merge(['end_time' => '23:59']);
+        }
+
         $validated = $request->validate([
             'court_id'     => 'required|integer|exists:courts,court_id',
             'booking_date' => 'required|date|after_or_equal:today',
@@ -144,23 +149,45 @@ class BookingController extends Controller
                 ->where('day_of_week', $dayOfWeek)
                 ->first();
 
-            if ($operatingHour && $operatingHour->is_closed) {
+            if (!$operatingHour) {
+                $operatingHour = $court->operatingHours()->first();
+            }
+
+            if (!$operatingHour || $operatingHour->is_closed) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Lapangan tutup pada hari tersebut.',
                 ], 422);
             }
 
-            if ($operatingHour && $operatingHour->open_time && $operatingHour->close_time) {
-                $openTime  = Carbon::parse($operatingHour->open_time)->format('H:i');
-                $closeTime = Carbon::parse($operatingHour->close_time)->format('H:i');
+            $openTime  = Carbon::parse($operatingHour->open_time)->format('H:i');
+            $closeTime = Carbon::parse($operatingHour->close_time)->format('H:i');
 
-                if ($validated['start_time'] < $openTime || $validated['end_time'] > $closeTime) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Booking harus berada dalam jam operasional ({$openTime} - {$closeTime}).",
-                    ], 422);
+            // Support both same-day operating hours and overnight operating hours
+            // If close_time is 00:00, it represents midnight (end of day 23:59)
+            $isMidnightClose = ($closeTime === '00:00');
+            $effectiveCloseTime = $isMidnightClose ? '23:59' : $closeTime;
+
+            $isOvernight = !$isMidnightClose && ($closeTime <= $openTime);
+            $isOutsideHours = false;
+
+            if (!$isOvernight) {
+                if ($validated['start_time'] < $openTime || $validated['end_time'] > $effectiveCloseTime) {
+                    $isOutsideHours = true;
                 }
+            } else {
+                $validEvening = ($validated['start_time'] >= $openTime);
+                $validMorning = ($validated['end_time'] <= $closeTime);
+                if (!$validEvening && !$validMorning) {
+                    $isOutsideHours = true;
+                }
+            }
+
+            if ($isOutsideHours) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Booking harus berada dalam jam operasional ({$openTime} - {$closeTime}).",
+                ], 422);
             }
 
             // 5 — Check slot conflict (Anti-Bentrok) with lock
@@ -182,7 +209,12 @@ class BookingController extends Controller
             // 6 — Calculate price
             $start = Carbon::createFromFormat('H:i', $validated['start_time']);
             $end   = Carbon::createFromFormat('H:i', $validated['end_time']);
-            $hours = abs($start->diffInMinutes($end)) / 60;
+            $diffMinutes = abs($start->diffInMinutes($end));
+            // If normalized to 23:59 (e.g. 59 minutes diff), count as full hour
+            if ($validated['end_time'] === '23:59' && ($diffMinutes % 60 === 59)) {
+                $diffMinutes += 1;
+            }
+            $hours = max(1, (int) round($diffMinutes / 60));
             $price = (int) round($court->price_per_hour * $hours);
 
             // 7 — Create booking record
@@ -197,7 +229,7 @@ class BookingController extends Controller
                 'start_time'     => $validated['start_time'],
                 'end_time'       => $validated['end_time'],
                 'price'          => $price,
-                'payment_method' => $validated['payment_method'] ?? 'ON_SITE',
+                'payment_method' => (($validated['payment_method'] ?? 'ON_SITE') === 'MIDTRANS_QRIS' ? 'QRIS' : ($validated['payment_method'] ?? 'ON_SITE')),
                 'status'         => 'PENDING',
                 'notes'          => $validated['notes'] ?? null,
             ]);
@@ -355,9 +387,22 @@ class BookingController extends Controller
             ->where('day_of_week', $dayOfWeek)
             ->first();
 
-        $isClosed  = $operatingHour ? (bool) $operatingHour->is_closed : false;
-        $openTime  = $operatingHour && $operatingHour->open_time ? Carbon::parse($operatingHour->open_time)->format('H:i') : '08:00';
-        $closeTime = $operatingHour && $operatingHour->close_time ? Carbon::parse($operatingHour->close_time)->format('H:i') : '23:00';
+        if (!$operatingHour) {
+            $operatingHour = CourtOperatingHour::where('court_id', $court->court_id)
+                ->where('day_of_week', $dayOfWeek)
+                ->first();
+        }
+
+        $isClosed = $operatingHour ? (bool) $operatingHour->is_closed : false;
+
+        $courtFallback = $court->operatingHours->first();
+        $openTime = $operatingHour && $operatingHour->open_time
+            ? Carbon::parse($operatingHour->open_time)->format('H:i')
+            : ($courtFallback && $courtFallback->open_time ? Carbon::parse($courtFallback->open_time)->format('H:i') : '08:00');
+
+        $closeTime = $operatingHour && $operatingHour->close_time
+            ? Carbon::parse($operatingHour->close_time)->format('H:i')
+            : ($courtFallback && $courtFallback->close_time ? Carbon::parse($courtFallback->close_time)->format('H:i') : '22:00');
 
         // Return only booked start/end times and status (privacy preserved)
         $existingBookings = Booking::where('court_id', $court->court_id)
