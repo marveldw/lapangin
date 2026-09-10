@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { formatRupiah } from '@/lib/formatters';
@@ -11,6 +11,7 @@ export interface BookingRecord {
   start_time: string;
   end_time: string;
   price: number;
+  payment_method?: string;
   status: string;
   customer?: {
     name: string;
@@ -54,6 +55,14 @@ export default function BookingDetailModal({ booking, onClose }: Props) {
             <span className="text-[#3d4a3d]">Waktu</span>
             <span className="font-bold">
               {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[#3d4a3d]">Metode Bayar</span>
+            <span className="font-bold">
+              {booking.payment_method === 'QRIS'
+                ? 'QRIS Dinamis'
+                : 'Bayar di Tempat'}
             </span>
           </div>
           <div className="flex justify-between">

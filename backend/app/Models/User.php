@@ -42,6 +42,13 @@ class User extends Authenticatable implements FilamentUser
         'remember_token',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'password_hash' => 'hashed',
+        ];
+    }
+
     public function getAuthPassword(): string
     {
         return $this->password_hash;
@@ -80,5 +87,15 @@ class User extends Authenticatable implements FilamentUser
     public function bookings()
     {
         return $this->hasMany(Booking::class, 'user_id', 'user_id');
+    }
+
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class, 'owner_id', 'user_id');
+    }
+
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class, 'user_id', 'user_id');
     }
 }

@@ -68,9 +68,10 @@ class BookingController extends Controller
         $validated = $request->validate([
             'court_id'     => 'required|integer|exists:courts,court_id',
             'booking_date' => 'required|date|after_or_equal:today',
-            'start_time'   => 'required|date_format:H:i',
-            'end_time'     => 'required|date_format:H:i|after:start_time',
-            'notes'        => 'nullable|string|max:1000',
+            'start_time'     => 'required|date_format:H:i',
+            'end_time'       => 'required|date_format:H:i|after:start_time',
+            'notes'          => 'nullable|string|max:1000',
+            'payment_method' => 'nullable|string|in:QRIS,ON_SITE',
         ]);
 
         return DB::transaction(function () use ($user, $validated) {
@@ -181,23 +182,24 @@ class BookingController extends Controller
             // 6 — Calculate price
             $start = Carbon::createFromFormat('H:i', $validated['start_time']);
             $end   = Carbon::createFromFormat('H:i', $validated['end_time']);
-            $hours = $end->diffInMinutes($start) / 60;
+            $hours = abs($start->diffInMinutes($end)) / 60;
             $price = (int) round($court->price_per_hour * $hours);
 
             // 7 — Create booking record
             $bookingCode = $this->generateUniqueBookingCode();
 
             $booking = Booking::create([
-                'booking_code' => $bookingCode,
-                'court_id'     => $validated['court_id'],
-                'customer_id'  => $customer->customer_id,
-                'user_id'      => $user->user_id,
-                'booking_date' => $validated['booking_date'],
-                'start_time'   => $validated['start_time'],
-                'end_time'     => $validated['end_time'],
-                'price'        => $price,
-                'status'       => 'PENDING',
-                'notes'        => $validated['notes'] ?? null,
+                'booking_code'   => $bookingCode,
+                'court_id'       => $validated['court_id'],
+                'customer_id'    => $customer->customer_id,
+                'user_id'        => $user->user_id,
+                'booking_date'   => $validated['booking_date'],
+                'start_time'     => $validated['start_time'],
+                'end_time'       => $validated['end_time'],
+                'price'          => $price,
+                'payment_method' => $validated['payment_method'] ?? 'ON_SITE',
+                'status'         => 'PENDING',
+                'notes'          => $validated['notes'] ?? null,
             ]);
 
             return response()->json([
@@ -392,12 +394,12 @@ class BookingController extends Controller
     private function generateUniqueBookingCode(int $maxRetries = 5): string
     {
         for ($i = 0; $i < $maxRetries; $i++) {
-            $code = 'BK' . strtoupper(Str::random(8));
+            $code = 'BK-' . now()->format('Ymd') . '-' . strtoupper(Str::random(4));
             if (!Booking::where('booking_code', $code)->exists()) {
                 return $code;
             }
         }
 
-        return 'BK' . strtoupper(dechex(time())) . strtoupper(Str::random(4));
+        return 'BK-' . now()->format('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
     }
 }

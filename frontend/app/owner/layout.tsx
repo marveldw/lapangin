@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -14,7 +14,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
     if (!isLoading) {
       if (!token || !user) {
         router.push('/login');
-      } else if (user.role !== 'OWNER') {
+      } else if (user.role?.toUpperCase() !== 'OWNER') {
         router.push('/lapangan');
       }
     }
@@ -31,7 +31,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  if (!token || user?.role !== 'OWNER') {
+  if (!token || user?.role?.toUpperCase() !== 'OWNER') {
     return null;
   }
 

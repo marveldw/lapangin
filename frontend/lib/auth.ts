@@ -37,21 +37,23 @@ export function setAuthSession(token: string, user: User) {
   if (typeof window === "undefined") return;
   localStorage.setItem(AUTH_TOKEN_KEY, token);
   localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
-  document.cookie = `${AUTH_TOKEN_KEY}=${encodeURIComponent(token)}; path=/; max-age=604800; SameSite=Lax`;
+  const isSecure = window.location.protocol === "https:";
+  document.cookie = `${AUTH_TOKEN_KEY}=${encodeURIComponent(token)}; path=/; max-age=604800; SameSite=Lax${isSecure ? "; Secure" : ""}`;
 }
 
 export function clearAuthSession() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(AUTH_USER_KEY);
-  document.cookie = `${AUTH_TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;
+  const isSecure = window.location.protocol === "https:";
+  document.cookie = `${AUTH_TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax${isSecure ? "; Secure" : ""}`;
 }
 
 export async function logoutUser(): Promise<void> {
   const token = getAuthToken();
   if (token) {
     try {
-      const rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+      const rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
       const apiUrl = rawUrl.endsWith("/api") ? rawUrl : `${rawUrl}/api`;
       await fetch(`${apiUrl}/logout`, {
         method: "POST",

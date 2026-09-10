@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import QrisPaymentModal from '@/components/QrisPaymentModal';
 import { useAuth } from '@/lib/AuthContext';
 import { api } from '@/lib/api';
 import { formatRupiah, formatDateIndo, getCourtFallbackImage } from '@/lib/formatters';
@@ -38,6 +39,17 @@ function KonfirmasiBookingContent() {
   const [createdBookingCode, setCreatedBookingCode] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Payment method state ('QRIS' or 'ON_SITE')
+  const [paymentMethod, setPaymentMethod] = useState<'QRIS' | 'ON_SITE'>('QRIS');
+  const [qrisData, setQrisData] = useState<{
+    orderId: string;
+    grossAmount: number;
+    qrUrl: string;
+    qrString?: string;
+    expiresAt?: string;
+  } | null>(null);
+  const [showQrisModal, setShowQrisModal] = useState(false);
 
   // 1. Check auth
   useEffect(() => {
@@ -100,13 +112,41 @@ function KonfirmasiBookingContent() {
         start_time: startTime,
         end_time: endTime,
         notes: notes.trim() || undefined,
+        payment_method: paymentMethod,
       };
 
       const res = await api.post('/bookings', payload, token);
 
       if (res.success && res.data) {
-        setCreatedBookingCode(res.data.booking_code || 'LPG-SUCCESS');
-        setShowModal(true);
+        const booking = res.data;
+        setCreatedBookingCode(booking.booking_code || 'LPG-SUCCESS');
+
+        if (paymentMethod === 'QRIS') {
+          // Buat Dynamic QRIS via Payment Gateway Midtrans
+          try {
+            const payRes = await api.post(`/bookings/${booking.booking_id}/pay`, {}, token);
+            if (payRes.success && payRes.data) {
+              setQrisData({
+                orderId: payRes.data.order_id,
+                grossAmount: payRes.data.gross_amount,
+                qrUrl: payRes.data.qr_url,
+                qrString: payRes.data.qr_string,
+                expiresAt: payRes.data.expires_at,
+              });
+              setShowQrisModal(true);
+              return;
+            } else {
+              setErrorMessage(payRes.message || 'Booking berhasil dibuat, namun gagal memuat QRIS. Anda dapat membayarnya di menu Booking Saya.');
+              setShowModal(true);
+            }
+          } catch (payErr) {
+            setErrorMessage('Gagal memuat QRIS pembayaran. Anda dapat melanjutkan pembayaran di menu Booking Saya.');
+            setShowModal(true);
+          }
+        } else {
+          // Bayar di Tempat (ON_SITE)
+          setShowModal(true);
+        }
       } else {
         setErrorMessage(res.message || 'Gagal membuat reservasi. Silakan coba kembali.');
       }
@@ -312,6 +352,78 @@ function KonfirmasiBookingContent() {
                 ></textarea>
               </div>
 
+              {/* Pilihan Metode Pembayaran */}
+              <div className="flex flex-col gap-3 w-full">
+                <label className="text-xs font-bold text-[#3d4a3d] uppercase tracking-wider flex items-center justify-between">
+                  <span>Pilih Metode Pembayaran</span>
+                  <span className="text-[11px] font-normal text-gray-500 lowercase">Wajib dipilih</span>
+                </label>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Opsi 1: QRIS Dinamis */}
+                  <div
+                    onClick={() => setPaymentMethod('QRIS')}
+                    className={`relative p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                      paymentMethod === 'QRIS'
+                        ? 'border-[#006e2f] bg-[#f0fdf4] shadow-sm'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="px-2 py-0.5 rounded bg-red-600 text-white font-black text-[10px] tracking-wider">
+                          QRIS
+                        </div>
+                        <span className="text-xs font-bold text-[#0b1c30]">QRIS Dinamis</span>
+                      </div>
+                      <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-[#006e2f] text-white">
+                        Otomatis
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-gray-500 leading-relaxed">
+                      Scan via BCA, Mandiri, BRI, GoPay, OVO, Dana. <strong>Otomatis lunas seketika</strong> tanpa perlu konfirmasi admin.
+                    </p>
+
+                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[#006e2f]">
+                      <span className="material-symbols-outlined text-[14px]">bolt</span>
+                      <span>Konfirmasi Instan 24 Jam</span>
+                    </div>
+                  </div>
+
+                  {/* Opsi 2: Bayar di Tempat */}
+                  <div
+                    onClick={() => setPaymentMethod('ON_SITE')}
+                    className={`relative p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                      paymentMethod === 'ON_SITE'
+                        ? 'border-[#006e2f] bg-[#f0fdf4] shadow-sm'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[#006e2f] text-[20px]">
+                          payments
+                        </span>
+                        <span className="text-xs font-bold text-[#0b1c30]">Bayar di Tempat</span>
+                      </div>
+                      <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                        Manual
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-gray-500 leading-relaxed">
+                      Bayar tunai saat Anda tiba di lokasi. <strong>Memerlukan konfirmasi manual</strong> dari pihak admin venue.
+                    </p>
+
+                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-700">
+                      <span className="material-symbols-outlined text-[14px]">hourglass_top</span>
+                      <span>Konfirmasi oleh Admin</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Guarantee badge */}
               <div className="p-3 bg-[#e5eeff] rounded-xl flex items-center gap-2.5 text-xs text-[#004b1e] font-medium">
                 <span className="material-symbols-outlined text-[20px] text-[#006e2f] shrink-0">
@@ -341,11 +453,16 @@ function KonfirmasiBookingContent() {
                       <span className="material-symbols-outlined animate-spin text-[18px]">
                         progress_activity
                       </span>
-                      <span>Memproses Reservasi...</span>
+                      <span>Memproses Booking...</span>
+                    </>
+                  ) : paymentMethod === 'QRIS' ? (
+                    <>
+                      <span>Lanjut Bayar via QRIS</span>
+                      <span className="material-symbols-outlined text-[18px]">qr_code_2</span>
                     </>
                   ) : (
                     <>
-                      <span>Konfirmasi & Buat Booking</span>
+                      <span>Konfirmasi (Bayar di Tempat)</span>
                       <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                     </>
                   )}
@@ -355,6 +472,28 @@ function KonfirmasiBookingContent() {
           </div>
         </div>
       </main>
+
+      {/* Dynamic QRIS Payment Modal */}
+      {qrisData && (
+        <QrisPaymentModal
+          isOpen={showQrisModal}
+          onClose={() => {
+            setShowQrisModal(false);
+            // Tetap arahkan ke riwayat booking agar pengguna bisa bayar nanti
+            router.push('/customer/booking');
+          }}
+          orderId={qrisData.orderId}
+          grossAmount={qrisData.grossAmount}
+          qrUrl={qrisData.qrUrl}
+          qrString={qrisData.qrString}
+          expiresAt={qrisData.expiresAt}
+          title={`Booking #${createdBookingCode || ''}`}
+          onSuccess={() => {
+            setShowQrisModal(false);
+            setShowModal(true);
+          }}
+        />
+      )}
 
       {/* Success Modal */}
       {showModal && (
@@ -367,10 +506,23 @@ function KonfirmasiBookingContent() {
             </div>
 
             <div className="text-center">
-              <h3 className="text-xl font-bold text-[#0b1c30]">Reservasi Berhasil Dibuat!</h3>
+              <h3 className="text-xl font-bold text-[#0b1c30]">
+                {paymentMethod === 'QRIS'
+                  ? 'Pembayaran Berhasil & Terkonfirmasi!'
+                  : 'Reservasi Berhasil Dibuat!'}
+              </h3>
               <p className="text-xs text-[#3d4a3d] mt-1 leading-relaxed">
-                Slot jadwal Anda di <strong className="text-[#0b1c30]">{court.name}</strong> telah
-                berhasil dipesan.
+                {paymentMethod === 'QRIS' ? (
+                  <>
+                    Pembayaran QRIS untuk slot di <strong className="text-[#0b1c30]">{court.name}</strong>{' '}
+                    telah diverifikasi otomatis oleh sistem. E-Ticket Anda siap digunakan!
+                  </>
+                ) : (
+                  <>
+                    Slot jadwal Anda di <strong className="text-[#0b1c30]">{court.name}</strong> telah
+                    didaftarkan. Silakan lakukan pembayaran di lokasi saat tiba. Booking akan dikonfirmasi oleh pengelola venue.
+                  </>
+                )}
               </p>
             </div>
 

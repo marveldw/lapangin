@@ -27,6 +27,7 @@ export interface BookingRecord {
   start_time: string;
   end_time: string;
   price: number;
+  payment_method?: string;
   status: string;
   customer?: {
     name: string;

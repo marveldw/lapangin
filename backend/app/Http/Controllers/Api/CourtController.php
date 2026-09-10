@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Court;
 use App\Models\CourtOperatingHour;
 use App\Models\Plan;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CourtController extends Controller
 {
@@ -28,36 +30,6 @@ class CourtController extends Controller
     {
         $user = $request->user();
 
-        // Get active subscription and plan, or fallback to default Free plan
-        $subscription = $user->subscriptions()
-            ->where('status', 'ACTIVE')
-            ->with('plan')
-            ->first();
-
-        $maxCourts = 1; // default limit
-        $planName  = 'FREE';
-
-        if ($subscription && $subscription->plan) {
-            $maxCourts = $subscription->plan->max_courts;
-            $planName  = $subscription->plan->name;
-        } else {
-            $freePlan = Plan::where('name', 'FREE')->first();
-            if ($freePlan) {
-                $maxCourts = $freePlan->max_courts;
-            }
-        }
-
-        $currentCourts = Court::where('owner_id', $user->user_id)
-            ->where('status', 'ACTIVE')
-            ->count();
-
-        if ($maxCourts !== null && $currentCourts >= $maxCourts) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Batas maksimal lapangan untuk paket ' . $planName . ' (' . $maxCourts . ' lapangan) telah tercapai. Silakan upgrade paket Anda.',
-            ], 403);
-        }
-
         $validated = $request->validate([
             'name'           => 'required|string|max:255',
             'sport_type'     => 'required|string|max:255',
@@ -70,31 +42,69 @@ class CourtController extends Controller
             'status'         => 'in:ACTIVE,INACTIVE',
         ]);
 
-        $court = Court::create([
-            ...$validated,
-            'owner_id' => $user->user_id,
-            'status'   => $validated['status'] ?? 'ACTIVE',
-        ]);
+        return DB::transaction(function () use ($user, $validated) {
+            // Lock user row untuk menserialisasi pengecekan kuota paket dan mencegah race condition
+            $lockedUser = User::where('user_id', $user->user_id)
+                ->lockForUpdate()
+                ->first();
 
-        // Auto-create default operating hours (Senin-Minggu 08:00 - 22:00) agar langsung bisa dibooking
-        for ($day = 0; $day <= 6; $day++) {
-            CourtOperatingHour::firstOrCreate(
-                [
-                    'court_id'    => $court->court_id,
-                    'day_of_week' => $day,
-                ],
-                [
-                    'open_time'  => '08:00',
-                    'close_time' => '22:00',
-                    'is_closed'  => false,
-                ]
-            );
-        }
+            // Get active subscription and plan, or fallback to default Free plan
+            $subscription = $lockedUser->subscriptions()
+                ->where('status', 'ACTIVE')
+                ->with('plan')
+                ->first();
 
-        return response()->json([
-            'success' => true,
-            'data'    => $court->load('operatingHours'),
-        ], 201);
+            $maxCourts = 1; // default limit
+            $planName  = 'FREE';
+
+            if ($subscription && $subscription->plan) {
+                $maxCourts = $subscription->plan->max_courts;
+                $planName  = $subscription->plan->name;
+            } else {
+                $freePlan = Plan::where('name', 'FREE')->first();
+                if ($freePlan) {
+                    $maxCourts = $freePlan->max_courts;
+                }
+            }
+
+            $currentCourts = Court::where('owner_id', $lockedUser->user_id)
+                ->where('status', 'ACTIVE')
+                ->lockForUpdate()
+                ->count();
+
+            if ($maxCourts !== null && $currentCourts >= $maxCourts) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Batas maksimal lapangan untuk paket ' . $planName . ' (' . $maxCourts . ' lapangan) telah tercapai. Silakan upgrade paket Anda.',
+                ], 403);
+            }
+
+            $court = Court::create([
+                ...$validated,
+                'owner_id' => $lockedUser->user_id,
+                'status'   => $validated['status'] ?? 'ACTIVE',
+            ]);
+
+            // Auto-create default operating hours (Senin-Minggu 08:00 - 22:00) agar langsung bisa dibooking
+            for ($day = 0; $day <= 6; $day++) {
+                CourtOperatingHour::firstOrCreate(
+                    [
+                        'court_id'    => $court->court_id,
+                        'day_of_week' => $day,
+                    ],
+                    [
+                        'open_time'  => '08:00',
+                        'close_time' => '22:00',
+                        'is_closed'  => false,
+                    ]
+                );
+            }
+
+            return response()->json([
+                'success' => true,
+                'data'    => $court->load('operatingHours'),
+            ], 201);
+        });
     }
 
     // GET /api/courts/{id}

@@ -32,7 +32,7 @@ export default function TestimoniSection() {
           <p className="text-[11px] font-bold tracking-widest text-[#006e2f] uppercase mb-2">
             KATA MEREKA
           </p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0b1c30] tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">
             Dipercaya pemain &amp; pemilik lapangan
           </h2>
         </div>

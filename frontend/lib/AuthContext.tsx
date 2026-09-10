@@ -11,9 +11,10 @@ export interface User {
   phone?: string;
   status?: string;
   subscription?: {
+    plan_id?: number;
     plan_name: string;
-    max_courts: number;
-    max_bookings_per_month: number;
+    max_courts: number | null;
+    max_bookings_per_month: number | null;
     status: string;
   } | null;
 }
@@ -30,11 +31,12 @@ export interface RegisterPayload {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<{ success: boolean; message?: string; role?: string }>;
-  register: (payload: RegisterPayload) => Promise<{ success: boolean; message?: string; errors?: Record<string, string[]>; role?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; message?: string; role?: string; user?: User }>;
+  register: (payload: RegisterPayload) => Promise<{ success: boolean; message?: string; errors?: Record<string, string[]>; role?: string; user?: User }>;
   logout: () => Promise<void>;
   isLoading: boolean;
   refreshUser: () => Promise<void>;
+  setAuth: (token: string, user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -43,6 +45,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const setAuth = (newToken: string, newUser: User) => {
+    setToken(newToken);
+    setUser(newUser);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lapangin_token', newToken);
+      localStorage.setItem('lapangin_user', JSON.stringify(newUser));
+      const isSecure = window.location.protocol === 'https:';
+      document.cookie = `lapangin_token=${encodeURIComponent(newToken)}; path=/; max-age=604800; SameSite=Lax${isSecure ? '; Secure' : ''}`;
+    }
+  };
 
   // Ambil user dan token dari localStorage saat pertama kali aplikasi dimuat
   useEffect(() => {
@@ -61,12 +74,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshUser = async () => {
-    if (!token) return;
+    const currentToken = token || (typeof window !== 'undefined' ? localStorage.getItem('lapangin_token') : null);
+    if (!currentToken) return;
     try {
-      const res = await api.get('/me', token);
+      const res = await api.get('/me', currentToken);
       if (res.success && res.user) {
-        setUser(res.user);
-        localStorage.setItem('lapangin_user', JSON.stringify(res.user));
+        setAuth(currentToken, res.user);
       }
     } catch (e) {
       console.error('Failed to refresh user:', e);
@@ -77,12 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.post('/login', { email, password });
       if (res.success && res.token && res.user) {
-        setToken(res.token);
-        setUser(res.user);
-        localStorage.setItem('lapangin_token', res.token);
-        localStorage.setItem('lapangin_user', JSON.stringify(res.user));
-        document.cookie = `lapangin_token=${encodeURIComponent(res.token)}; path=/; max-age=604800; SameSite=Lax`;
-        return { success: true, role: res.user.role };
+        setAuth(res.token, res.user);
+        return { success: true, role: res.user.role, user: res.user };
       }
       return { success: false, message: res.message || 'Email atau password salah.' };
     } catch {
@@ -94,12 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.post('/register', payload);
       if (res.success && res.token && res.user) {
-        setToken(res.token);
-        setUser(res.user);
-        localStorage.setItem('lapangin_token', res.token);
-        localStorage.setItem('lapangin_user', JSON.stringify(res.user));
-        document.cookie = `lapangin_token=${encodeURIComponent(res.token)}; path=/; max-age=604800; SameSite=Lax`;
-        return { success: true, role: res.user.role };
+        setAuth(res.token, res.user);
+        return { success: true, role: res.user.role, user: res.user };
       }
       return {
         success: false,
@@ -112,23 +117,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    if (token) {
+    const currentToken = token || (typeof window !== 'undefined' ? localStorage.getItem('lapangin_token') : null);
+    if (currentToken) {
       try {
-        await api.post('/logout', {}, token);
+        await api.post('/logout', {}, currentToken);
       } catch {
         // Abaikan error saat logout
       }
     }
     setToken(null);
     setUser(null);
-    localStorage.removeItem('lapangin_token');
-    localStorage.removeItem('lapangin_user');
-    document.cookie = `lapangin_token=; path=/; max-age=0; SameSite=Lax`;
-    window.location.href = '/login';
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('lapangin_token');
+      localStorage.removeItem('lapangin_user');
+      const isSecure = window.location.protocol === 'https:';
+      document.cookie = `lapangin_token=; path=/; max-age=0; SameSite=Lax${isSecure ? '; Secure' : ''}`;
+      window.location.href = '/login';
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, isLoading, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, isLoading, refreshUser, setAuth }}>
       {children}
     </AuthContext.Provider>
   );

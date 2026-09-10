@@ -11,7 +11,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
   const pathname = usePathname();
-  const { user, logout } = useAuth(); // Tambahkan fungsi logout di sini
+  const { user, logout } = useAuth();
 
   const getMenuClass = (path: string) => {
     const isActive = pathname === path || pathname.startsWith(`${path}/`);

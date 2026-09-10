@@ -102,6 +102,7 @@ function CariLapanganContent() {
         setCourts(items || []);
       } else {
         setCourts([]);
+        if (res.message) setError(res.message);
       }
     } catch (err) {
       setError('Gagal memuat data lapangan. Pastikan server aktif.');

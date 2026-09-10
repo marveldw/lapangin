@@ -40,7 +40,7 @@ export default function FaqSection() {
           <p className="text-[11px] font-bold tracking-widest text-[#006e2f] uppercase mb-2">
             FAQ
           </p>
-          <h2 className="text-3xl font-extrabold text-[#0b1c30] tracking-tight">
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
             Pertanyaan umum
           </h2>
           <p className="text-sm text-gray-500 mt-3 leading-relaxed">
