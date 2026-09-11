@@ -124,19 +124,37 @@ function JadwalContent() {
       const timeMatch = selectedCourt.description.match(/Jam Operasional:\s*(\d{2}):\d{2}\s*-\s*(\d{2}):\d{2}/);
       if (timeMatch) {
         openHour = parseInt(timeMatch[1], 10);
-        closeHour = parseInt(timeMatch[2], 10) - 1; 
+        const rawClose = parseInt(timeMatch[2], 10);
+        // Midnight closing (00:00) represents 24:00 (end of day)
+        const endHour = (rawClose === 0 || timeMatch[2] === '00') ? 24 : rawClose;
+        closeHour = endHour - 1; 
+      }
+    }
+
+    const opHours = (selectedCourt as any).operating_hours || (selectedCourt as any).operatingHours;
+    if (Array.isArray(opHours) && opHours.length > 0) {
+      const firstOp = opHours[0];
+      if (firstOp.open_time && firstOp.close_time) {
+        const parsedOpen = parseInt(firstOp.open_time.split(':')[0], 10);
+        const rawClose = parseInt(firstOp.close_time.split(':')[0], 10);
+        const endHour = (rawClose === 0 || firstOp.close_time.startsWith('00:')) ? 24 : rawClose;
+        if (!isNaN(parsedOpen)) openHour = parsedOpen;
+        if (!isNaN(endHour)) closeHour = endHour - 1;
       }
     }
 
     const hours = [];
     for (let h = openHour; h <= closeHour; h++) {
       const start = h.toString().padStart(2, '0') + ':00';
-      const end = (h + 1).toString().padStart(2, '0') + ':00';
+      const nextH = h + 1;
+      const end = nextH === 24 ? '00:00' : nextH.toString().padStart(2, '0') + ':00';
 
       const matchedBooking = dayBookings.find((b) => {
         const bStart = b.start_time.slice(0, 5);
         const bEnd = b.end_time.slice(0, 5);
-        return start < bEnd && end > bStart;
+        const normSlotEnd = (end === '00:00' || end === '24:00') ? '24:00' : end;
+        const normBEnd = (bEnd === '00:00' || bEnd === '23:59' || bEnd === '24:00') ? '24:00' : bEnd;
+        return start < normBEnd && normSlotEnd > bStart;
       });
 
       hours.push({
@@ -155,7 +173,10 @@ function JadwalContent() {
 
     dayBookings.forEach((b) => {
       const startH = parseInt(b.start_time.split(':')[0], 10);
-      const endH = parseInt(b.end_time.split(':')[0], 10);
+      let endH = parseInt(b.end_time.split(':')[0], 10);
+      if (endH === 0 || b.end_time.startsWith('00:') || b.end_time.startsWith('23:59')) {
+        endH = 24;
+      }
       hours += Math.max(1, endH - startH);
       if (b.status === 'CONFIRMED') {
         rev += b.price;

@@ -66,13 +66,7 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Registrasi berhasil.',
             'token'   => $token,
-            'user'    => [
-                'user_id' => $user->user_id,
-                'name'    => $user->name,
-                'email'   => $user->email,
-                'phone'   => $user->phone,
-                'role'    => $user->role,
-            ],
+            'user'    => $this->formatUserResponse($user),
         ], 201);
     }
 
@@ -110,13 +104,7 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'token'   => $token,
-            'user'    => [
-                'user_id' => $user->user_id,
-                'name'    => $user->name,
-                'email'   => $user->email,
-                'phone'   => $user->phone,
-                'role'    => $user->role,
-            ],
+            'user'    => $this->formatUserResponse($user),
         ]);
     }
 
@@ -140,29 +128,34 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        $user = $request->user()->load(['subscriptions.plan']);
+        return response()->json([
+            'success' => true,
+            'user'    => $this->formatUserResponse($request->user()),
+        ]);
+    }
+
+    private function formatUserResponse(User $user): array
+    {
+        $user->loadMissing(['subscriptions.plan']);
 
         $activeSubscription = $user->subscriptions
             ->where('status', 'ACTIVE')
             ->first();
 
-        return response()->json([
-            'success' => true,
-            'user'    => [
-                'user_id'      => $user->user_id,
-                'name'         => $user->name,
-                'email'        => $user->email,
-                'role'         => $user->role,
-                'phone'        => $user->phone,
-                'status'       => $user->status,
-                'subscription' => ($user->role === 'OWNER' && $activeSubscription) ? [
-                    'plan_id'                => $activeSubscription->plan_id,
-                    'plan_name'              => $activeSubscription->plan->name ?? null,
-                    'max_courts'             => $activeSubscription->plan->max_courts ?? null,
-                    'max_bookings_per_month' => $activeSubscription->plan->max_bookings_per_month ?? null,
-                    'status'                 => $activeSubscription->status,
-                ] : null,
-            ],
-        ]);
+        return [
+            'user_id'      => $user->user_id,
+            'name'         => $user->name,
+            'email'        => $user->email,
+            'phone'        => $user->phone,
+            'role'         => $user->role,
+            'status'       => $user->status,
+            'subscription' => ($user->role === 'OWNER' && $activeSubscription) ? [
+                'plan_id'                => $activeSubscription->plan_id,
+                'plan_name'              => $activeSubscription->plan->name ?? null,
+                'max_courts'             => $activeSubscription->plan->max_courts ?? null,
+                'max_bookings_per_month' => $activeSubscription->plan->max_bookings_per_month ?? null,
+                'status'                 => $activeSubscription->status,
+            ] : null,
+        ];
     }
 }
