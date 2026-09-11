@@ -174,5 +174,11 @@ class DatabaseSeeder extends Seeder
                 }
             }
         }
+
+        // 7. Seed Tiered Owners, Subscriptions, Customers, and Diverse Courts
+        $this->call([
+            UserSeeder::class,
+            CourtSeeder::class,
+        ]);
     }
 }
