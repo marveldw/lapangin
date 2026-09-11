@@ -18,6 +18,8 @@ export interface CourtItem {
   city: string;
   district?: string | null;
   image_url?: string | null;
+  open_time?: string | null;
+  close_time?: string | null;
   status: 'ACTIVE' | 'INACTIVE' | string;
   booking_count?: number;
   created_at?: string;
@@ -239,14 +241,15 @@ export default function DaftarLapangan() {
     setEditingCourt(court);
     
     let rawDesc = court.description || '';
-    let oTime = '08:00';
-    let cTime = '23:00';
+    // Ambil langsung jika field open_time / close_time tersedia di court
+    let oTime = court.open_time ? court.open_time.slice(0, 5) : '08:00';
+    let cTime = court.close_time ? court.close_time.slice(0, 5) : '23:00';
     let foundAmenities: string[] = [];
     
     let eRules = '- Wajib menggunakan sepatu olahraga khusus indoor.\n- Dilarang membawa makanan berat ke dalam area lapangan.\n- Dilarang merokok di area GOR.';
     let eRefund = 'Booking yang sudah dibayar tidak dapat dibatalkan (Non-refundable). Jika ada kendala cuaca pada lapangan outdoor, jadwal bisa di-reschedule.';
 
-    // Extract Refund Policy (Bottom-up)
+    // Extract Refund Policy
     const refundSplit = rawDesc.split(/Kebijakan Refund & Reschedule:\n/i);
     if (refundSplit.length > 1) {
       eRefund = refundSplit[1].trim();
@@ -260,10 +263,11 @@ export default function DaftarLapangan() {
       rawDesc = rulesSplit[0];
     }
 
-    const timeMatch = rawDesc.match(/Jam Operasional:\s*(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+    // Extract Operating Hours jika belum ada di field kolom langsung
+    const timeMatch = rawDesc.match(/Jam Operasional:\s*(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/i);
     if (timeMatch) {
-      oTime = timeMatch[1];
-      cTime = timeMatch[2];
+      if (!court.open_time) oTime = timeMatch[1];
+      if (!court.close_time) cTime = timeMatch[2];
       rawDesc = rawDesc.replace(timeMatch[0], '');
     }
 
@@ -351,11 +355,14 @@ export default function DaftarLapangan() {
 
     setIsSavingEdit(true);
 
+    // Normalisasi jam malam: jika tutup jam 00:00, jadikan 23:59 agar validasi waktu backend aman
+    const normalizedCloseTime = editCloseTime === '00:00' ? '23:59' : editCloseTime;
+
     const baseDescription = editFormData.description.trim() ? `${editFormData.description.trim()}\n\n` : '';
     const rulesSection = editRules.trim() ? `Aturan Venue:\n${editRules.trim()}\n\n` : '';
     const refundSection = editRefundPolicy.trim() ? `Kebijakan Refund & Reschedule:\n${editRefundPolicy.trim()}` : '';
 
-    const compiledDescription = `Jam Operasional: ${editOpenTime} - ${editCloseTime}\n${
+    const compiledDescription = `Jam Operasional: ${editOpenTime} - ${normalizedCloseTime}\n${
       editSelectedAmenities.length > 0
         ? `Fasilitas Tersedia: ${editSelectedAmenities.map(a => AMENITIES.find(x => x.id === a)?.label).join(', ')}.\n\n`
         : '\n'
@@ -366,6 +373,8 @@ export default function DaftarLapangan() {
         name: editFormData.name.trim(),
         sport_type: finalEditSportType.trim(),
         price_per_hour: Number(editFormData.price_per_hour),
+        open_time: editOpenTime,              // <-- Sinkronkan jam buka ke backend
+        close_time: normalizedCloseTime,      // <-- Sinkronkan jam tutup ke backend
         address: editFormData.address.trim(),
         city: editFormData.city.trim(),
         district: editFormData.district.trim() ? editFormData.district.trim() : null,
@@ -381,7 +390,12 @@ export default function DaftarLapangan() {
       if (res?.success && res.data) {
         const updated = res.data;
         setCourts((prev) =>
-          prev.map((c) => (c.court_id === editingCourt.court_id ? { ...c, ...updated } : c))
+          prev.map((c) => (c.court_id === editingCourt.court_id ? { 
+            ...c, 
+            ...updated,
+            open_time: editOpenTime,
+            close_time: normalizedCloseTime 
+          } : c))
         );
         setToastMessage({
           type: 'success',
