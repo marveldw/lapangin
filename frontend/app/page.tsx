@@ -1,4 +1,4 @@
-import Navbar from "@/components/landing/Navbar";
+import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/landing/HeroSection";
 import DualRoleSection from "@/components/landing/DualRoleSection";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";

@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatRupiah, getCourtFallbackImage } from '@/lib/formatters';
 import { useDebounce } from '@/lib/useDebounce';
+import Navbar from '@/components/Navbar';
 
 interface Court {
   court_id: number;
@@ -160,51 +161,8 @@ function CariLapanganContent() {
   return (
     <div className="bg-[#f8f9ff] font-sans text-[#0b1c30] min-h-screen flex flex-col">
       
-      {/* Header Persis Seperti Landing Page (Ditulis Langsung di sini) */}
-      <header className="fixed top-0 left-0 right-0 w-full z-50 bg-[#f4f6fa]/95 backdrop-blur-md border-b border-gray-200/50 shadow-xs">
-        <div className="h-16 max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
-          
-          {/* KIRI: Logo & Brand Name */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-white shadow-xs border border-gray-200 flex items-center justify-center p-1.5 transition-transform group-hover:scale-105">
-              <img src="/logo.png" alt="Lapangin Logo" className="w-full h-full object-contain" />
-            </div>
-            <span className="text-[19px] font-extrabold text-[#0b1c30] tracking-tight">
-              Lapangin
-            </span>
-          </Link>
-
-          {/* TENGAH: Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-9">
-            <Link href="/" className="text-[14px] font-medium text-slate-600 hover:text-[#0b1c30] transition-colors">
-              Beranda
-            </Link>
-            <Link href="/lapangan" className="text-[14px] font-bold text-[#0b1c30] transition-colors">
-              Sewa Lapangan
-            </Link>
-            <Link href="/partner" className="text-[14px] font-medium text-slate-600 hover:text-[#0b1c30] transition-colors">
-              Partner With Us
-            </Link>
-          </nav>
-
-          {/* KANAN: Auth (Masuk & Daftar) */}
-          <div className="hidden md:flex items-center gap-5">
-            <Link
-              href="/login"
-              className="text-[14px] font-semibold text-slate-700 hover:text-[#0b1c30] transition-colors"
-            >
-              Masuk
-            </Link>
-            <Link
-              href="/register"
-              className="inline-flex items-center justify-center bg-[#0b1c30] hover:bg-slate-800 text-white font-semibold px-6 py-2.5 rounded-full text-[14px] transition-all shadow-sm"
-            >
-              Daftar
-            </Link>
-          </div>
-
-        </div>
-      </header>
+      {/* Navbar Global yang sudah terhubung AuthContext */}
+      <Navbar />
 
       {/* Konten Utama diletakkan dengan pt-16 agar tidak tertutup Navbar Fixed */}
       <main className="w-full pt-16 bg-[#f8f9ff] flex-1">
