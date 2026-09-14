@@ -13,7 +13,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci || npm install
 
 # ==========================================
 # STAGE 3: Build Next.js

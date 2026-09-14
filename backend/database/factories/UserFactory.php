@@ -12,10 +12,12 @@ use Illuminate\Support\Str;
  */
 class UserFactory extends Factory
 {
+    protected $model = User::class;
+
     /**
-     * The current password being used by the factory.
+     * The default hashed password (reused for performance).
      */
-    protected static ?string $password;
+    protected static ?string $passwordHash = null;
 
     /**
      * Define the model's default state.
@@ -24,22 +26,48 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $createdAt = fake()->dateTimeBetween('-6 months', '-1 days');
+
         return [
-            'name' => fake()->name(),
+            'name' => fake('id_ID')->name(),
             'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
+            'password_hash' => static::$passwordHash ??= Hash::make('password123'),
+            'phone' => '08' . fake()->numerify('##########'),
+            'role' => 'OWNER',
+            'status' => 'ACTIVE',
             'remember_token' => Str::random(10),
+            'created_at' => $createdAt,
+            'updated_at' => $createdAt,
         ];
     }
 
     /**
-     * Indicate that the model's email address should be unverified.
+     * State for Court Owner user.
      */
-    public function unverified(): static
+    public function owner(): static
     {
         return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
+            'role' => 'OWNER',
+        ]);
+    }
+
+    /**
+     * State for Customer / Renter user.
+     */
+    public function customer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'CUSTOMER',
+        ]);
+    }
+
+    /**
+     * State for Inactive user.
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'INACTIVE',
         ]);
     }
 }
