@@ -22,7 +22,7 @@ class LatestBookings extends TableWidget
             ->query(
                 Booking::query()
                     ->whereHas('court', function (Builder $q) use ($userId) {
-                        $q->where('owner_id', $userId);
+                        $q->withTrashed()->where('owner_id', $userId);
                     })
                     ->latest('created_at')
             )
@@ -37,7 +37,8 @@ class LatestBookings extends TableWidget
                     ->searchable(),
 
                 TextColumn::make('court.name')
-                    ->label('Lapangan'),
+                    ->label('Lapangan')
+                    ->formatStateUsing(fn ($state, $record) => $record->court?->trashed() ? "{$state} (Dihapus)" : ($state ?? '-')),
 
                 TextColumn::make('booking_date')
                     ->label('Tanggal Main')

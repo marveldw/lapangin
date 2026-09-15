@@ -41,6 +41,21 @@ function JadwalContent() {
   const [courts, setCourts] = useState<Court[]>([]);
   const [selectedCourtId, setSelectedCourtId] = useState<number | null>(null);
   const [loadingCourts, setLoadingCourts] = useState(true);
+  const [selectedSportFilter, setSelectedSportFilter] = useState<string>('ALL');
+
+  const availableSports = useMemo(() => {
+    const sports = Array.from(
+      new Set(courts.map((c) => c.sport_type).filter(Boolean))
+    );
+    return sports.sort();
+  }, [courts]);
+
+  const filteredCourts = useMemo(() => {
+    if (selectedSportFilter === 'ALL') return courts;
+    return courts.filter(
+      (c) => (c.sport_type || '').toLowerCase() === selectedSportFilter.toLowerCase()
+    );
+  }, [courts, selectedSportFilter]);
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [selectedDate, setSelectedDate] = useState(todayStr);
@@ -105,14 +120,27 @@ function JadwalContent() {
   );
 
   useEffect(() => {
+    if (filteredCourts.length > 0) {
+      const isCurrentStillVisible = filteredCourts.some(
+        (c) => c.court_id === selectedCourtId
+      );
+      if (!isCurrentStillVisible) {
+        setSelectedCourtId(filteredCourts[0].court_id);
+      }
+    } else if (courts.length > 0) {
+      setSelectedCourtId(null);
+    }
+  }, [filteredCourts, selectedCourtId, courts.length]);
+
+  useEffect(() => {
     if (selectedCourtId && selectedDate) {
       loadSchedule(selectedCourtId, selectedDate);
     }
   }, [selectedCourtId, selectedDate, loadSchedule]);
 
   const selectedCourt = useMemo(() => {
-    return courts.find((c) => c.court_id === selectedCourtId) || courts[0] || null;
-  }, [courts, selectedCourtId]);
+    return filteredCourts.find((c) => c.court_id === selectedCourtId) || filteredCourts[0] || null;
+  }, [filteredCourts, selectedCourtId]);
 
   const timelineHours = useMemo(() => {
     if (!selectedCourt) return [];
@@ -309,28 +337,77 @@ function JadwalContent() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm mb-6 overflow-hidden border border-[#bccbb9]/30">
-            <div className="flex overflow-x-auto scrollbar-none">
-              {courts.map((court) => {
-                const isSelected = selectedCourt?.court_id === court.court_id;
-                return (
-                  <button
-                    key={court.court_id}
-                    type="button"
-                    onClick={() => setSelectedCourtId(court.court_id)}
-                    className={`py-3 px-6 text-xs font-bold transition-all cursor-pointer whitespace-nowrap border-b-2 flex items-center gap-2 ${
-                      isSelected
-                        ? 'border-[#006e2f] text-[#006e2f] bg-[#006e2f]/5'
-                        : 'border-transparent text-[#3d4a3d] hover:bg-[#eff4ff] hover:text-[#0b1c30]'
-                    }`}
-                  >
-                    <span>{court.name}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-gray-100 font-semibold">
-                      {court.sport_type}
+            {/* Filter Bar */}
+            <div className="p-3.5 sm:px-5 sm:py-3 border-b border-[#bccbb9]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#f8f9ff]/70">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#0b1c30]">
+                <span className="material-symbols-outlined text-[18px] text-[#006e2f]">stadium</span>
+                <span>Pilih Unit Lapangan:</span>
+                <span className="text-[11px] font-medium text-[#3d4a3d] bg-white px-2.5 py-0.5 rounded-md border border-[#bccbb9]/30 shadow-2xs">
+                  {filteredCourts.length} {selectedSportFilter !== 'ALL' ? `dari ${courts.length}` : ''} unit
+                </span>
+              </div>
+
+              {availableSports.length > 0 && (
+                <div className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-auto">
+                  <label htmlFor="sportFilterSelect" className="text-xs font-semibold text-[#3d4a3d] shrink-0">
+                    Filter Olahraga:
+                  </label>
+                  <div className="relative flex-1 sm:flex-initial">
+                    <select
+                      id="sportFilterSelect"
+                      value={selectedSportFilter}
+                      onChange={(e) => setSelectedSportFilter(e.target.value)}
+                      className="w-full sm:w-auto bg-white border border-[#bccbb9]/40 text-xs font-bold text-[#0b1c30] rounded-xl pl-3 pr-8 py-2 focus:outline-none focus:ring-2 focus:ring-[#006e2f] cursor-pointer shadow-2xs appearance-none transition-all"
+                    >
+                      <option value="ALL">Semua Olahraga ({courts.length})</option>
+                      {availableSports.map((sport) => {
+                        const count = courts.filter(
+                          (c) => (c.sport_type || '').toLowerCase() === sport.toLowerCase()
+                        ).length;
+                        return (
+                          <option key={sport} value={sport}>
+                            {sport} ({count})
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <span className="material-symbols-outlined text-[18px] text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                      expand_more
                     </span>
-                  </button>
-                );
-              })}
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* Horizontal Court Tabs */}
+            {filteredCourts.length === 0 ? (
+              <div className="p-6 text-center text-xs font-medium text-[#3d4a3d]">
+                Tidak ada unit lapangan untuk jenis olahraga "{selectedSportFilter}".
+              </div>
+            ) : (
+              <div className="flex overflow-x-auto scrollbar-none">
+                {filteredCourts.map((court) => {
+                  const isSelected = selectedCourt?.court_id === court.court_id;
+                  return (
+                    <button
+                      key={court.court_id}
+                      type="button"
+                      onClick={() => setSelectedCourtId(court.court_id)}
+                      className={`py-3 px-5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap border-b-2 flex items-center gap-2 shrink-0 ${
+                        isSelected
+                          ? 'border-[#006e2f] text-[#006e2f] bg-[#006e2f]/5 font-extrabold'
+                          : 'border-transparent text-[#3d4a3d] hover:bg-[#eff4ff] hover:text-[#0b1c30]'
+                      }`}
+                    >
+                      <span>{court.name}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-gray-100 font-semibold text-gray-700">
+                        {court.sport_type}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm p-6 border border-[#bccbb9]/30 relative">

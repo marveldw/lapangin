@@ -28,7 +28,7 @@ class BookingController extends Controller
 
         // Dual-role check: Owner can view customer bookings if scope=customer
         if ($user->role === 'OWNER' && $request->query('scope') !== 'customer') {
-            $courtIds = Court::where('owner_id', $user->user_id)->pluck('court_id');
+            $courtIds = Court::withTrashed()->where('owner_id', $user->user_id)->pluck('court_id');
             if ($courtIds->isEmpty()) {
                 return response()->json([
                     'success' => true,
@@ -117,7 +117,7 @@ class BookingController extends Controller
 
                 if ($maxBookingsPerMonth !== null) {
                     $currentMonthBookings = Booking::whereHas('court', function ($q) use ($owner) {
-                        $q->where('owner_id', $owner->user_id);
+                        $q->withTrashed()->where('owner_id', $owner->user_id);
                     })
                     ->whereMonth('booking_date', Carbon::parse($validated['booking_date'])->month)
                     ->whereYear('booking_date', Carbon::parse($validated['booking_date'])->year)

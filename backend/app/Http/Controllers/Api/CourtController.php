@@ -19,26 +19,42 @@ class CourtController extends Controller
     // GET /api/courts (or /api/owner/courts) — owner sees only their own courts
     public function index(Request $request)
     {
+        $user = $request->user();
         $perPage = min(50, max(1, (int) $request->query('per_page', 10)));
-        $courts = Court::where('owner_id', $request->user()->user_id)
+        $query = Court::where('owner_id', $user->user_id)
             ->with('operatingHours')
-            ->paginate($perPage);
+            ->orderBy('court_id', 'asc');
+
+        if ($request->filled('sport_type') && strtoupper($request->query('sport_type')) !== 'ALL') {
+            $query->where('sport_type', $request->query('sport_type'));
+        }
+
+        $courts = $query->paginate($perPage);
 
         $today = now()->toDateString();
         $currentTime = now()->toTimeString();
+        $maxCourts = $user->getMaxCourtsAllowed();
+        $currentPage = $courts->currentPage();
+        $perPageActual = $courts->perPage();
 
-        $courts->getCollection()->transform(function ($court) use ($today, $currentTime) {
+        $courts->getCollection()->transform(function ($court, $index) use ($today, $currentTime, $maxCourts, $currentPage, $perPageActual) {
             $court->has_active_booking = $court->bookings()
                 ->where('booking_date', $today)
                 ->where('status', 'CONFIRMED')
                 ->where('end_time', '>', $currentTime)
                 ->exists();
+
+            $absoluteIndex = ($currentPage - 1) * $perPageActual + $index;
+            $court->is_locked = ($maxCourts !== null && $absoluteIndex >= $maxCourts);
+
             return $court;
         });
 
         return response()->json([
-            'success' => true,
-            'data'    => $courts,
+            'success'            => true,
+            'data'               => $courts,
+            'max_allowed_courts' => $maxCourts,
+            'plan_name'          => $user->active_plan?->name ?? 'FREE',
         ]);
     }
 
@@ -75,24 +91,8 @@ class CourtController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            // Get active subscription and plan, or fallback to default Free plan
-            $subscription = $lockedUser->subscriptions()
-                ->where('status', 'ACTIVE')
-                ->with('plan')
-                ->first();
-
-            $maxCourts = 1; // default limit
-            $planName  = 'FREE';
-
-            if ($subscription && $subscription->plan) {
-                $maxCourts = $subscription->plan->max_courts;
-                $planName  = $subscription->plan->name;
-            } else {
-                $freePlan = Plan::where('name', 'FREE')->first();
-                if ($freePlan) {
-                    $maxCourts = $freePlan->max_courts;
-                }
-            }
+            $maxCourts = $lockedUser->getMaxCourtsAllowed();
+            $planName  = $lockedUser->active_plan?->name ?? 'FREE';
 
             $currentCourts = Court::where('owner_id', $lockedUser->user_id)
                 ->where('status', 'ACTIVE')
@@ -252,7 +252,7 @@ class CourtController extends Controller
         });
     }
 
-    // DELETE /api/courts/{id} — soft delete via status
+    // DELETE /api/courts/{id} — soft delete via SoftDeletes
     public function destroy(Request $request, $id)
     {
         $court = Court::where('court_id', $id)
@@ -262,17 +262,26 @@ class CourtController extends Controller
         if (!$court) {
             return response()->json([
                 'success' => false,
-                'message' => 'Lapangan tidak ditemukan.',
+                'message' => 'Lapangan tidak ditemukan atau sudah dihapus.',
             ], 404);
         }
 
-        $court->update(['status' => 'INACTIVE']);
-        $court->delete();
+        try {
+            DB::transaction(function () use ($court) {
+                $court->update(['status' => 'INACTIVE']);
+                $court->delete();
+            });
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Lapangan berhasil dihapus (soft-delete). Riwayat pemesanan tetap tersimpan.',
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Lapangan berhasil dihapus (soft-delete). Riwayat pemesanan tetap tersimpan.',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus lapangan: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     // POST /api/courts/upload-image — dedicated secure photo upload

@@ -38,7 +38,7 @@ class BookingResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()->whereHas('court', function ($q) {
-            $q->where('owner_id', auth()->user()?->user_id);
+            $q->withTrashed()->where('owner_id', auth()->user()?->user_id);
         });
     }
 

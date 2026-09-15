@@ -18,6 +18,6 @@ class CourtOperatingHour extends Model
 
     public function court()
     {
-        return $this->belongsTo(Court::class, 'court_id', 'court_id');
+        return $this->belongsTo(Court::class, 'court_id', 'court_id')->withTrashed();
     }
 }

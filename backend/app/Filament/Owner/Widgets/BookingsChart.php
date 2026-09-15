@@ -23,7 +23,7 @@ class BookingsChart extends ChartWidget
         $endOfMonth = Carbon::now()->endOfMonth()->toDateString();
 
         $query = Booking::whereHas('court', function ($q) use ($userId) {
-            $q->where('owner_id', $userId);
+            $q->withTrashed()->where('owner_id', $userId);
         })->whereBetween('booking_date', [$startOfMonth, $endOfMonth]);
 
         $confirmed = (clone $query)->where('status', 'CONFIRMED')->count();

@@ -43,7 +43,7 @@ class ActivityLogResource extends Resource
             return parent::getEloquentQuery()->whereRaw('1=0');
         }
 
-        $courtIds = \App\Models\Court::where('owner_id', $user->user_id)->pluck('court_id');
+        $courtIds = \App\Models\Court::withTrashed()->where('owner_id', $user->user_id)->pluck('court_id');
         $bookingIds = \App\Models\Booking::whereIn('court_id', $courtIds)->pluck('booking_id');
 
         return parent::getEloquentQuery()

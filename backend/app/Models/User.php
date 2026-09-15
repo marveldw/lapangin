@@ -98,4 +98,52 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasMany(Transaction::class, 'user_id', 'user_id');
     }
+
+    /**
+     * Get user's active subscription (most recent).
+     */
+    public function getActiveSubscriptionAttribute(): ?Subscription
+    {
+        if ($this->relationLoaded('subscriptions')) {
+            return $this->subscriptions
+                ->where('status', 'ACTIVE')
+                ->sortByDesc('subscription_id')
+                ->first();
+        }
+
+        return $this->subscriptions()
+            ->where('status', 'ACTIVE')
+            ->latest('subscription_id')
+            ->first();
+    }
+
+    /**
+     * Get user's active plan.
+     */
+    public function getActivePlanAttribute(): ?Plan
+    {
+        $subscription = $this->active_subscription;
+        if ($subscription && $subscription->relationLoaded('plan')) {
+            return $subscription->plan;
+        }
+
+        return $subscription?->plan()->first();
+    }
+
+    /**
+     * Get maximum courts allowed based on active plan.
+     * Returns null for unlimited (PRO), or integer quota (e.g. 1 for FREE, 5 for BASIC).
+     */
+    public function getMaxCourtsAllowed(): ?int
+    {
+        $plan = $this->active_plan;
+        if ($plan) {
+            if (strtoupper($plan->name) === Plan::PRO || $plan->max_courts === null) {
+                return null;
+            }
+            return (int) $plan->max_courts;
+        }
+
+        return Plan::getMaxCourtsForPlan(Plan::FREE);
+    }
 }

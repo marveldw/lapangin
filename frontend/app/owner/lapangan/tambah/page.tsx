@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { api } from '@/lib/api';
 import { formatRupiah } from '@/lib/formatters';
+import { getMaxCourtsAllowed, isCourtQuotaExceeded } from '@/lib/planLimits';
 
 const SPORT_OPTIONS = [
   { label: 'Bulutangkis / Badminton', value: 'Badminton', icon: 'sports_tennis' },
@@ -80,7 +81,7 @@ export default function TambahLapangan() {
   const [checkingQuota, setCheckingQuota] = useState(true);
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [currentCourtsCount, setCurrentCourtsCount] = useState(0);
-  const [maxCourtsAllowed, setMaxCourtsAllowed] = useState<number>(1);
+  const [maxCourtsAllowed, setMaxCourtsAllowed] = useState<number | null>(1);
 
   const [name, setName] = useState('');
   const [sportType, setSportType] = useState('');
@@ -126,15 +127,9 @@ export default function TambahLapangan() {
         const totalCourts = courts.length;
         setCurrentCourtsCount(totalCourts);
 
-        // Batas default: 1 untuk akun FREE jika null/undefined
-        const maxLimit = user?.subscription?.max_courts !== undefined && user?.subscription?.max_courts !== null
-          ? user.subscription.max_courts
-          : 1;
+        const maxLimit = getMaxCourtsAllowed(user?.subscription);
         setMaxCourtsAllowed(maxLimit);
-
-        if (maxLimit !== null && totalCourts >= maxLimit) {
-          setQuotaExceeded(true);
-        }
+        setQuotaExceeded(isCourtQuotaExceeded(totalCourts, maxLimit));
       } catch (err) {
         console.error('Gagal mengecek kuota lapangan:', err);
       } finally {
@@ -318,7 +313,7 @@ export default function TambahLapangan() {
             <div>
               <h2 className="text-base font-bold text-[#0b1c30]">Kuota Pembuatan Lapangan Sudah Penuh</h2>
               <p className="text-xs text-[#3d4a3d] mt-1 leading-relaxed">
-                Paket Anda saat ini adalah <strong>{user?.subscription?.plan_name || 'FREE'}</strong> yang dibatasi maksimal {maxCourtsAllowed} lapangan. Anda telah memiliki {currentCourtsCount} lapangan aktif.
+                Paket Anda saat ini adalah <strong>{user?.subscription?.plan_name || 'FREE'}</strong> yang dibatasi maksimal {maxCourtsAllowed ?? 'Unlimited'} lapangan. Anda telah memiliki {currentCourtsCount} lapangan aktif.
               </p>
             </div>
           </div>

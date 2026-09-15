@@ -21,13 +21,8 @@ class CreateCourt extends CreateRecord
     protected function beforeCreate(): void
     {
         $user = auth()->user();
-        $subscription = $user->subscriptions()
-            ->where('status', 'ACTIVE')
-            ->with('plan')
-            ->first();
-
-        $maxCourts = $subscription?->plan?->max_courts ?? 1;
-        $planName = $subscription?->plan?->name ?? 'FREE';
+        $maxCourts = $user->getMaxCourtsAllowed();
+        $planName = $user->active_plan?->name ?? 'FREE';
 
         if ($maxCourts !== null) {
             $currentCount = Court::where('owner_id', $user->user_id)->count();

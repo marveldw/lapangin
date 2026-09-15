@@ -16,9 +16,11 @@ class BookingsTable
             ->columns([
                 TextColumn::make('booking_code')
                     ->searchable(),
-                TextColumn::make('court_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('court.name')
+                    ->label('Lapangan')
+                    ->formatStateUsing(fn ($state, $record) => $record->court?->trashed() ? "{$state} (Dihapus)" : ($state ?? '-'))
+                    ->sortable()
+                    ->searchable(),
                 TextColumn::make('customer_id')
                     ->numeric()
                     ->sortable(),

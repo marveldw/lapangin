@@ -30,7 +30,7 @@ class RevenueChart extends ChartWidget
             $end = $month->copy()->endOfMonth()->toDateString();
 
             $revenue = Booking::whereHas('court', function ($q) use ($userId) {
-                $q->where('owner_id', $userId);
+                $q->withTrashed()->where('owner_id', $userId);
             })
                 ->where('status', 'CONFIRMED')
                 ->whereBetween('booking_date', [$start, $end])
