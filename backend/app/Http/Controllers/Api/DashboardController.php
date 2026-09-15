@@ -30,11 +30,12 @@ class DashboardController extends Controller
             return response()->json([
                 'success' => true,
                 'data'    => [
-                    'total_courts'    => 0,
-                    'total_bookings'  => 0,
-                    'today_bookings'  => 0,
-                    'today_revenue'   => 0,
-                    'monthly_revenue' => 0,
+                    'total_courts'     => 0,
+                    'total_bookings'   => 0,
+                    'pending_bookings' => 0,
+                    'today_bookings'   => 0,
+                    'today_revenue'    => 0,
+                    'monthly_revenue'  => 0,
                 ],
             ]);
         }
@@ -43,6 +44,7 @@ class DashboardController extends Controller
         $stats = Booking::whereIn('court_id', $courtIds)
             ->selectRaw("
                 COUNT(CASE WHEN status != 'CANCELLED' THEN 1 END) as total_bookings,
+                COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_bookings,
                 COUNT(CASE WHEN booking_date = ? AND status != 'CANCELLED' THEN 1 END) as today_bookings,
                 COALESCE(SUM(CASE WHEN booking_date = ? AND status = 'CONFIRMED' THEN price ELSE 0 END), 0) as today_revenue,
                 COALESCE(SUM(CASE WHEN booking_date >= ? AND booking_date <= ? AND status = 'CONFIRMED' THEN price ELSE 0 END), 0) as monthly_revenue
@@ -54,10 +56,11 @@ class DashboardController extends Controller
         return response()->json([
             'success' => true,
             'data'    => [
-                'total_courts'    => $totalCourts,
-                'total_bookings'  => (int) ($stats->total_bookings ?? 0),
-                'today_bookings'  => (int) ($stats->today_bookings ?? 0),
-                'today_revenue'   => (int) ($stats->today_revenue ?? 0),
+                'total_courts'     => $totalCourts,
+                'total_bookings'   => (int) ($stats->total_bookings ?? 0),
+                'pending_bookings' => (int) ($stats->pending_bookings ?? 0),
+                'today_bookings'   => (int) ($stats->today_bookings ?? 0),
+                'today_revenue'    => (int) ($stats->today_revenue ?? 0),
                 'monthly_revenue' => (int) ($stats->monthly_revenue ?? 0),
                 'wallet_balance'  => (int) $wallet->balance,
                 'locked_balance'  => (int) $wallet->locked_balance,

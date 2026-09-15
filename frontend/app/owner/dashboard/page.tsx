@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
@@ -9,6 +9,7 @@ import Link from 'next/link';
 interface DashboardStats {
   total_courts: number;
   total_bookings: number;
+  pending_bookings?: number;
   today_bookings: number;
   today_revenue: number;
   monthly_revenue: number;
@@ -48,12 +49,14 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     total_courts: 0,
     total_bookings: 0,
+    pending_bookings: 0,
     today_bookings: 0,
     today_revenue: 0,
     monthly_revenue: 0,
   });
 
   const [recentBookings, setRecentBookings] = useState<BookingItem[]>([]);
+  const [bookingFilter, setBookingFilter] = useState<'ALL' | 'PENDING'>('ALL');
   const [courts, setCourts] = useState<CourtItem[]>([]);
   const [selectedCourtId, setSelectedCourtId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,48 +112,63 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col w-full max-w-6xl mx-auto gap-8 pb-12">
       
-      {/* 4 Cards Atas - Warna Original dengan Ukuran Proporsional */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 5 Cards Ringkasan Dashboard — Termasuk Status Pending */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         
         {/* Card 1: Total Lapangan */}
-        <div className="bg-[#e5eeff] rounded-xl p-6 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+        <div className="bg-[#e5eeff] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-[#006e2f]/10 rounded-full blur-xl group-hover:bg-[#006e2f]/20 transition-colors"></div>
           <div className="flex items-center gap-2 text-[#3d4a3d] relative z-10">
             <span className="material-symbols-outlined text-[20px]">stadium</span>
-            <span className="text-sm font-semibold tracking-wide">Total Lapangan</span>
+            <span className="text-xs font-semibold tracking-wide">Total Lapangan</span>
           </div>
-          <div className="text-4xl font-bold tracking-tight text-[#0b1c30] relative z-10">
+          <div className="text-3xl font-bold tracking-tight text-[#0b1c30] relative z-10">
             {stats.total_courts}
           </div>
           <div className="text-xs font-medium text-[#3d4a3d] mt-auto relative z-10">
-            {stats.total_courts > 0 ? `${stats.total_courts} Lapangan Aktif` : 'Belum ada lapangan'}
+            {stats.total_courts > 0 ? `${stats.total_courts} Lapangan Aktif` : 'Belum ada'}
           </div>
         </div>
 
         {/* Card 2: Booking Hari Ini */}
-        <div className="bg-[#e5eeff] rounded-xl p-6 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+        <div className="bg-[#e5eeff] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-[#565e74]/10 rounded-full blur-xl group-hover:bg-[#565e74]/20 transition-colors"></div>
           <div className="flex items-center gap-2 text-[#3d4a3d] relative z-10">
             <span className="material-symbols-outlined text-[20px]">event_available</span>
-            <span className="text-sm font-semibold tracking-wide">Booking Hari Ini</span>
+            <span className="text-xs font-semibold tracking-wide">Booking Hari Ini</span>
           </div>
-          <div className="text-4xl font-bold tracking-tight text-[#0b1c30] relative z-10">
+          <div className="text-3xl font-bold tracking-tight text-[#0b1c30] relative z-10">
             {stats.today_bookings}
           </div>
           <div className="text-xs font-medium text-[#006e2f] flex items-center gap-1 mt-auto relative z-10">
             <span className="material-symbols-outlined text-[16px]">trending_up</span>
-            <span>Total: {stats.total_bookings} reservasi</span>
+            <span>Total: {stats.total_bookings}</span>
           </div>
         </div>
 
-        {/* Card 3: Pendapatan Hari Ini */}
-        <div className="bg-[#e5eeff] rounded-xl p-6 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+        {/* Card 3: Status PENDING (Menunggu Pembayaran / Approval) */}
+        <div className="bg-amber-50 rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group border border-amber-200/80">
+          <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-amber-400/15 rounded-full blur-xl group-hover:bg-amber-400/25 transition-colors"></div>
+          <div className="flex items-center gap-2 text-amber-800 relative z-10">
+            <span className="material-symbols-outlined text-[20px]">hourglass_top</span>
+            <span className="text-xs font-bold tracking-wide">Menunggu (Pending)</span>
+          </div>
+          <div className="text-3xl font-bold tracking-tight text-amber-700 relative z-10">
+            {stats.pending_bookings || 0}
+          </div>
+          <div className="text-xs font-semibold text-amber-800 mt-auto relative z-10">
+            Menunggu pembayaran/approval
+          </div>
+        </div>
+
+        {/* Card 4: Pendapatan Hari Ini */}
+        <div className="bg-[#e5eeff] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-[#005ac2]/10 rounded-full blur-xl group-hover:bg-[#005ac2]/20 transition-colors"></div>
           <div className="flex items-center gap-2 text-[#3d4a3d] relative z-10">
             <span className="material-symbols-outlined text-[20px]">payments</span>
-            <span className="text-sm font-semibold tracking-wide">Pendapatan Hari Ini</span>
+            <span className="text-xs font-semibold tracking-wide">Pendapatan Hari Ini</span>
           </div>
-          <div className="text-4xl font-bold tracking-tight text-[#0b1c30] relative z-10">
+          <div className="text-3xl font-bold tracking-tight text-[#0b1c30] relative z-10">
             {formatRupiahCompact(stats.today_revenue)}
           </div>
           <div className="text-xs font-medium text-[#3d4a3d] mt-auto relative z-10">
@@ -158,16 +176,16 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Card 4: Pendapatan Bulan Ini */}
-        <div className="bg-[#006e2f] rounded-xl p-6 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group text-[#ffffff]">
+        {/* Card 5: Pendapatan Bulan Ini */}
+        <div className="bg-[#006e2f] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group text-[#ffffff]">
           <div className="absolute right-[-20px] bottom-[-20px] opacity-10">
-            <span className="material-symbols-outlined text-[120px] leading-none" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
+            <span className="material-symbols-outlined text-[100px] leading-none" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
           </div>
           <div className="flex items-center gap-2 text-[#4ae176] relative z-10">
             <span className="material-symbols-outlined text-[20px]">monitoring</span>
-            <span className="text-sm font-semibold tracking-wide">Pendapatan Bulan Ini</span>
+            <span className="text-xs font-semibold tracking-wide">Pendapatan Bulan Ini</span>
           </div>
-          <div className="text-4xl font-bold tracking-tight z-10 relative">
+          <div className="text-3xl font-bold tracking-tight z-10 relative">
             {formatRupiahCompact(stats.monthly_revenue)}
           </div>
           <div className="text-xs font-medium text-[#4ae176] mt-auto z-10 relative">
@@ -247,8 +265,35 @@ export default function Dashboard() {
 
           {/* Tabel Booking Terbaru (Dirapikan) */}
           <div className="bg-[#ffffff] rounded-xl shadow-sm border border-[#bccbb9]/30 overflow-hidden">
-            <div className="p-6 flex justify-between items-center border-b border-[#bccbb9]/20 bg-[#ffffff]">
-              <h3 className="text-xl font-semibold text-[#0b1c30]">Booking Terbaru</h3>
+            <div className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-[#bccbb9]/20 bg-[#ffffff]">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h3 className="text-xl font-semibold text-[#0b1c30]">Booking Terbaru</h3>
+                <div className="flex items-center bg-slate-100 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setBookingFilter('ALL')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      bookingFilter === 'ALL'
+                        ? 'bg-white text-[#006e2f] shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Semua ({recentBookings.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBookingFilter('PENDING')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      bookingFilter === 'PENDING'
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-amber-800 hover:text-amber-900'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[13px]">hourglass_top</span>
+                    Pending ({stats.pending_bookings || 0})
+                  </button>
+                </div>
+              </div>
               <Link href="/owner/booking" className="text-[#006e2f] text-sm font-semibold tracking-wide hover:text-[#006e2f]/80 transition-colors flex items-center gap-1">
                 Lihat Semua <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
               </Link>
@@ -266,14 +311,20 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  {recentBookings.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-8 text-center text-[#3d4a3d]">
-                        Belum ada data booking.
-                      </td>
-                    </tr>
-                  ) : (
-                    recentBookings.map((b, index) => {
+                  {(() => {
+                    const displayed = bookingFilter === 'PENDING'
+                      ? recentBookings.filter((b) => b.status === 'PENDING')
+                      : recentBookings;
+                    if (displayed.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-[#3d4a3d]">
+                            {bookingFilter === 'PENDING' ? 'Tidak ada booking dengan status pending.' : 'Belum ada data booking.'}
+                          </td>
+                        </tr>
+                      );
+                    }
+                    return displayed.map((b, index) => {
                       const customerName = b.customer?.name || 'Pelanggan';
                       const initial = customerName.charAt(0).toUpperCase();
                       const courtName = b.court ? `${b.court.name} (${b.court.sport_type})` : `Lapangan #${b.court_id}`;
@@ -322,8 +373,8 @@ export default function Dashboard() {
                           </td>
                         </tr>
                       );
-                    })
-                  )}
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>

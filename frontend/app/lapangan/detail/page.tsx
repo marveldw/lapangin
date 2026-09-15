@@ -44,7 +44,14 @@ function DetailLapanganContent() {
   const [loadingCourt, setLoadingCourt] = useState(true);
   const [errorCourt, setErrorCourt] = useState<string | null>(null);
 
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const getLocalDateString = (d: Date = new Date()) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = useMemo(() => getLocalDateString(new Date()), []);
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
 
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -131,14 +138,13 @@ function DetailLapanganContent() {
     fetchSlots();
   }, [courtId, selectedDate]);
 
-  // Kalender 10 Hari ke Depan
+  // Kalender 10 Hari ke Depan (Menggunakan Local Date untuk Mencegah Bug Timezone UTC vs WIB)
   const availableDates = useMemo(() => {
     const list = [];
     const now = new Date();
     for (let i = 0; i < 10; i++) {
-      const d = new Date(now);
-      d.setDate(now.getDate() + i);
-      const iso = d.toISOString().split('T')[0];
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+      const iso = getLocalDateString(d);
       const dayName = new Intl.DateTimeFormat('id-ID', { weekday: 'short' }).format(d);
       const dayNum = d.getDate();
       const monthName = new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(d);

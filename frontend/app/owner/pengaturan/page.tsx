@@ -23,12 +23,17 @@ export default function PengaturanPage() {
   const [name, setName] = useState(user?.name || 'Owner Venue');
   const [email, setEmail] = useState(user?.email || 'owner@lapangin.com');
   const [phone, setPhone] = useState(user?.phone || '081234567890');
-  const [savedSuccess, setSavedSuccess] = useState(false);
+  const [savedSuccess, setSavedSuccess] = useState<string | null>(null);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   // Bank Info
   const [bankName, setBankName] = useState('BCA');
-  const [accountNumber, setAccountNumber] = useState('8830192831');
+  const [accountNumber, setAccountNumber] = useState('');
   const [accountHolder, setAccountHolder] = useState(user?.name || 'Owner Venue');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [isSavingBank, setIsSavingBank] = useState(false);
+  const [bankError, setBankError] = useState<string | null>(null);
 
   // Subscription State
   const [plans, setPlans] = useState<PlanData[]>([
@@ -84,8 +89,25 @@ export default function PengaturanPage() {
         // Fallback default
       }
     }
+    async function loadProfile() {
+      if (!token) return;
+      try {
+        const res = await api.get('/profile', token);
+        if (res.success && res.data) {
+          setName(res.data.name || '');
+          setEmail(res.data.email || '');
+          setPhone(res.data.phone || '');
+          if (res.data.bank?.bank_name) setBankName(res.data.bank.bank_name);
+          if (res.data.bank?.account_number) setAccountNumber(res.data.bank.account_number);
+          if (res.data.bank?.account_holder) setAccountHolder(res.data.bank.account_holder);
+        }
+      } catch (err) {
+        console.error('Failed to load profile details:', err);
+      }
+    }
     loadPlans();
-  }, []);
+    loadProfile();
+  }, [token]);
 
   const handleSelectPlan = async (plan: PlanData) => {
     const currentPlanName = (user?.subscription?.plan_name || (user as any)?.plan || 'FREE').toUpperCase();
@@ -151,10 +173,57 @@ export default function PengaturanPage() {
     setSubscriptionSuccess(`Selamat! Paket langganan ${planName} Anda telah aktif.`);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+    setIsSavingProfile(true);
+    setProfileError(null);
+    try {
+      const res = await api.put('/profile', { name, email, phone }, token);
+      if (res.success) {
+        await refreshUser();
+        setSavedSuccess('Profil akun berhasil diperbarui!');
+        setTimeout(() => setSavedSuccess(null), 4000);
+      } else {
+        setProfileError(res.message || 'Gagal memperbarui profil.');
+      }
+    } catch {
+      setProfileError('Terjadi gangguan koneksi saat menyimpan profil.');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleSaveBank = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword) {
+      setBankError('Konfirmasi kata sandi wajib diisi demi keamanan rekening pencairan.');
+      return;
+    }
+    setIsSavingBank(true);
+    setBankError(null);
+    try {
+      const res = await api.put(
+        '/owner/payout-account',
+        {
+          current_password: currentPassword,
+          bank_name: bankName,
+          account_number: accountNumber,
+          account_holder: accountHolder,
+        },
+        token
+      );
+      if (res.success) {
+        setCurrentPassword('');
+        setSavedSuccess('Rekening pencairan dana berhasil diperbarui dengan aman.');
+        setTimeout(() => setSavedSuccess(null), 4000);
+      } else {
+        setBankError(res.message || 'Gagal memperbarui rekening pencairan.');
+      }
+    } catch {
+      setBankError('Terjadi kesalahan saat memverifikasi perubahan rekening.');
+    } finally {
+      setIsSavingBank(false);
+    }
   };
 
   return (
@@ -208,14 +277,21 @@ export default function PengaturanPage() {
       {savedSuccess && (
         <div className="p-4 bg-[#22c55e]/20 text-[#004b1e] rounded-2xl text-xs font-bold flex items-center gap-2 border border-[#22c55e]/40 animate-in fade-in duration-200">
           <span className="material-symbols-outlined text-[18px]">check_circle</span>
-          <span>Pengaturan berhasil disimpan!</span>
+          <span>{savedSuccess}</span>
         </div>
       )}
 
       {/* Container Utama */}
       <div className="bg-[#e5eeff] rounded-2xl shadow-sm p-6 md:p-8 flex flex-col gap-6 border border-white">
         {activeTab === 'PROFIL' && (
-          <form onSubmit={handleSave} className="flex flex-col gap-6">
+          <form onSubmit={handleSaveProfile} className="flex flex-col gap-6">
+            {profileError && (
+              <div className="p-4 bg-red-50 text-red-700 rounded-xl text-xs font-semibold flex items-center gap-2 border border-red-200">
+                <span className="material-symbols-outlined text-[18px]">error</span>
+                <span>{profileError}</span>
+              </div>
+            )}
+
             {/* Logo Venue */}
             <div className="flex items-center gap-5">
               <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-sm relative group bg-white border-2 border-white shrink-0 flex items-center justify-center">
@@ -246,22 +322,24 @@ export default function PengaturanPage() {
                   Email Akun
                 </label>
                 <input
-                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] transition-all shadow-sm font-medium opacity-70 cursor-not-allowed"
+                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] transition-all shadow-sm font-medium"
                   type="email"
                   value={email}
-                  disabled
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
                 />
               </div>
 
               <div className="flex flex-col gap-1.5 md:col-span-2">
                 <label className="text-[11px] font-bold text-[#3d4a3d] uppercase tracking-wide">
-                  Nomor WhatsApp
+                  Nomor WhatsApp / Seluler
                 </label>
                 <input
                   className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] transition-all shadow-sm md:w-1/2 font-medium"
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  placeholder="081234567890"
                   required
                 />
               </div>
@@ -270,22 +348,33 @@ export default function PengaturanPage() {
             <div className="flex justify-end pt-2">
               <button
                 type="submit"
-                className="px-6 py-2.5 rounded-xl bg-[#006e2f] text-white font-bold text-xs hover:bg-[#005321] transition-colors shadow-md cursor-pointer"
+                disabled={isSavingProfile}
+                className="px-6 py-2.5 rounded-xl bg-[#006e2f] text-white font-bold text-xs hover:bg-[#005321] transition-colors shadow-md cursor-pointer disabled:opacity-50"
               >
-                Simpan Profil
+                {isSavingProfile ? 'Menyimpan...' : 'Simpan Profil'}
               </button>
             </div>
           </form>
         )}
 
         {activeTab === 'BANK' && (
-          <form onSubmit={handleSave} className="flex flex-col gap-5">
+          <form onSubmit={handleSaveBank} className="flex flex-col gap-5">
             <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3 text-amber-800 text-xs mb-2">
-              <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">info</span>
-              <p>
-                Rekening ini akan digunakan oleh Lapangin untuk mentransfer dana pembayaran booking (pencairan otomatis setiap hari Senin).
-              </p>
+              <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">security</span>
+              <div>
+                <p className="font-bold mb-0.5">Keamanan Rekening Pencairan Finansial</p>
+                <p>
+                  Rekening ini digunakan untuk pencairan pendapatan booking venue Anda. Perubahan rekening wajib mengonfirmasi kata sandi akun untuk mencegah pengalihan dana tidak sah.
+                </p>
+              </div>
             </div>
+
+            {bankError && (
+              <div className="p-4 bg-red-50 text-red-700 rounded-xl text-xs font-semibold flex items-center gap-2 border border-red-200">
+                <span className="material-symbols-outlined text-[18px]">error</span>
+                <span>{bankError}</span>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="flex flex-col gap-1.5">
@@ -316,6 +405,7 @@ export default function PengaturanPage() {
                   type="text"
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value)}
+                  placeholder="Contoh: 8830192831"
                   required
                 />
               </div>
@@ -329,17 +419,39 @@ export default function PengaturanPage() {
                   type="text"
                   value={accountHolder}
                   onChange={(e) => setAccountHolder(e.target.value)}
+                  placeholder="Sesuai nama di buku tabungan"
                   required
                 />
+              </div>
+
+              {/* Konfirmasi Kata Sandi Akun untuk Keamanan Finansial */}
+              <div className="flex flex-col gap-1.5 md:col-span-2 pt-2 border-t border-slate-200">
+                <label className="text-[11px] font-bold text-red-700 uppercase tracking-wide flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[15px]">lock</span>
+                  Konfirmasi Kata Sandi Saat Ini <span className="text-red-600">*</span>
+                </label>
+                <input
+                  className="px-4 py-2.5 bg-white border border-red-300 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 md:w-1/2 font-medium"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Masukkan kata sandi akun Anda untuk verifikasi"
+                  required
+                />
+                <p className="text-[11px] text-slate-500">
+                  Wajib memasukkan kata sandi akun untuk memvalidasi kepemilikan sebelum data rekening disimpan.
+                </p>
               </div>
             </div>
 
             <div className="flex justify-end pt-2">
               <button
                 type="submit"
-                className="px-6 py-2.5 rounded-xl bg-[#006e2f] text-white font-bold text-xs hover:bg-[#005321] transition-colors shadow-md cursor-pointer"
+                disabled={isSavingBank}
+                className="px-6 py-2.5 rounded-xl bg-[#006e2f] text-white font-bold text-xs hover:bg-[#005321] transition-colors shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
               >
-                Simpan Rekening
+                <span className="material-symbols-outlined text-[16px]">verified_user</span>
+                {isSavingBank ? 'Memverifikasi & Menyimpan...' : 'Verifikasi & Simpan Rekening'}
               </button>
             </div>
           </form>

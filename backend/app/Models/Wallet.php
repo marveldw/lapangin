@@ -25,6 +25,9 @@ class Wallet extends Model
         'owner_id',
         'balance',
         'locked_balance',
+        'bank_name',
+        'account_number',
+        'account_holder',
     ];
 
     protected $casts = [

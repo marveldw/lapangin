@@ -19,8 +19,16 @@ class AuthController extends Controller
             'email'                 => 'required|email|max:255|unique:users,email',
             'password'              => 'required|string|min:8|max:128|confirmed',
             'password_confirmation' => 'required|string',
-            'phone'                 => 'required|string|max:20',
+            'phone'                 => [
+                'required',
+                'string',
+                'unique:users,phone',
+                'regex:/^(\+62|62|0)8[1-9][0-9]{7,11}$/',
+            ],
             'role'                  => 'nullable|string|in:CUSTOMER,OWNER',
+        ], [
+            'phone.unique' => 'Nomor telepon ini sudah terdaftar pada akun lain.',
+            'phone.regex'  => 'Format nomor telepon seluler Indonesia tidak valid (contoh: 08123456789).',
         ]);
 
         $role = $validated['role'] ?? 'CUSTOMER';

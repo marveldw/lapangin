@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { formatRupiah, getCourtFallbackImage } from '@/lib/formatters';
 import { useDebounce } from '@/lib/useDebounce';
 import Navbar from '@/components/Navbar';
+import AnimatedLoading from '@/components/AnimatedLoading';
 
 interface Court {
   court_id: number;
@@ -144,6 +145,19 @@ function CariLapanganContent() {
 
     return result;
   }, [courts, minPrice, maxPrice, sortBy]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, city, district, sportType, minPrice, maxPrice, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAndSortedCourts.length / perPage));
+  const paginatedCourts = useMemo(() => {
+    const start = (currentPage - 1) * perPage;
+    return filteredAndSortedCourts.slice(start, start + perPage);
+  }, [filteredAndSortedCourts, currentPage, perPage]);
 
   const handleResetFilters = () => {
     setSearch('');
@@ -408,9 +422,10 @@ function CariLapanganContent() {
                 </button>
               </div>
             ) : (
-              /* Courts Grid */
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredAndSortedCourts.map((court) => (
+              <>
+                {/* Courts Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {paginatedCourts.map((court) => (
                   <div
                     key={court.court_id}
                     className="bg-white rounded-2xl shadow-sm border border-[#bccbb9]/30 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col relative group"
@@ -471,7 +486,59 @@ function CariLapanganContent() {
                   </div>
                 ))}
               </div>
-            )}
+
+              {/* Pagination Controls (Item 3) */}
+              {filteredAndSortedCourts.length > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-5 bg-white rounded-2xl border border-[#bccbb9]/30 shadow-xs mt-6">
+                  <div className="flex items-center gap-3 text-xs text-[#3d4a3d]">
+                    <span>
+                      Menampilkan {(currentPage - 1) * perPage + 1} -{' '}
+                      {Math.min(currentPage * perPage, filteredAndSortedCourts.length)} dari {filteredAndSortedCourts.length} lapangan
+                    </span>
+                    <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-3">
+                      <span>Per halaman:</span>
+                      <select
+                        value={perPage}
+                        onChange={(e) => {
+                          setPerPage(Number(e.target.value));
+                          setCurrentPage(1);
+                        }}
+                        className="bg-slate-100 font-semibold py-1 px-2 rounded-lg text-xs outline-none border border-slate-300 cursor-pointer"
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1.5 rounded-xl border border-[#bccbb9]/40 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                      Sebelumnya
+                    </button>
+                    <span className="text-xs font-bold px-3 py-1 bg-[#e5eeff] text-[#006e2f] rounded-lg">
+                      {currentPage} / {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage >= totalPages}
+                      className="px-3 py-1.5 rounded-xl border border-[#bccbb9]/40 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      Berikutnya
+                      <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
           </div>
         </div>
       </main>
@@ -494,9 +561,7 @@ export default function CariLapanganPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[#f8f9ff]">
-          <span className="text-sm font-semibold text-[#006e2f]">Memuat Lapangin...</span>
-        </div>
+        <AnimatedLoading fullScreen message="Memuat Lapangin" submessage="Mencari lapangan olahraga terbaik untuk Anda" />
       }
     >
       <CariLapanganContent />

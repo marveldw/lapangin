@@ -70,6 +70,8 @@ class PublicCourtController extends Controller
             });
         }
 
+        $perPage = min(50, max(1, (int) $request->query('per_page', 10)));
+
         $courts = $query
             ->select([
                 'court_id', 'name', 'sport_type', 'description',
@@ -77,7 +79,7 @@ class PublicCourtController extends Controller
                 'image_url',
             ])
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate($perPage);
 
         return response()->json([
             'success' => true,
