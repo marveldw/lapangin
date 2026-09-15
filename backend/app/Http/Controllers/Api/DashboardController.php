@@ -23,8 +23,8 @@ class DashboardController extends Controller
             ->where('status', 'ACTIVE')
             ->count();
 
-        // Court IDs milik owner ini
-        $courtIds = Court::where('owner_id', $ownerId)->pluck('court_id');
+        // Court IDs milik owner ini (termasuk yang di-soft delete agar riwayat finansial dan statistik booking tetap akurat)
+        $courtIds = Court::withTrashed()->where('owner_id', $ownerId)->pluck('court_id');
 
         if ($courtIds->isEmpty()) {
             return response()->json([

@@ -148,7 +148,14 @@ class AuthController extends Controller
 
         $activeSubscription = $user->subscriptions
             ->where('status', 'ACTIVE')
+            ->sortByDesc('subscription_id')
             ->first();
+
+        $plan = $activeSubscription?->plan;
+        $planName = $plan?->name ?? 'FREE';
+        $maxCourts = ($planName === 'PRO' || ($plan && $plan->max_courts === null))
+            ? null
+            : ($plan?->max_courts ?? Plan::getMaxCourtsForPlan('FREE'));
 
         return [
             'user_id'      => $user->user_id,
@@ -157,12 +164,12 @@ class AuthController extends Controller
             'phone'        => $user->phone,
             'role'         => $user->role,
             'status'       => $user->status,
-            'subscription' => ($user->role === 'OWNER' && $activeSubscription) ? [
-                'plan_id'                => $activeSubscription->plan_id,
-                'plan_name'              => $activeSubscription->plan->name ?? null,
-                'max_courts'             => $activeSubscription->plan->max_courts ?? null,
-                'max_bookings_per_month' => $activeSubscription->plan->max_bookings_per_month ?? null,
-                'status'                 => $activeSubscription->status,
+            'subscription' => ($user->role === 'OWNER') ? [
+                'plan_id'                => $activeSubscription?->plan_id,
+                'plan_name'              => $planName,
+                'max_courts'             => $maxCourts,
+                'max_bookings_per_month' => $plan?->max_bookings_per_month,
+                'status'                 => $activeSubscription?->status ?? 'ACTIVE',
             ] : null,
         ];
     }

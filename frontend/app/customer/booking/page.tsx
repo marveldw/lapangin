@@ -29,6 +29,7 @@ interface BookingItem {
     address: string;
     city: string | null;
     image_url: string | null;
+    deleted_at?: string | null;
   };
 }
 
@@ -281,8 +282,13 @@ export default function CustomerBookingPage() {
                           #{b.booking_code}
                         </span>
                         <span className="w-1.5 h-1.5 rounded-full bg-[#bccbb9]"></span>
-                        <h3 className="text-lg font-bold text-[#0b1c30] truncate">
-                          {b.court?.name || 'Lapangan Olahraga'}
+                        <h3 className="text-lg font-bold text-[#0b1c30] truncate flex items-center gap-1.5">
+                          <span>{b.court?.name || 'Lapangan Olahraga'}</span>
+                          {b.court?.deleted_at && (
+                            <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
+                              Venue Nonaktif
+                            </span>
+                          )}
                         </h3>
                         {/* Payment Method Badge */}
                         {b.payment_method === 'QRIS' ? (

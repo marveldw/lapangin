@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { api } from '@/lib/api';
 import { formatRupiah } from '@/lib/formatters';
 import { useDebounce } from '@/lib/useDebounce';
+import { getMaxCourtsAllowed, isCourtRestricted, isCourtQuotaExceeded } from '@/lib/planLimits';
 
 export interface CourtItem {
   court_id: number;
@@ -23,6 +24,7 @@ export interface CourtItem {
   status: 'ACTIVE' | 'INACTIVE' | string;
   booking_count?: number;
   has_active_booking?: boolean;
+  is_locked?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -99,10 +101,8 @@ export default function DaftarLapangan() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const maxAllowedCourts = user?.subscription?.max_courts !== undefined && user?.subscription?.max_courts !== null
-    ? user.subscription.max_courts
-    : 1;
-  const isQuotaExceeded = maxAllowedCourts !== null && courts.length >= maxAllowedCourts;
+  const maxAllowedCourts = getMaxCourtsAllowed(user?.subscription);
+  const isQuotaExceeded = isCourtQuotaExceeded(courts.length, maxAllowedCourts);
 
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 500);
@@ -264,20 +264,16 @@ export default function DaftarLapangan() {
     try {
       const res = await api.delete(`/courts/${courtToDelete.court_id}`, token);
       if (res?.success) {
-        setCourts((prev) =>
-          prev.map((c) =>
-            c.court_id === courtToDelete.court_id ? { ...c, status: 'INACTIVE' } : c
-          )
-        );
+        setCourts((prev) => prev.filter((c) => c.court_id !== courtToDelete.court_id));
         setToastMessage({
           type: 'success',
-          text: `${courtToDelete.name} berhasil dinonaktifkan.`,
+          text: `Lapangan "${courtToDelete.name}" berhasil dihapus. Riwayat pemesanan tetap tersimpan.`,
         });
         setCourtToDelete(null);
       } else {
         setToastMessage({
           type: 'error',
-          text: res?.message || 'Gagal menonaktifkan lapangan.',
+          text: res?.message || 'Gagal menghapus lapangan.',
         });
       }
     } catch (err) {
@@ -786,7 +782,7 @@ export default function DaftarLapangan() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 relative">
           {paginatedCourts.map((court, index) => {
             const absoluteIndex = (currentPage - 1) * perPage + index;
-            const isRestricted = maxAllowedCourts !== null && absoluteIndex >= maxAllowedCourts;
+            const isRestricted = court.is_locked ?? isCourtRestricted(absoluteIndex, maxAllowedCourts);
             if (isRestricted) {
               return (
                 <div
@@ -979,7 +975,7 @@ export default function DaftarLapangan() {
           className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all shadow-sm cursor-pointer ${
             isActive ? 'bg-[#e5eeff] text-[#3d4a3d] hover:bg-[#ffdad6] hover:text-[#ba1a1a]' : 'bg-white text-[#3d4a3d] hover:bg-gray-200'
           }`}
-          title="Nonaktifkan Lapangan"
+          title="Hapus Lapangan"
         >
           <span className="material-symbols-outlined text-[18px]">delete</span>
         </button>
@@ -1471,6 +1467,57 @@ export default function DaftarLapangan() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL KONFIRMASI HAPUS LAPANGAN (SOFT-DELETE) */}
+      {courtToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b1c30]/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-[#bccbb9]/30 flex flex-col gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#ffdad6] text-[#ba1a1a] flex items-center justify-center">
+              <span className="material-symbols-outlined text-[28px]">delete_forever</span>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-[#0b1c30]">Hapus Lapangan?</h3>
+              <p className="text-xs text-[#3d4a3d] mt-1.5 leading-relaxed">
+                Apakah Anda yakin ingin menghapus{' '}
+                <strong className="text-[#0b1c30] font-semibold">{courtToDelete.name}</strong>?
+              </p>
+              <div className="mt-3 p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 leading-relaxed">
+                <span className="font-bold">Info Keamanan:</span> Lapangan akan dihapus dari daftar aktif Anda dan pencarian publik. Seluruh riwayat reservasi pelanggan, jadwal masa lalu, serta laporan omzet tetap tersimpan aman.
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-2 pt-4 border-t border-[#bccbb9]/20">
+              <button
+                type="button"
+                onClick={() => setCourtToDelete(null)}
+                disabled={isDeleting}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-[#3d4a3d] hover:bg-[#eff4ff] transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#ba1a1a] text-white hover:bg-red-700 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+              >
+                {isDeleting ? (
+                  <>
+                    <span className="material-symbols-outlined text-[16px] animate-spin">
+                      progress_activity
+                    </span>
+                    <span>Menghapus...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                    <span>Ya, Hapus Lapangan</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -15,18 +15,15 @@ class OwnerStatsOverview extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        $userId = auth()->user()?->user_id;
+        $user = auth()->user();
+        $userId = $user?->user_id;
 
         // 1. Subscription data
-        $subscription = Subscription::with('plan')
-            ->where('user_id', $userId)
-            ->where('status', 'ACTIVE')
-            ->latest('start_date')
-            ->first();
-
-        $planName = $subscription?->plan?->name ?? 'FREE';
-        $maxCourts = $subscription?->plan?->max_courts ?? 'Unlimited';
-        $maxBookings = $subscription?->plan?->max_bookings_per_month ?? 'Unlimited';
+        $subscription = $user?->active_subscription;
+        $planName = $user?->active_plan?->name ?? 'FREE';
+        $maxCourtsLimit = $user?->getMaxCourtsAllowed();
+        $maxCourts = $maxCourtsLimit === null ? 'Unlimited' : $maxCourtsLimit;
+        $maxBookings = $subscription?->plan?->max_bookings_per_month ?? ($planName === 'PRO' ? 'Unlimited' : 30);
 
         // 2. Counts
         $courtCount = Court::where('owner_id', $userId)->where('status', 'ACTIVE')->count();
@@ -35,7 +32,7 @@ class OwnerStatsOverview extends StatsOverviewWidget
         $endOfMonth = Carbon::now()->endOfMonth()->toDateString();
 
         $monthlyBookings = Booking::whereHas('court', function ($q) use ($userId) {
-            $q->where('owner_id', $userId);
+            $q->withTrashed()->where('owner_id', $userId);
         })
             ->whereBetween('booking_date', [$startOfMonth, $endOfMonth]);
 

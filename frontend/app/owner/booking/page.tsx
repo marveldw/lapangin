@@ -22,6 +22,7 @@ interface BookingRecord {
     court_id: number;
     name: string;
     sport_type: string;
+    deleted_at?: string | null;
   };
   customer?: {
     customer_id: number;
@@ -125,7 +126,7 @@ export default function OwnerBookingPage() {
       `"${b.booking_code}"`,
       `"${(b.customer?.name || '-').replace(/"/g, '""')}"`,
       `="${b.customer?.phone || '-'}"`, // Mengunci format teks agar angka 0 di depan nomor HP tidak hilang
-      `"${(b.court?.name || '-').replace(/"/g, '""')}"`,
+      `"${(b.court?.name || '-').replace(/"/g, '""')}${b.court?.deleted_at ? ' (Dihapus)' : ''}"`,
       `"${b.court?.sport_type || '-'}"`,
       b.booking_date,
       b.start_time ? b.start_time.slice(0, 5) : '-',
@@ -361,7 +362,14 @@ export default function OwnerBookingPage() {
                       </td>
                       <td className="p-4">
                         <div className="flex flex-col">
-                          <span className="font-semibold">{b.court?.name || 'Lapangan'}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold">{b.court?.name || 'Lapangan'}</span>
+                            {b.court?.deleted_at && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-gray-100 text-gray-600 border border-gray-300">
+                                Dihapus
+                              </span>
+                            )}
+                          </div>
                           <span className="text-[10px] text-[#3d4a3d]">
                             {b.court?.sport_type || '-'}
                           </span>
@@ -518,7 +526,14 @@ export default function OwnerBookingPage() {
               </div>
               <div className="flex justify-between border-b border-[#bccbb9]/20 pb-2">
                 <span className="text-[#3d4a3d]">Lapangan</span>
-                <span className="font-bold">{selectedBooking.court?.name || '-'}</span>
+                <span className="font-bold flex items-center gap-1.5">
+                  {selectedBooking.court?.name || '-'}
+                  {selectedBooking.court?.deleted_at && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-gray-100 text-gray-600 border border-gray-300">
+                      Dihapus
+                    </span>
+                  )}
+                </span>
               </div>
               <div className="flex justify-between border-b border-[#bccbb9]/20 pb-2">
                 <span className="text-[#3d4a3d]">Tanggal & Waktu</span>

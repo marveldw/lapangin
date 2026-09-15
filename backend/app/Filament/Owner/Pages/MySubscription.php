@@ -51,8 +51,12 @@ class MySubscription extends Page
 
     public function getUsageStats()
     {
-        $userId = auth()->user()?->user_id;
-        $currentPlan = $this->getSubscription()?->plan;
+        $user = auth()->user();
+        $userId = $user?->user_id;
+        $currentPlan = $this->getSubscription()?->plan ?? Plan::where('name', Plan::FREE)->first();
+        $planName = $currentPlan?->name ?? Plan::FREE;
+        $maxCourts = ($planName === Plan::PRO || $currentPlan?->max_courts === null) ? 'Unlimited' : ($currentPlan?->max_courts ?? 1);
+        $maxBookings = ($planName === Plan::PRO || $currentPlan?->max_bookings_per_month === null) ? 'Unlimited' : ($currentPlan?->max_bookings_per_month ?? 30);
 
         $courtCount = Court::where('owner_id', $userId)
             ->where('status', 'ACTIVE')
@@ -62,16 +66,16 @@ class MySubscription extends Page
         $endOfMonth = Carbon::now()->endOfMonth()->toDateString();
 
         $bookingCount = Booking::whereHas('court', function ($q) use ($userId) {
-            $q->where('owner_id', $userId);
+            $q->withTrashed()->where('owner_id', $userId);
         })
             ->whereBetween('booking_date', [$startOfMonth, $endOfMonth])
             ->count();
 
         return [
             'court_count'   => $courtCount,
-            'court_max'     => $currentPlan?->max_courts ?? 'Unlimited',
+            'court_max'     => $maxCourts,
             'booking_count' => $bookingCount,
-            'booking_max'   => $currentPlan?->max_bookings_per_month ?? 'Unlimited',
+            'booking_max'   => $maxBookings,
         ];
     }
 

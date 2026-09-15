@@ -378,7 +378,7 @@ export default function PelangganPage() {
                     <div key={b.booking_id} className="py-2.5 flex justify-between items-center text-xs">
                       <div>
                         <p className="font-bold text-[#0b1c30]">
-                          #{b.booking_code} - {b.court?.name || 'Lapangan'}
+                          #{b.booking_code} - {b.court?.name || 'Lapangan'}{b.court?.deleted_at ? ' (Dihapus)' : ''}
                         </p>
                         <p className="text-[11px] text-[#3d4a3d]">
                           {formatDateIndo(b.booking_date)} ({b.start_time.slice(0, 5)} -{' '}
