@@ -138,17 +138,18 @@ function DetailLapanganContent() {
     fetchSlots();
   }, [courtId, selectedDate]);
 
-  // Kalender 10 Hari ke Depan (Menggunakan Local Date untuk Mencegah Bug Timezone UTC vs WIB)
+  // Kalender 7 Hari ke Depan (Menggunakan Local Date untuk Mencegah Bug Timezone UTC vs WIB)
   const availableDates = useMemo(() => {
     const list = [];
     const now = new Date();
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 7; i++) {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
       const iso = getLocalDateString(d);
       const dayName = new Intl.DateTimeFormat('id-ID', { weekday: 'short' }).format(d);
       const dayNum = d.getDate();
       const monthName = new Intl.DateTimeFormat('id-ID', { month: 'short' }).format(d);
-      list.push({ iso, dayName, dayNum, monthName });
+      const isPast = iso < getLocalDateString(new Date());
+      list.push({ iso, dayName, dayNum, monthName, isPast });
     }
     return list;
   }, []);
@@ -392,6 +393,7 @@ function DetailLapanganContent() {
                   <input
                     type="date"
                     min={todayStr}
+                    max={availableDates.length > 0 ? availableDates[availableDates.length - 1].iso : todayStr}
                     value={selectedDate}
                     onChange={(e) => {
                       if (e.target.value) {
@@ -407,6 +409,18 @@ function DetailLapanganContent() {
               <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none">
                 {availableDates.map((item) => {
                   const isSelected = selectedDate === item.iso;
+                  if (item.isPast) {
+                    return (
+                      <div
+                        key={item.iso}
+                        className="w-[70px] h-[82px] shrink-0 rounded-xl flex flex-col items-center justify-center gap-0.5 border border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed select-none opacity-60"
+                      >
+                        <span className="text-[10px] uppercase font-semibold">{item.dayName}</span>
+                        <span className="text-xl font-extrabold leading-none">{item.dayNum}</span>
+                        <span className="text-[10px] opacity-80">{item.monthName}</span>
+                      </div>
+                    );
+                  }
                   return (
                     <button
                       type="button"
@@ -580,9 +594,7 @@ function DetailLapanganContent() {
                 <span>Lanjut ke Pembayaran</span>
               </button>
 
-              <p className="text-[10px] text-center text-[#3d4a3d]/70">
-                🔒 Pembayaran aman & jadwal terverifikasi anti-bentrok.
-              </p>
+              
             </div>
           </aside>
         </div>
