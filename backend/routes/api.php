@@ -6,8 +6,10 @@ use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\CourtController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PlanController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PublicCourtController;
 use App\Http\Controllers\Api\WalletController;
 
@@ -19,6 +21,12 @@ Route::post('/register', [AuthController::class, 'register'])
 
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:login');
+
+Route::post('/forgot-password', [PasswordResetController::class, 'sendResetToken'])
+    ->middleware('throttle:10,1');
+
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])
+    ->middleware('throttle:10,1');
 
 Route::get('/plans', [PlanController::class, 'index'])
     ->middleware('throttle:60,1');
@@ -51,6 +59,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Auth & Profil (Semua Role)
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/profile', [ProfileController::class, 'getProfile']);
+    Route::put('/profile', [ProfileController::class, 'updateProfile']);
 
     // Bookings (Pelanggan booking & riwayat; Owner pantau & kelola status)
     Route::get('/bookings', [BookingController::class, 'index']);
@@ -95,5 +105,6 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         // Wallet & Withdrawal (Owner)
         Route::get('/owner/wallet', [WalletController::class, 'getWallet']);
         Route::post('/owner/withdraw', [WalletController::class, 'requestWithdraw']);
+        Route::put('/owner/payout-account', [ProfileController::class, 'updatePayoutAccount']);
     });
 });

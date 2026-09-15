@@ -22,6 +22,7 @@ export interface CourtItem {
   close_time?: string | null;
   status: 'ACTIVE' | 'INACTIVE' | string;
   booking_count?: number;
+  has_active_booking?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -92,11 +93,16 @@ export function getCourtFallbackImage(sportType?: string): string {
 }
 
 export default function DaftarLapangan() {
-  const { token, isLoading: authLoading } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
 
   const [courts, setCourts] = useState<CourtItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const maxAllowedCourts = user?.subscription?.max_courts !== undefined && user?.subscription?.max_courts !== null
+    ? user.subscription.max_courts
+    : 1;
+  const isQuotaExceeded = maxAllowedCourts !== null && courts.length >= maxAllowedCourts;
 
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 500);
@@ -497,6 +503,19 @@ export default function DaftarLapangan() {
     });
   }, [courts, debouncedSearch, statusFilter, sportFilter]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, statusFilter, sportFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredCourts.length / perPage));
+  const paginatedCourts = useMemo(() => {
+    const start = (currentPage - 1) * perPage;
+    return filteredCourts.slice(start, start + perPage);
+  }, [filteredCourts, currentPage, perPage]);
+
   const totalCourts = courts.length;
   const activeCourts = courts.filter((c) => c.status === 'ACTIVE').length;
   const inactiveCourts = courts.filter((c) => c.status !== 'ACTIVE').length;
@@ -537,13 +556,24 @@ export default function DaftarLapangan() {
           </p>
         </div>
 
-        <Link
-          href="/owner/lapangan/tambah"
-          className="bg-[#006e2f] text-[#ffffff] text-sm font-semibold py-3 px-6 rounded-xl shadow-md hover:bg-[#006e2f]/90 hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 self-start lg:self-end shrink-0 cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[20px]">add</span>
-          Tambah Lapangan Baru
-        </Link>
+        {isQuotaExceeded ? (
+          <Link
+            href="/owner/pengaturan?tab=SECURITY"
+            className="bg-slate-200 text-slate-600 hover:bg-amber-100 hover:text-amber-800 text-sm font-semibold py-3 px-6 rounded-xl shadow-xs transition-all flex items-center gap-2 self-start lg:self-end shrink-0 cursor-pointer border border-slate-300"
+            title={`Batas kuota paket (${maxAllowedCourts} lapangan) tercapai. Klik untuk upgrade paket.`}
+          >
+            <span className="material-symbols-outlined text-[20px]">lock</span>
+            Tambah Lapangan (Upgrade Paket)
+          </Link>
+        ) : (
+          <Link
+            href="/owner/lapangan/tambah"
+            className="bg-[#006e2f] text-[#ffffff] text-sm font-semibold py-3 px-6 rounded-xl shadow-md hover:bg-[#006e2f]/90 hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 self-start lg:self-end shrink-0 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[20px]">add</span>
+            Tambah Lapangan Baru
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -712,13 +742,23 @@ export default function DaftarLapangan() {
             <p className="text-sm text-[#3d4a3d] max-w-md">
               Mulai buat profil lapangan olahraga Anda sekarang untuk menerima reservasi dan mengelola ketersediaan secara online.
             </p>
-            <Link
-              href="/owner/lapangan/tambah"
-              className="mt-4 bg-[#006e2f] text-white px-8 py-3 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[20px]">add</span>
-              Tambah Lapangan Pertama
-            </Link>
+            {isQuotaExceeded ? (
+              <Link
+                href="/owner/pengaturan?tab=SECURITY"
+                className="mt-4 bg-slate-200 text-slate-600 hover:bg-amber-100 hover:text-amber-800 px-8 py-3 rounded-xl text-sm font-semibold shadow-xs transition-all flex items-center gap-2 cursor-pointer border border-slate-300"
+              >
+                <span className="material-symbols-outlined text-[20px]">lock</span>
+                Upgrade Paket untuk Menambah Lapangan
+              </Link>
+            ) : (
+              <Link
+                href="/owner/lapangan/tambah"
+                className="mt-4 bg-[#006e2f] text-white px-8 py-3 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">add</span>
+                Tambah Lapangan Pertama
+              </Link>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-2xl p-12 text-center border border-[#bccbb9]/30 shadow-sm flex flex-col items-center justify-center gap-3 py-12">
@@ -742,8 +782,45 @@ export default function DaftarLapangan() {
           </div>
         )
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 relative">
-          {filteredCourts.map((court) => {
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 relative">
+          {paginatedCourts.map((court, index) => {
+            const absoluteIndex = (currentPage - 1) * perPage + index;
+            const isRestricted = maxAllowedCourts !== null && absoluteIndex >= maxAllowedCourts;
+            if (isRestricted) {
+              return (
+                <div
+                  key={court.court_id}
+                  className="col-span-1 md:col-span-2 xl:col-span-3 bg-amber-50/90 border border-amber-300/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all shadow-xs"
+                >
+                  <div className="flex items-center gap-3.5 w-full sm:w-auto">
+                    <div className="w-11 h-11 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 border border-amber-200">
+                      <span className="material-symbols-outlined text-[24px]">lock</span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-bold text-slate-800 text-sm">{court.name}</h4>
+                        <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                          Dibatasi Kuota
+                        </span>
+                        <span className="text-xs text-slate-500 font-medium">({court.sport_type})</span>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-1">
+                        Lapangan ini dibatasi (collapsed) karena paket aktif Anda hanya mendukung maksimal {maxAllowedCourts} lapangan. Upgrade paket untuk mengaktifkan kembali.
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/owner/pengaturan?tab=SECURITY"
+                    className="text-xs font-bold bg-[#006e2f] hover:bg-[#005321] text-white px-5 py-2.5 rounded-xl transition-all shadow-xs shrink-0 flex items-center gap-1.5 self-end sm:self-center"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">upgrade</span>
+                    Upgrade Paket
+                  </Link>
+                </div>
+              );
+            }
+
             const isActive = court.status === 'ACTIVE';
             const imageUrl = court.image_url || getCourtFallbackImage(court.sport_type);
             const locationDisplay = court.district
@@ -848,10 +925,20 @@ export default function DaftarLapangan() {
           role="switch"
           aria-checked={isActive}
           onClick={() => handleToggleStatus(court)}
-          disabled={updatingId === court.court_id}
-          title={isActive ? 'Klik untuk nonaktifkan lapangan' : 'Klik untuk aktifkan lapangan'}
-          className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
-            isActive ? 'bg-[#006e2f]' : 'bg-slate-300'
+          disabled={updatingId === court.court_id || (isActive && !!court.has_active_booking)}
+          title={
+            isActive && court.has_active_booking
+              ? 'Tidak dapat dinonaktifkan: ada jadwal booking aktif atau mendatang hari ini'
+              : isActive
+              ? 'Klik untuk nonaktifkan lapangan'
+              : 'Klik untuk aktifkan lapangan'
+          }
+          className={`relative inline-flex h-5 w-10 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+            isActive && court.has_active_booking
+              ? 'opacity-50 cursor-not-allowed bg-[#006e2f]'
+              : updatingId === court.court_id
+              ? 'opacity-50 cursor-not-allowed ' + (isActive ? 'bg-[#006e2f]' : 'bg-slate-300')
+              : 'cursor-pointer ' + (isActive ? 'bg-[#006e2f]' : 'bg-slate-300')
           }`}
         >
           <span
@@ -860,9 +947,19 @@ export default function DaftarLapangan() {
             }`}
           />
         </button>
-        <span className="text-xs font-semibold text-slate-600 select-none">
-          {updatingId === court.court_id ? 'Memproses...' : isActive ? 'Aktif' : 'Non-aktif'}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className="text-xs font-semibold text-slate-600 select-none">
+            {updatingId === court.court_id ? 'Memproses...' : isActive ? 'Aktif' : 'Non-aktif'}
+          </span>
+          {isActive && court.has_active_booking && (
+            <span
+              className="material-symbols-outlined text-[14px] text-amber-600 cursor-help"
+              title="Ada jadwal booking aktif hari ini"
+            >
+              lock
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Tombol Edit & Delete */}
@@ -892,10 +989,60 @@ export default function DaftarLapangan() {
               </div>
             );
           })}
-
-          
         </div>
-      )}
+
+        {/* Pagination Controls (Item 3) */}
+        {filteredCourts.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-5 bg-white rounded-2xl border border-[#bccbb9]/30 shadow-xs mt-2">
+            <div className="flex items-center gap-3 text-xs text-[#3d4a3d]">
+              <span>
+                Menampilkan {(currentPage - 1) * perPage + 1} -{' '}
+                {Math.min(currentPage * perPage, filteredCourts.length)} dari {filteredCourts.length} lapangan
+              </span>
+              <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-3">
+                <span>Per halaman:</span>
+                <select
+                  value={perPage}
+                  onChange={(e) => {
+                    setPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-slate-100 font-semibold py-1 px-2 rounded-lg text-xs outline-none border border-slate-300 cursor-pointer"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-xl border border-[#bccbb9]/40 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                Sebelumnya
+              </button>
+              <span className="text-xs font-bold px-3 py-1 bg-[#e5eeff] text-[#006e2f] rounded-lg">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="px-3 py-1.5 rounded-xl border border-[#bccbb9]/40 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
+              >
+                Berikutnya
+                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    )}
 
       {editingCourt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b1c30]/50 backdrop-blur-sm animate-in fade-in">

@@ -7,6 +7,9 @@ use App\Models\Booking;
 use App\Models\Court;
 use App\Models\Customer;
 use App\Models\Plan;
+use App\Models\Transaction;
+use App\Models\Wallet;
+use App\Models\WalletMutation;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +26,8 @@ class BookingController extends Controller
             ->orderBy('booking_date', 'desc')
             ->orderBy('start_time', 'asc');
 
-        if ($user->role === 'OWNER') {
+        // Dual-role check: Owner can view customer bookings if scope=customer
+        if ($user->role === 'OWNER' && $request->query('scope') !== 'customer') {
             $courtIds = Court::where('owner_id', $user->user_id)->pluck('court_id');
             if ($courtIds->isEmpty()) {
                 return response()->json([
@@ -296,12 +300,28 @@ class BookingController extends Controller
             ], 403);
         }
 
-        // Customer can only cancel their own pending booking
+        // Customer cancellation
         if ($isCustomer && !$isOwner && $user->role !== 'ADMIN') {
-            if ($booking->status !== 'PENDING') {
+            $bookingDateTime = Carbon::parse($booking->booking_date . ' ' . $booking->start_time);
+            if ($bookingDateTime->isPast()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Booking yang sudah dikonfirmasi atau dibatalkan tidak dapat diubah.',
+                    'message' => 'Tidak dapat membatalkan booking yang sudah lewat atau sedang berlangsung.',
+                ], 422);
+            }
+
+            if (!in_array($booking->status, ['PENDING', 'CONFIRMED'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Booking yang sudah dibatalkan atau selesai tidak dapat diubah.',
+                ], 422);
+            }
+
+            // If confirmed, require at least 2 hours notice
+            if ($booking->status === 'CONFIRMED' && $bookingDateTime->diffInMinutes(now(), false) > -120) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pembatalan jadwal terkonfirmasi hanya dapat dilakukan minimal 2 jam sebelum waktu bermain.',
                 ], 422);
             }
 
@@ -310,16 +330,22 @@ class BookingController extends Controller
                 'notes'  => 'nullable|string|max:1000',
             ]);
 
-            $booking->update([
-                'status' => 'CANCELLED',
-                'notes'  => $validated['notes'] ?? $booking->notes,
-            ]);
+            return DB::transaction(function () use ($booking, $validated, $user) {
+                if ($booking->status === 'CONFIRMED') {
+                    $this->processRefundForBooking($booking, 'Dibatalkan oleh Pelanggan');
+                }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Booking berhasil dibatalkan.',
-                'data'    => $booking->fresh(['court', 'customer']),
-            ]);
+                $booking->update([
+                    'status' => 'CANCELLED',
+                    'notes'  => $validated['notes'] ?? $booking->notes,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Booking berhasil dibatalkan.',
+                    'data'    => $booking->fresh(['court', 'customer']),
+                ]);
+            });
         }
 
         // Owner / Admin can update to PENDING, CONFIRMED, or CANCELLED
@@ -328,7 +354,11 @@ class BookingController extends Controller
             'notes'  => 'nullable|string|max:1000',
         ]);
 
-        return DB::transaction(function () use ($booking, $validated) {
+        return DB::transaction(function () use ($booking, $validated, $user) {
+            if ($validated['status'] === 'CANCELLED' && $booking->status === 'CONFIRMED') {
+                $this->processRefundForBooking($booking, 'Dibatalkan oleh Pengelola Venue');
+            }
+
             // If re-activating a CANCELLED booking, verify slot is still available
             if ($booking->status === 'CANCELLED' && in_array($validated['status'], ['PENDING', 'CONFIRMED'])) {
                 $conflict = Booking::where('court_id', $booking->court_id)
@@ -355,6 +385,69 @@ class BookingController extends Controller
                 'data'    => $booking->fresh(['court', 'customer']),
             ]);
         });
+    }
+
+    /**
+     * Process refund to wallet when confirmed booking is cancelled
+     */
+    protected function processRefundForBooking(Booking $booking, string $reason): void
+    {
+        $tx = Transaction::where('type', 'BOOKING')
+            ->where('reference_id', $booking->booking_id)
+            ->where('status', 'SETTLEMENT')
+            ->first();
+
+        if (!$tx) {
+            return;
+        }
+
+        $refundAmount = (int) $tx->gross_amount;
+        $ownerId = $booking->court?->owner_id;
+
+        // 1. Deduct from Owner's wallet if exists
+        if ($ownerId) {
+            $ownerWallet = Wallet::where('owner_id', $ownerId)->lockForUpdate()->first();
+            if ($ownerWallet && $ownerWallet->balance >= $refundAmount) {
+                $ownerBefore = $ownerWallet->balance;
+                $ownerWallet->decrement('balance', $refundAmount);
+                WalletMutation::create([
+                    'wallet_id'      => $ownerWallet->wallet_id,
+                    'type'           => 'DEBIT',
+                    'amount'         => $refundAmount,
+                    'balance_before' => $ownerBefore,
+                    'balance_after'  => $ownerWallet->balance,
+                    'description'    => "Potongan refund booking #{$booking->booking_code} ({$reason})",
+                    'reference_type' => 'BOOKING',
+                    'reference_id'   => $booking->booking_id,
+                ]);
+            }
+        }
+
+        // 2. Credit to Customer's wallet
+        if ($booking->user_id) {
+            $customerWallet = Wallet::where('owner_id', $booking->user_id)->lockForUpdate()->first();
+            if (!$customerWallet) {
+                $customerWallet = Wallet::create([
+                    'owner_id'       => $booking->user_id,
+                    'balance'        => 0,
+                    'locked_balance' => 0,
+                ]);
+                $customerWallet = Wallet::where('wallet_id', $customerWallet->wallet_id)->lockForUpdate()->first();
+            }
+
+            $custBefore = $customerWallet->balance;
+            $customerWallet->increment('balance', $refundAmount);
+            WalletMutation::create([
+                'wallet_id'      => $customerWallet->wallet_id,
+                'type'           => 'CREDIT',
+                'amount'         => $refundAmount,
+                'balance_before' => $custBefore,
+                'balance_after'  => $customerWallet->balance,
+                'description'    => "Refund pembatalan sewa lapangan #{$booking->booking_code} ({$reason})",
+                'reference_type' => 'BOOKING',
+                'reference_id'   => $booking->booking_id,
+            ]);
+        }
     }
 
     // ==========================================

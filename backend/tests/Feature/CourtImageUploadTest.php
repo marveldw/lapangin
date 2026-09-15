@@ -119,4 +119,19 @@ class CourtImageUploadTest extends TestCase
         $imageUrl = $response->json('data.image_url');
         $this->assertStringContainsString('/storage/courts/', $imageUrl);
     }
+
+    public function test_rejects_renamed_non_image_file_disguised_as_jpg(): void
+    {
+        // Renamed text/script file with .jpg extension (MIME spoofing attack)
+        $fakeJpg = UploadedFile::fake()->createWithContent(
+            'script_disguised.jpg',
+            "<?php phpinfo(); ?> This is plain PHP code disguised as a photo."
+        );
+
+        $response = $this->postJson('/api/courts/upload-image', [
+            'image' => $fakeJpg,
+        ]);
+
+        $response->assertStatus(422);
+    }
 }

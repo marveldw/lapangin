@@ -19,9 +19,22 @@ class CourtController extends Controller
     // GET /api/courts (or /api/owner/courts) — owner sees only their own courts
     public function index(Request $request)
     {
+        $perPage = min(50, max(1, (int) $request->query('per_page', 10)));
         $courts = Court::where('owner_id', $request->user()->user_id)
             ->with('operatingHours')
-            ->paginate(25);
+            ->paginate($perPage);
+
+        $today = now()->toDateString();
+        $currentTime = now()->toTimeString();
+
+        $courts->getCollection()->transform(function ($court) use ($today, $currentTime) {
+            $court->has_active_booking = $court->bookings()
+                ->where('booking_date', $today)
+                ->where('status', 'CONFIRMED')
+                ->where('end_time', '>', $currentTime)
+                ->exists();
+            return $court;
+        });
 
         return response()->json([
             'success' => true,
@@ -183,6 +196,24 @@ class CourtController extends Controller
         $this->resolveImageUrl($request, $validated);
         unset($validated['open_time'], $validated['close_time']);
 
+        // Prevent deactivating court if it has ongoing/confirmed booking today (Item 11)
+        if (isset($validated['status']) && $validated['status'] === 'INACTIVE' && $court->status === 'ACTIVE') {
+            $today = now()->toDateString();
+            $currentTime = now()->toTimeString();
+            $hasActiveBooking = $court->bookings()
+                ->where('booking_date', $today)
+                ->where('status', 'CONFIRMED')
+                ->where('end_time', '>', $currentTime)
+                ->exists();
+
+            if ($hasActiveBooking) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak dapat menonaktifkan lapangan karena terdapat jadwal booking aktif hari ini.',
+                ], 422);
+            }
+        }
+
         return DB::transaction(function () use ($court, $validated, $openTimeStr, $closeTimeStr) {
             $court->update([
                 'name'           => $validated['name'] ?? $court->name,
@@ -236,10 +267,11 @@ class CourtController extends Controller
         }
 
         $court->update(['status' => 'INACTIVE']);
+        $court->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Lapangan berhasil dinonaktifkan.',
+            'message' => 'Lapangan berhasil dihapus (soft-delete). Riwayat pemesanan tetap tersimpan.',
         ]);
     }
 

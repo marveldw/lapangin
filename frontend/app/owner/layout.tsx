@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import Sidebar from '../../components/Sidebar';
+import AnimatedLoading from '../../components/AnimatedLoading';
 
 export default function OwnerLayout({ children }: { children: React.ReactNode }) {
   const { user, token, isLoading, logout } = useAuth();
@@ -21,14 +22,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
   }, [user, token, isLoading, router]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9ff]">
-        <div className="flex items-center gap-2 text-[#006e2f] animate-pulse">
-          <span className="material-symbols-outlined text-[32px]">sports_soccer</span>
-          <span className="text-lg font-semibold">Memuat Lapangin...</span>
-        </div>
-      </div>
-    );
+    return <AnimatedLoading fullScreen message="Memuat Lapangin" submessage="Menyiapkan portal pengelola Anda" />;
   }
 
   if (!token || user?.role?.toUpperCase() !== 'OWNER') {
@@ -54,7 +48,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
               <span className="material-symbols-outlined text-[26px]">menu</span>
             </button>
             <span className="material-symbols-outlined text-[#006e2f] hidden sm:block">location_on</span>
-            <span className="text-lg sm:text-xl font-semibold">Owner Portal</span>
+            <span className="text-lg sm:text-xl font-semibold">Portal Pengelola</span>
           </div>
           
           <div className="flex items-center gap-4 sm:gap-6">
