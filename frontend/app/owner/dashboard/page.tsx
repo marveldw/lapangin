@@ -118,9 +118,8 @@ export default function Dashboard() {
         {/* Card 1: Total Lapangan */}
         <div className="bg-[#e5eeff] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-[#006e2f]/10 rounded-full blur-xl group-hover:bg-[#006e2f]/20 transition-colors"></div>
-          <div className="flex items-center gap-2 text-[#3d4a3d] relative z-10">
-            <span className="material-symbols-outlined text-[20px]">stadium</span>
-            <span className="text-xs font-semibold tracking-wide">Total Lapangan</span>
+          <div className="text-xs font-semibold tracking-wide text-[#3d4a3d] relative z-10">
+            Total Lapangan
           </div>
           <div className="text-3xl font-bold tracking-tight text-[#0b1c30] relative z-10">
             {stats.total_courts}
@@ -133,40 +132,36 @@ export default function Dashboard() {
         {/* Card 2: Booking Hari Ini */}
         <div className="bg-[#e5eeff] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-[#565e74]/10 rounded-full blur-xl group-hover:bg-[#565e74]/20 transition-colors"></div>
-          <div className="flex items-center gap-2 text-[#3d4a3d] relative z-10">
-            <span className="material-symbols-outlined text-[20px]">event_available</span>
-            <span className="text-xs font-semibold tracking-wide">Booking Hari Ini</span>
+          <div className="text-xs font-semibold tracking-wide text-[#3d4a3d] relative z-10">
+            Booking Hari Ini
           </div>
           <div className="text-3xl font-bold tracking-tight text-[#0b1c30] relative z-10">
             {stats.today_bookings}
           </div>
-          <div className="text-xs font-medium text-[#006e2f] flex items-center gap-1 mt-auto relative z-10">
-            <span className="material-symbols-outlined text-[16px]">trending_up</span>
-            <span>Total: {stats.total_bookings}</span>
+          <div className="text-xs font-medium text-[#006e2f] mt-auto relative z-10">
+            Total: {stats.total_bookings}
           </div>
         </div>
 
         {/* Card 3: Status PENDING (Menunggu Pembayaran / Approval) */}
         <div className="bg-[#e5eeff] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-[#565e74]/10 rounded-full blur-xl group-hover:bg-[#565e74]/20 transition-colors"></div>
-          <div className="flex items-center gap-2 text-[#3d4a3d] relative z-10">
-            <span className="material-symbols-outlined text-[20px]">hourglass_top</span>
-            <span className="text-xs font-semibold tracking-wide">Menunggu (Pending)</span>
+          <div className="text-xs font-semibold tracking-wide text-[#3d4a3d] relative z-10">
+            Menunggu (Pending)
           </div>
           <div className="text-3xl font-bold tracking-tight text-[#0b1c30] relative z-10">
             {stats.pending_bookings || 0}
           </div>
           <div className="text-xs font-medium text-[#3d4a3d] mt-auto relative z-10">
-            Menunggu pembayaran/approval
+            Menunggu pembayaran
           </div>
         </div>
 
         {/* Card 4: Pendapatan Hari Ini */}
         <div className="bg-[#e5eeff] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-[#005ac2]/10 rounded-full blur-xl group-hover:bg-[#005ac2]/20 transition-colors"></div>
-          <div className="flex items-center gap-2 text-[#3d4a3d] relative z-10">
-            <span className="material-symbols-outlined text-[20px]">payments</span>
-            <span className="text-xs font-semibold tracking-wide">Pendapatan Hari Ini</span>
+          <div className="text-xs font-semibold tracking-wide text-[#3d4a3d] relative z-10">
+            Pendapatan Hari Ini
           </div>
           <div className="text-3xl font-bold tracking-tight text-[#0b1c30] relative z-10">
             {formatRupiahCompact(stats.today_revenue)}
@@ -178,12 +173,8 @@ export default function Dashboard() {
 
         {/* Card 5: Pendapatan Bulan Ini */}
         <div className="bg-[#006e2f] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group text-[#ffffff]">
-          <div className="absolute right-[-20px] bottom-[-20px] opacity-10">
-            <span className="material-symbols-outlined text-[100px] leading-none" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
-          </div>
-          <div className="flex items-center gap-2 text-[#4ae176] relative z-10">
-            <span className="material-symbols-outlined text-[20px]">monitoring</span>
-            <span className="text-xs font-semibold tracking-wide">Pendapatan Bulan Ini</span>
+          <div className="text-xs font-semibold tracking-wide text-[#4ae176] relative z-10">
+            Pendapatan Bulan Ini
           </div>
           <div className="text-3xl font-bold tracking-tight z-10 relative">
             {formatRupiahCompact(stats.monthly_revenue)}
@@ -283,13 +274,12 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => setBookingFilter('PENDING')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       bookingFilter === 'PENDING'
                         ? 'bg-amber-600 text-white shadow-xs'
                         : 'text-amber-800 hover:text-amber-900'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[13px]">hourglass_top</span>
                     Pending ({stats.pending_bookings || 0})
                   </button>
                 </div>
