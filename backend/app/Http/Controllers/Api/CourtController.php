@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Rules\SecureImageFile;
 
 class CourtController extends Controller
 {
@@ -82,7 +83,7 @@ class CourtController extends Controller
         $closeTimeStr = strlen($closeTime) === 5 ? "{$closeTime}:00" : $closeTime;
 
         // 2. Resolve image and remove transient fields
-        $this->resolveImageUrl($request, $validated);
+        $this->resolveImageUrl($request, $validated, false);
         unset($validated['open_time'], $validated['close_time']);
 
         return DB::transaction(function () use ($user, $validated, $openTimeStr, $closeTimeStr) {
@@ -193,7 +194,7 @@ class CourtController extends Controller
         $closeTimeStr = $closeTime ? (strlen($closeTime) === 5 ? "{$closeTime}:00" : $closeTime) : null;
 
         // 2. Resolve image and remove transient fields
-        $this->resolveImageUrl($request, $validated);
+        $this->resolveImageUrl($request, $validated, true);
         unset($validated['open_time'], $validated['close_time']);
 
         // Prevent deactivating court if it has ongoing/confirmed booking today (Item 11)
@@ -287,35 +288,49 @@ class CourtController extends Controller
     // POST /api/courts/upload-image — dedicated secure photo upload
     public function uploadImage(Request $request)
     {
-        $maxSizeKb = (int) config('court.max_image_size_kb', env('MAX_COURT_IMAGE_SIZE_KB', 2048));
+        if ($request->hasFile('image')) {
+            $request->validate([
+                'image' => [
+                    'required',
+                    new SecureImageFile('court'),
+                ],
+            ]);
+
+            $file = $request->file('image');
+            $path = $file->store('courts', 'public');
+            $url  = url('storage/' . $path);
+
+            return response()->json([
+                'success'   => true,
+                'message'   => 'Foto lapangan berhasil diunggah.',
+                'image_url' => $url,
+                'path'      => $path,
+            ]);
+        }
+
+        if ($request->filled('image_url') || $request->filled('image')) {
+            $raw = $request->input('image_url') ?: $request->input('image');
+            if (is_string($raw) && preg_match('/^data:image\/([a-zA-Z0-9\+\.-]+);(?:charset=[^;]+;)?base64,/i', $raw)) {
+                $validated = ['image_url' => $raw];
+                $this->resolveImageUrl($request, $validated, true);
+                return response()->json([
+                    'success'   => true,
+                    'message'   => 'Foto lapangan berhasil diunggah.',
+                    'image_url' => $validated['image_url'],
+                ]);
+            }
+        }
 
         $request->validate([
             'image' => [
                 'required',
-                'file',
-                'image',
-                'mimes:jpeg,png,jpg,webp',
-                "max:{$maxSizeKb}",
+                new SecureImageFile('court'),
             ],
-        ]);
-
-        $file = $request->file('image');
-        $this->validateImageContentSecurity($file);
-
-        // Simpan dengan nama hash acak (keamanan: mencegah path traversal dan script eksekusi)
-        $path = $file->store('courts', 'public');
-        $url  = url('storage/' . $path);
-
-        return response()->json([
-            'success'   => true,
-            'message'   => 'Foto lapangan berhasil diunggah.',
-            'image_url' => $url,
-            'path'      => $path,
         ]);
     }
 
     // Helper: Validasi & ekstrak file upload fisik / Base64 Data URL menjadi URL Storage aman
-    private function resolveImageUrl(Request $request, array &$validated): void
+    private function resolveImageUrl(Request $request, array &$validated, bool $isUpdate = false): void
     {
         // 1. File fisik diunggah via multipart/form-data
         if ($request->hasFile('image')) {
@@ -325,31 +340,54 @@ class CourtController extends Controller
             $validated['image_url'] = url('storage/' . $path);
         }
         // 2. Base64 Data URL (misal dari FileReader JS frontend)
-        elseif (!empty($validated['image_url']) && preg_match('/^data:image\/(jpeg|png|jpg|webp);base64,/', $validated['image_url'])) {
+        elseif (!empty($validated['image_url']) && preg_match('/^data:image\/([a-zA-Z0-9\+\.-]+);(?:charset=[^;]+;)?base64,/i', $validated['image_url'])) {
             $parts  = explode(',', $validated['image_url'], 2);
             $binary = base64_decode($parts[1] ?? '', true);
-            $maxBytes = (int) config('court.max_image_size_kb', env('MAX_COURT_IMAGE_SIZE_KB', 2048)) * 1024;
+            $maxBytes = (int) config('upload.max_court_image_size_kb', 2048) * 1024;
 
-            if ($binary !== false && strlen($binary) <= $maxBytes) {
-                $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                $mime  = finfo_buffer($finfo, $binary);
-                finfo_close($finfo);
-
-                $allowedMimes = [
-                    'image/jpeg' => 'jpg',
-                    'image/png'  => 'png',
-                    'image/webp' => 'webp',
-                ];
-
-                if (isset($allowedMimes[$mime])) {
-                    $filename = 'courts/' . Str::random(40) . '.' . $allowedMimes[$mime];
-                    Storage::disk('public')->put($filename, $binary);
-                    $validated['image_url'] = url('storage/' . $filename);
-                }
+            if ($binary === false) {
+                abort(422, 'Data berkas gambar Base64 tidak valid atau korup.');
             }
+
+            if (strlen($binary) > $maxBytes) {
+                $maxMb = round($maxBytes / 1024 / 1024, 1);
+                abort(422, "Ukuran gambar tidak boleh melebihi {$maxMb}MB (" . ($maxBytes / 1024) . " KB).");
+            }
+
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime  = finfo_buffer($finfo, $binary);
+            finfo_close($finfo);
+
+            $allowedMimes = [
+                'image/jpeg' => 'jpg',
+                'image/png'  => 'png',
+                'image/webp' => 'webp',
+            ];
+
+            if (!isset($allowedMimes[$mime])) {
+                abort(422, 'Konten berkas bukan gambar valid (Format harus JPEG, PNG, atau WebP).');
+            }
+
+            $imageInfo = @getimagesizefromstring($binary);
+            if ($imageInfo === false || empty($imageInfo[0]) || empty($imageInfo[1])) {
+                abort(422, 'Berkas yang diunggah bukan gambar asli yang valid.');
+            }
+
+            $contents = substr($binary, 0, 4096);
+            if (
+                stripos($contents, '<?php') !== false ||
+                stripos($contents, '<?=') !== false ||
+                stripos($contents, '<script') !== false
+            ) {
+                abort(422, 'Berkas terdeteksi mengandung skrip kode terlarang.');
+            }
+
+            $filename = 'courts/' . Str::random(40) . '.' . $allowedMimes[$mime];
+            Storage::disk('public')->put($filename, $binary);
+            $validated['image_url'] = url('storage/' . $filename);
         }
-        // 3. Fallback jika image_url kosong: gunakan preset olahraga
-        elseif (empty($validated['image_url']) && !empty($validated['sport_type'])) {
+        // 3. Fallback jika image_url kosong pada penambahan lapangan baru (store): gunakan preset olahraga
+        elseif (!$isUpdate && empty($validated['image_url']) && !empty($validated['sport_type'])) {
             $validated['image_url'] = $this->getCourtFallbackImage($validated['sport_type']);
         }
 
@@ -405,15 +443,10 @@ class CourtController extends Controller
 
     private function getCourtFallbackImage(?string $sportType): string
     {
-        $presets = [
-            'Badminton'   => 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&q=80',
-            'Futsal'      => 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80',
-            'Basket'      => 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&q=80',
-            'Tenis'       => 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&q=80',
-            'Mini Soccer' => 'https://images.unsplash.com/photo-1529900245534-47fbf8674971?w=800&q=80',
-            'Voli'        => 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=800&q=80',
-        ];
+        if ($sportType && ($fallback = config("sports.types.{$sportType}.fallback_image"))) {
+            return $fallback;
+        }
 
-        return $presets[$sportType] ?? 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80';
+        return 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&q=80';
     }
 }

@@ -40,6 +40,7 @@ Route::prefix('public')->middleware('throttle:120,1')->group(function () {
     // Helper dropdown data untuk filter lokasi & olahraga
     Route::get('/cities', [PublicCourtController::class, 'cities']);
     Route::get('/cities/{city}/districts', [PublicCourtController::class, 'districts']);
+    Route::get('/districts', [PublicCourtController::class, 'allDistricts']);
     Route::get('/sport-types', [PublicCourtController::class, 'sportTypes']);
 
     // Cek ketersediaan slot jam lapangan pada tanggal tertentu

@@ -217,7 +217,7 @@ export default function PengaturanPage() {
         setSavedSuccess('Rekening pencairan dana berhasil diperbarui dengan aman.');
         setTimeout(() => setSavedSuccess(null), 4000);
       } else {
-        setBankError(res.message || 'Gagal memperbarui rekening pencairan.');
+        setBankError(res.errors?.account_number?.[0] || res.message || 'Gagal memperbarui rekening pencairan.');
       }
     } catch {
       setBankError('Terjadi kesalahan saat memverifikasi perubahan rekening.');
@@ -403,9 +403,12 @@ export default function PengaturanPage() {
                 <input
                   className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] font-medium tracking-wider"
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={20}
                   value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  placeholder="Contoh: 8830192831"
+                  onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Contoh: 8830192831 (angka saja)"
                   required
                 />
               </div>

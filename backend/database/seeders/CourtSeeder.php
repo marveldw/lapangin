@@ -132,6 +132,28 @@ class CourtSeeder extends Seeder
             'image_url' => 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?auto=format&fit=crop&w=800&q=80',
             'profile' => 'monday_off',
         ],
+        [
+            'name' => 'Green Fairway Golf Driving Range',
+            'sport_type' => 'Golf',
+            'description' => 'Driving range golf 40 bay dengan pelatih bersertifikat PGI, sewa stik, dan automatic ball feeder.',
+            'price_per_hour' => 150000,
+            'address' => 'Jl. Metro Pondok Indah No. 10',
+            'city' => 'Jakarta Selatan',
+            'district' => 'Kebayoran Lama',
+            'image_url' => 'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&w=800&q=80',
+            'profile' => 'standard',
+        ],
+        [
+            'name' => 'Peak Horizon Bouldering & Wall Climbing',
+            'sport_type' => 'Panjat Tebing',
+            'description' => 'Arena panjat tebing indoor terlengkap dengan 20 jalur bouldering dan 15 meter lead wall berstandar FPTI.',
+            'price_per_hour' => 85000,
+            'address' => 'Jl. Margonda Raya No. 45',
+            'city' => 'Depok',
+            'district' => 'Beji',
+            'image_url' => 'https://images.unsplash.com/photo-1522163182402-834f871fd851?auto=format&fit=crop&w=800&q=80',
+            'profile' => 'standard',
+        ],
     ];
 
     /**

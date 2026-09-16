@@ -123,6 +123,32 @@ class CourtFactory extends Factory
             ],
             'desc' => 'Lapangan bola voli indoor interlock berstandar nasional, net adjustable, dan fasilitas shower.',
         ],
+        [
+            'type' => 'Golf',
+            'names' => [
+                'Green Valley Driving Range',
+                'Fairway Golf Center',
+            ],
+            'price_min' => 100000,
+            'price_max' => 250000,
+            'images' => [
+                'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&w=800&q=80',
+            ],
+            'desc' => 'Driving range golf 50 bay dengan pelatih profesional, penyewaan stik golf, dan lampu malam.',
+        ],
+        [
+            'type' => 'Panjat Tebing',
+            'names' => [
+                'Summit Climbing Wall',
+                'Boulder Gym Arena',
+            ],
+            'price_min' => 50000,
+            'price_max' => 120000,
+            'images' => [
+                'https://images.unsplash.com/photo-1522163182402-834f871fd851?auto=format&fit=crop&w=800&q=80',
+            ],
+            'desc' => 'Dinding panjat tebing indoor lead & bouldering dengan matras busa tebal dan safety harness.',
+        ],
     ];
 
     protected static array $locations = [

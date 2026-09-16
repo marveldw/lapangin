@@ -22,16 +22,7 @@ class CourtForm
 
                 Select::make('sport_type')
                     ->label('Cabang Olahraga')
-                    ->options([
-                        'Futsal'      => 'Futsal',
-                        'Badminton'   => 'Badminton',
-                        'Basketball'  => 'Basketball',
-                        'Mini Soccer' => 'Mini Soccer',
-                        'Tennis'      => 'Tennis',
-                        'Volleyball'  => 'Volleyball',
-                        'Padel'       => 'Padel',
-                        'Tenis Meja'  => 'Tenis Meja',
-                    ])
+                    ->options(collect(config('sports.types', []))->mapWithKeys(fn($item, $key) => [$key => $item['label']])->toArray())
                     ->searchable()
                     ->required(),
 
@@ -77,6 +68,8 @@ class CourtForm
                 FileUpload::make('image_url')
                     ->label('Foto Lapangan')
                     ->image()
+                    ->acceptedFileTypes(config('upload.allowed_image_mimes', ['image/jpeg', 'image/png', 'image/webp']))
+                    ->maxSize(config('upload.max_court_image_size_kb', 2048))
                     ->disk('public')
                     ->directory('courts')
                     ->columnSpanFull(),

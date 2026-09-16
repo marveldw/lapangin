@@ -8,6 +8,7 @@ import { formatRupiah, getCourtFallbackImage } from '@/lib/formatters';
 import { useDebounce } from '@/lib/useDebounce';
 import Navbar from '@/components/Navbar';
 import AnimatedLoading from '@/components/AnimatedLoading';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 interface Court {
   court_id: number;
@@ -222,48 +223,32 @@ function CariLapanganContent() {
             </div>
 
             {/* City Dropdown */}
-            <div className="w-full md:w-44 relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#3d4a3d]/60 pointer-events-none text-[20px]">
-                location_city
-              </span>
-              <select
+            <div className="w-full md:w-44">
+              <SearchableSelect
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="w-full bg-[#f8f9ff] py-2.5 pl-10 pr-8 rounded-xl border border-[#bccbb9]/40 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none text-sm text-[#0b1c30] appearance-none cursor-pointer"
-              >
-                <option value="">Semua Kota</option>
-                {availableCities.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-[#3d4a3d]/60 pointer-events-none text-[18px]">
-                expand_more
-              </span>
+                onChange={(val) => setCity(val)}
+                options={availableCities}
+                placeholder="Semua Kota"
+                searchPlaceholder="Cari kota..."
+                leadingIcon="location_city"
+                allowClear
+                className="w-full bg-[#f8f9ff] py-2.5 pl-3 pr-2.5 rounded-xl border border-[#bccbb9]/40 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] text-sm text-[#0b1c30] h-[42px]"
+              />
             </div>
 
             {/* District Dropdown */}
-            <div className="w-full md:w-44 relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#3d4a3d]/60 pointer-events-none text-[20px]">
-                location_on
-              </span>
-              <select
+            <div className="w-full md:w-44">
+              <SearchableSelect
                 value={district}
                 disabled={!city || availableDistricts.length === 0}
-                onChange={(e) => setDistrict(e.target.value)}
-                className="w-full bg-[#f8f9ff] py-2.5 pl-10 pr-8 rounded-xl border border-[#bccbb9]/40 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none text-sm text-[#0b1c30] appearance-none cursor-pointer disabled:opacity-50"
-              >
-                <option value="">Semua Kecamatan</option>
-                {availableDistricts.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-              <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-[#3d4a3d]/60 pointer-events-none text-[18px]">
-                expand_more
-              </span>
+                onChange={(val) => setDistrict(val)}
+                options={availableDistricts}
+                placeholder={!city ? 'Pilih Kota...' : 'Semua Kecamatan'}
+                searchPlaceholder="Cari kecamatan..."
+                leadingIcon="location_on"
+                allowClear
+                className="w-full bg-[#f8f9ff] py-2.5 pl-3 pr-2.5 rounded-xl border border-[#bccbb9]/40 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] text-sm text-[#0b1c30] h-[42px]"
+              />
             </div>
 
             {/* Sport Type Dropdown */}
