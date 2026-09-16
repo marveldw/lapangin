@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
                 <div className="space-y-1">
                   <p className="font-bold">Tautan Reset Berhasil Dibuat!</p>
                   <p className="text-emerald-700 leading-relaxed">
-                    Token reset sandi telah digenerate untuk akun Anda. Silakan klik tombol di bawah untuk memasukkan kata sandi baru.
+                    Token reset sandi telah digenerate. Silakan klik tombol di bawah untuk memasukkan kata sandi baru.
                   </p>
                 </div>
               </div>

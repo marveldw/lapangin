@@ -298,41 +298,41 @@ function JadwalContent() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[24px]">schedule</span>
-              </div>
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 mb-6">
+            <div className="bg-white rounded-xl py-2.5 px-4 border border-[#bccbb9]/30 shadow-xs flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs text-[#3d4a3d] font-semibold">Total Jam Terisi</p>
-                <p className="text-2xl font-extrabold text-[#0b1c30] mt-0.5">
+                <p className="text-[11px] font-semibold text-[#3d4a3d]">Total Jam Terisi</p>
+                <p className="text-xl font-bold text-[#0b1c30] leading-none mt-1">
                   {totalHoursBooked} Jam
                 </p>
               </div>
+              <span className="text-[11px] text-[#3d4a3d] font-medium bg-[#f8f9ff] px-2 py-0.5 rounded-md border border-[#bccbb9]/20">
+                Terjadwal
+              </span>
             </div>
 
-            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-[#005ac2]/10 text-[#005ac2] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[24px]">payments</span>
-              </div>
+            <div className="bg-white rounded-xl py-2.5 px-4 border border-[#bccbb9]/30 shadow-xs flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs text-[#3d4a3d] font-semibold">Pendapatan Hari Ini</p>
-                <p className="text-2xl font-extrabold text-[#006e2f] mt-0.5">
+                <p className="text-[11px] font-semibold text-[#3d4a3d]">Pendapatan Hari Ini</p>
+                <p className="text-xl font-bold text-[#006e2f] leading-none mt-1">
                   {formatRupiah(dayRevenue)}
                 </p>
               </div>
+              <span className="text-[11px] text-[#006e2f] font-semibold bg-[#22c55e]/10 px-2 py-0.5 rounded-md">
+                Terkonfirmasi
+              </span>
             </div>
 
-            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/30 flex items-center gap-4 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[24px]">pending_actions</span>
-              </div>
+            <div className="bg-white rounded-xl py-2.5 px-4 border border-[#bccbb9]/30 shadow-xs flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs text-[#3d4a3d] font-semibold">Menunggu Konfirmasi</p>
-                <p className="text-2xl font-extrabold text-amber-600 mt-0.5">
+                <p className="text-[11px] font-semibold text-[#3d4a3d]">Menunggu Konfirmasi</p>
+                <p className="text-xl font-bold text-amber-600 leading-none mt-1">
                   {pendingCount} Booking
                 </p>
               </div>
+              <span className="text-[11px] text-amber-700 font-semibold bg-amber-500/10 px-2 py-0.5 rounded-md">
+                Pending
+              </span>
             </div>
           </div>
 

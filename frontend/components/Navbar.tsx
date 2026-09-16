@@ -20,7 +20,7 @@ export default function Navbar() {
     <header className="fixed top-0 left-0 right-0 w-full z-50 bg-[#f4f6fa]/95 backdrop-blur-md border-b border-gray-200/60 shadow-xs">
       <div className="h-16 max-w-7xl mx-auto px-4 sm:px-6 md:px-12 flex items-center justify-between">
         
-        {/* KIRI: Logo & Brand Name (Simpler, lighter-weight logo text) */}
+        {/* KIRI: Logo & Brand Name */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="w-8 h-8 rounded-lg bg-white shadow-xs border border-gray-200 flex items-center justify-center p-1 transition-transform group-hover:scale-105">
             <img src="/logo.png" alt="Lapangin Logo" className="w-full h-full object-contain" />
@@ -85,19 +85,30 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           {token && user ? (
             <div className="flex items-center gap-2.5">
-              <div className="hidden sm:flex flex-col text-right">
-                <span className="text-xs font-bold text-[#0b1c30] leading-tight">{user.name}</span>
-                <span className="text-[10px] text-slate-500 font-medium uppercase">
-                  {user.role === 'OWNER' ? 'Pengelola Venue' : 'Penyewa'}
-                </span>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-[#0b1c30] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                {user.name?.charAt(0).toUpperCase() || 'U'}
-              </div>
+              {/* Profile Link Desktop: Klik nama atau avatar untuk ke halaman profil */}
+              <Link 
+                href="/customer/profile"
+                title="Buka Profil Saya"
+                className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl hover:bg-slate-200/50 transition-colors group cursor-pointer"
+              >
+                <div className="hidden sm:flex flex-col text-right">
+                  <span className="text-xs font-bold text-[#0b1c30] leading-tight group-hover:text-[#006e2f] transition-colors">
+                    {user.name}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-medium uppercase">
+                    {user.role === 'OWNER' ? 'Pengelola Venue' : 'Penyewa'}
+                  </span>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-[#0b1c30] group-hover:bg-[#006e2f] transition-colors text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                  {user.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              </Link>
+
+              {/* Tombol Keluar */}
               <button
                 type="button"
                 onClick={() => logout()}
-                title="Keluar"
+                title="Keluar / Logout"
                 className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
               >
                 <span className="material-symbols-outlined text-[18px]">logout</span>
@@ -135,7 +146,7 @@ export default function Navbar() {
 
       </div>
 
-      {/* Drawer Menu Navigasi Mobile (Tampil jika dibuka) */}
+      {/* Drawer Menu Navigasi Mobile */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-b border-slate-200 px-6 py-4 flex flex-col gap-3 shadow-lg animate-in slide-in-from-top-2 duration-200">
           <Link
@@ -161,13 +172,25 @@ export default function Navbar() {
           </Link>
 
           {user && (
-            <Link
-              href="/customer/booking"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-sm py-1.5 font-medium text-slate-700"
-            >
-              Booking Saya
-            </Link>
+            <>
+              <Link
+                href="/customer/booking"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`text-sm py-1.5 font-medium ${isActive('/customer/booking') ? 'text-[#006e2f] font-bold' : 'text-slate-700'}`}
+              >
+                Booking Saya
+              </Link>
+
+              {/* Menu Profil Khusus Mobile */}
+              <Link
+                href="/customer/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`text-sm py-1.5 font-medium flex items-center gap-1.5 ${isActive('/customer/profile') ? 'text-[#006e2f] font-bold' : 'text-slate-700'}`}
+              >
+                <span className="material-symbols-outlined text-[18px]">person</span>
+                Profil Saya
+              </Link>
+            </>
           )}
 
           {user?.role === 'OWNER' && (
