@@ -119,15 +119,22 @@ class PublicCourtController extends Controller
         ]);
     }
 
-    // GET /api/public/cities — daftar kota yang tersedia (untuk dropdown)
+    // GET /api/public/cities — daftar kota yang tersedia (untuk dropdown, mendukung ?search=...)
     public function cities(Request $request)
     {
+        $like = DB::getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
+
         // Support ?has_courts=1 filter if requested
         if ($request->boolean('has_courts')) {
-            $cities = Court::where('status', 'ACTIVE')
+            $query = Court::where('status', 'ACTIVE')
                 ->whereNotNull('city')
-                ->where('city', '!=', '')
-                ->select('city')
+                ->where('city', '!=', '');
+
+            if ($request->filled('search')) {
+                $query->where('city', $like, '%' . trim($request->search) . '%');
+            }
+
+            $cities = $query->select('city')
                 ->distinct()
                 ->orderBy('city')
                 ->pluck('city');
@@ -139,14 +146,27 @@ class PublicCourtController extends Controller
         }
 
         // Query comprehensive regencies from database
-        $cities = Regency::orderBy('name')->pluck('name');
+        $regencyQuery = Regency::query();
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $regencyQuery->where(function ($q) use ($search, $like) {
+                $q->where('name', $like, "%{$search}%")
+                  ->orWhere('alt_name', $like, "%{$search}%");
+            });
+        }
+        $cities = $regencyQuery->orderBy('name')->pluck('name');
 
         // If regencies table is empty for some reason, fallback to courts table
         if ($cities->isEmpty()) {
-            $cities = Court::where('status', 'ACTIVE')
+            $courtQuery = Court::where('status', 'ACTIVE')
                 ->whereNotNull('city')
-                ->where('city', '!=', '')
-                ->select('city')
+                ->where('city', '!=', '');
+
+            if ($request->filled('search')) {
+                $courtQuery->where('city', $like, '%' . trim($request->search) . '%');
+            }
+
+            $cities = $courtQuery->select('city')
                 ->distinct()
                 ->orderBy('city')
                 ->pluck('city');
@@ -158,7 +178,7 @@ class PublicCourtController extends Controller
         ]);
     }
 
-    // GET /api/public/cities/{city}/districts — daftar kecamatan per kota
+    // GET /api/public/cities/{city}/districts — daftar kecamatan per kota (mendukung ?search=...)
     public function districts(Request $request, $city)
     {
         $cityDecoded = trim(urldecode($city));
@@ -178,9 +198,11 @@ class PublicCourtController extends Controller
         }
 
         if ($regency) {
-            $districts = District::where('regency_id', $regency->id)
-                ->orderBy('name')
-                ->pluck('name');
+            $districtQuery = District::where('regency_id', $regency->id);
+            if ($request->filled('search')) {
+                $districtQuery->where('name', $like, '%' . trim($request->search) . '%');
+            }
+            $districts = $districtQuery->orderBy('name')->pluck('name');
 
             return response()->json([
                 'success' => true,
@@ -189,13 +211,18 @@ class PublicCourtController extends Controller
         }
 
         // 2. Fallback to courts table
-        $districts = Court::where('status', 'ACTIVE')
+        $fallbackQuery = Court::where('status', 'ACTIVE')
             ->where(function ($q) use ($cityDecoded, $like) {
                 $q->where('city', $cityDecoded)
                   ->orWhere('city', $like, $cityDecoded);
             })
-            ->whereNotNull('district')
-            ->select('district')
+            ->whereNotNull('district');
+
+        if ($request->filled('search')) {
+            $fallbackQuery->where('district', $like, '%' . trim($request->search) . '%');
+        }
+
+        $districts = $fallbackQuery->select('district')
             ->distinct()
             ->orderBy('district')
             ->pluck('district');
@@ -206,14 +233,70 @@ class PublicCourtController extends Controller
         ]);
     }
 
-    // GET /api/public/sport-types — daftar jenis olahraga yang tersedia
-    public function sportTypes()
+    // GET /api/public/districts — pencarian kecamatan server-side global (?search=...)
+    public function allDistricts(Request $request)
     {
-        $types = Court::where('status', 'ACTIVE')
-            ->select('sport_type')
-            ->distinct()
-            ->orderBy('sport_type')
-            ->pluck('sport_type');
+        $search = trim($request->query('search', ''));
+        if (strlen($search) < 2) {
+            return response()->json([
+                'success' => true,
+                'data'    => [],
+                'message' => 'Masukkan minimal 2 karakter untuk mencari kecamatan.',
+            ]);
+        }
+
+        $like = DB::getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
+        $districts = District::with('regency:id,name')
+            ->where('name', $like, "%{$search}%")
+            ->orderBy('name')
+            ->limit(30)
+            ->get(['id', 'regency_id', 'name'])
+            ->map(function ($d) {
+                return [
+                    'district' => $d->name,
+                    'city'     => $d->regency?->name,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data'    => $districts,
+        ]);
+    }
+
+    // GET /api/public/sport-types — daftar jenis olahraga dari master config (mendukung ?has_courts=1 & ?detailed=1)
+    public function sportTypes(Request $request)
+    {
+        $allConfigSports = config('sports.types', []);
+
+        // Filter hanya yang memiliki lapangan aktif jika diminta
+        if ($request->boolean('has_courts')) {
+            $activeTypes = Court::where('status', 'ACTIVE')
+                ->whereNotNull('sport_type')
+                ->where('sport_type', '!=', '')
+                ->select('sport_type')
+                ->distinct()
+                ->orderBy('sport_type')
+                ->pluck('sport_type');
+
+            return response()->json([
+                'success' => true,
+                'data'    => $activeTypes,
+            ]);
+        }
+
+        if ($request->boolean('detailed')) {
+            $detailed = [];
+            foreach ($allConfigSports as $name => $meta) {
+                $detailed[] = array_merge(['name' => $name], $meta);
+            }
+            return response()->json([
+                'success' => true,
+                'data'    => $detailed,
+            ]);
+        }
+
+        $types = array_keys($allConfigSports);
 
         return response()->json([
             'success' => true,

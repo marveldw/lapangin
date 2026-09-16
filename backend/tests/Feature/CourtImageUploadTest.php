@@ -134,4 +134,85 @@ class CourtImageUploadTest extends TestCase
 
         $response->assertStatus(422);
     }
+
+    public function test_can_create_court_with_base64_image(): void
+    {
+        $tempFile = UploadedFile::fake()->image('my_uploaded_photo.png', 400, 400);
+        $base64 = 'data:image/png;base64,' . base64_encode(file_get_contents($tempFile->getRealPath()));
+
+        $response = $this->postJson('/api/courts', [
+            'name'           => 'Lapangan Badminton Juara',
+            'sport_type'     => 'Badminton',
+            'price_per_hour' => 50000,
+            'address'        => 'Jl. Merdeka No. 10',
+            'city'           => 'Jakarta Selatan',
+            'image_url'      => $base64,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'data'    => [
+                    'name' => 'Lapangan Badminton Juara',
+                ],
+            ]);
+
+        $imageUrl = $response->json('data.image_url');
+        $this->assertNotEmpty($imageUrl);
+        $this->assertStringContainsString('/storage/courts/', $imageUrl);
+        $this->assertStringNotContainsString('unsplash.com', $imageUrl);
+
+        $filename = str_replace(url('storage/'), '', $imageUrl);
+        Storage::disk('public')->assertExists($filename);
+    }
+
+    public function test_rejects_malicious_base64_image_content(): void
+    {
+        $maliciousPayload = 'data:image/png;base64,' . base64_encode('<?php echo "evil"; ?>');
+
+        $response = $this->postJson('/api/courts', [
+            'name'           => 'Lapangan Hacked',
+            'sport_type'     => 'Badminton',
+            'price_per_hour' => 50000,
+            'address'        => 'Jl. Hack',
+            'city'           => 'Jakarta',
+            'image_url'      => $maliciousPayload,
+        ]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_can_upload_base64_via_upload_image_endpoint(): void
+    {
+        $tempFile = UploadedFile::fake()->image('preview.jpg', 200, 200);
+        $base64 = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($tempFile->getRealPath()));
+
+        $response = $this->postJson('/api/courts/upload-image', [
+            'image_url' => $base64,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+            ]);
+
+        $imageUrl = $response->json('image_url');
+        $this->assertStringContainsString('/storage/courts/', $imageUrl);
+    }
+
+    public function test_court_without_image_gets_sport_fallback_preset(): void
+    {
+        $response = $this->postJson('/api/courts', [
+            'name'           => 'Lapangan Polos',
+            'sport_type'     => 'Badminton',
+            'price_per_hour' => 50000,
+            'address'        => 'Jl. Polos',
+            'city'           => 'Jakarta',
+        ]);
+
+        $response->assertStatus(201);
+        $imageUrl = $response->json('data.image_url');
+        $this->assertNotEmpty($imageUrl);
+        $this->assertEquals(config('sports.types.Badminton.fallback_image'), $imageUrl);
+    }
 }

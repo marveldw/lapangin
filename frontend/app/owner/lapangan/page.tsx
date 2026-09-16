@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { formatRupiah } from '@/lib/formatters';
 import { useDebounce } from '@/lib/useDebounce';
 import { getMaxCourtsAllowed, isCourtRestricted, isCourtQuotaExceeded } from '@/lib/planLimits';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 export interface CourtItem {
   court_id: number;
@@ -35,9 +36,12 @@ const SPORT_OPTIONS = [
   { label: 'Bola Basket', value: 'Basket', icon: 'sports_basketball' },
   { label: 'Tenis Lapangan', value: 'Tenis', icon: 'sports_tennis' },
   { label: 'Mini Soccer', value: 'Mini Soccer', icon: 'sports_soccer' },
+  { label: 'Sepak Bola', value: 'Sepak Bola', icon: 'sports_soccer' },
   { label: 'Bola Voli', value: 'Voli', icon: 'sports_volleyball' },
   { label: 'Tenis Meja / Pingpong', value: 'Tenis Meja', icon: 'sports_baseball' },
   { label: 'Padel', value: 'Padel', icon: 'sports_tennis' },
+  { label: 'Golf (Driving Range)', value: 'Golf', icon: 'sports_golf' },
+  { label: 'Panjat Tebing (Wall Climbing)', value: 'Panjat Tebing', icon: 'terrain' },
 ];
 
 const PRESET_IMAGES = [
@@ -46,6 +50,8 @@ const PRESET_IMAGES = [
   { name: 'Lapangan Basket Kayu', sport: 'Basket', url: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=800&q=80' },
   { name: 'Tenis Lapangan Keras', sport: 'Tenis', url: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=800&q=80' },
   { name: 'Mini Soccer Arena', sport: 'Mini Soccer', url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=800&q=80' },
+  { name: 'Golf Driving Range', sport: 'Golf', url: 'https://images.unsplash.com/photo-1535131749006-b7f58c99034b?auto=format&fit=crop&w=800&q=80' },
+  { name: 'Wall Climbing Indoor', sport: 'Panjat Tebing', url: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?auto=format&fit=crop&w=800&q=80' },
 ];
 
 const CITY_DISTRICTS: Record<string, string[]> = {
@@ -367,8 +373,16 @@ export default function DaftarLapangan() {
     const files = e.target.files;
     if (!files) return;
 
+    const MAX_SIZE = 2 * 1024 * 1024;
     const fileList = Array.from(files);
     fileList.forEach((file) => {
+      if (file.size > MAX_SIZE) {
+        setToastMessage({
+          type: 'error',
+          text: `Ukuran berkas "${file.name}" melebihi batas maksimal 2MB.`,
+        });
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         if (typeof reader.result === 'string') {
@@ -429,7 +443,7 @@ export default function DaftarLapangan() {
         city: editFormData.city.trim(),
         district: editFormData.district.trim() ? editFormData.district.trim() : null,
         description: compiledDescription ? compiledDescription : null,
-        image_url: editSelectedPhotos.length > 0 && editSelectedPhotos[0].startsWith('http')
+        image_url: editSelectedPhotos.length > 0
           ? editSelectedPhotos[0]
           : getCourtFallbackImage(finalEditSportType),
         status: editFormData.status,
@@ -1212,21 +1226,16 @@ export default function DaftarLapangan() {
                     <label className="text-sm font-bold text-[#0b1c30]">
                       Kota / Kabupaten <span className="text-[#ba1a1a]">*</span>
                     </label>
-                    <div className="relative">
-                      <select
-                        value={editFormData.city}
-                        onChange={(e) => {
-                          setEditFormData({ ...editFormData, city: e.target.value, district: '' });
-                        }}
-                        className={`appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${editErrors.city ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer`}
-                      >
-                        <option value="" disabled>Pilih Kota / Kabupaten...</option>
-                        {(cityList.length > 0 ? cityList : Object.keys(CITY_DISTRICTS)).map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                      <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#3d4a3d] pointer-events-none">expand_more</span>
-                    </div>
+                    <SearchableSelect
+                      value={editFormData.city}
+                      onChange={(val) => {
+                        setEditFormData({ ...editFormData, city: val, district: '' });
+                      }}
+                      options={cityList.length > 0 ? cityList : Object.keys(CITY_DISTRICTS)}
+                      placeholder="Pilih Kota / Kabupaten..."
+                      searchPlaceholder="Cari nama kota atau kabupaten..."
+                      error={!!editErrors.city}
+                    />
                     {editErrors.city && <span className="text-xs font-semibold text-[#ba1a1a]">{editErrors.city}</span>}
                   </div>
 
@@ -1234,28 +1243,23 @@ export default function DaftarLapangan() {
                     <label className="text-sm font-bold text-[#0b1c30]">
                       Kecamatan
                     </label>
-                    <div className="relative">
-                      <select
-                        value={editFormData.district}
-                        onChange={(e) => setEditFormData({ ...editFormData, district: e.target.value })}
-                        disabled={!editFormData.city || loadingEditDistricts}
-                        className="appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] disabled:bg-gray-100 disabled:text-gray-400 px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer"
-                      >
-                        <option value="">
-                          {!editFormData.city
-                            ? 'Pilih Kota terlebih dahulu...'
-                            : loadingEditDistricts
-                              ? 'Memuat daftar kecamatan...'
-                              : editDistricts.length === 0
-                                ? 'Tidak ada kecamatan ditemukan'
-                                : 'Pilih Kecamatan...'}
-                        </option>
-                        {editDistricts.map((d) => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
-                      <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#3d4a3d] pointer-events-none">expand_more</span>
-                    </div>
+                    <SearchableSelect
+                      value={editFormData.district || ''}
+                      onChange={(val) => setEditFormData({ ...editFormData, district: val })}
+                      disabled={!editFormData.city || loadingEditDistricts}
+                      options={editDistricts}
+                      placeholder={
+                        !editFormData.city
+                          ? 'Pilih Kota terlebih dahulu...'
+                          : loadingEditDistricts
+                            ? 'Memuat daftar kecamatan...'
+                            : editDistricts.length === 0
+                              ? 'Tidak ada kecamatan ditemukan'
+                              : 'Pilih Kecamatan...'
+                      }
+                      searchPlaceholder="Cari nama kecamatan..."
+                      allowClear
+                    />
                   </div>
                 </div>
 
