@@ -14,7 +14,7 @@ interface PlanData {
   max_courts: number | null;
   max_bookings_per_month: number | null;
   is_active: boolean;
-}
+} 
 
 export default function PengaturanPage() {
   const { user, token, refreshUser } = useAuth();
@@ -34,6 +34,7 @@ export default function PengaturanPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [isSavingBank, setIsSavingBank] = useState(false);
   const [bankError, setBankError] = useState<string | null>(null);
+  const [showBankPassword, setShowBankPassword] = useState(false);
 
   // Subscription State
   const [plans, setPlans] = useState<PlanData[]>([
@@ -433,14 +434,27 @@ export default function PengaturanPage() {
                   <span className="material-symbols-outlined text-[15px]">lock</span>
                   Konfirmasi Kata Sandi Saat Ini <span className="text-red-600">*</span>
                 </label>
-                <input
-                  className="px-4 py-2.5 bg-white border border-red-300 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 md:w-1/2 font-medium"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Masukkan kata sandi akun Anda untuk verifikasi"
-                  required
-                />
+                <div className="relative md:w-1/2">
+                  <input
+                    className="w-full px-4 py-2.5 pr-11 bg-white border border-red-300 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 font-medium"
+                    type={showBankPassword ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Masukkan kata sandi akun Anda untuk verifikasi"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowBankPassword(!showBankPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                    tabIndex={-1}
+                    title={showBankPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {showBankPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
                 <p className="text-[11px] text-slate-500">
                   Wajib memasukkan kata sandi akun untuk memvalidasi kepemilikan sebelum data rekening disimpan.
                 </p>

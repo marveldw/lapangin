@@ -375,16 +375,16 @@ function CariLapanganContent() {
 
             {/* Loading State */}
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[1, 2, 3, 4].map((i) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div
                     key={i}
-                    className="bg-white rounded-2xl p-4 shadow-sm border border-[#bccbb9]/30 animate-pulse flex flex-col gap-3"
+                    className="bg-white rounded-xl p-3.5 sm:p-4 shadow-xs border border-[#bccbb9]/30 animate-pulse flex flex-col gap-2.5"
                   >
-                    <div className="h-44 bg-gray-200 rounded-xl"></div>
-                    <div className="h-5 bg-gray-200 rounded w-2/3"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                    <div className="h-8 bg-gray-200 rounded mt-4"></div>
+                    <div className="h-40 bg-gray-200 rounded-lg"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-7 bg-gray-200 rounded mt-2"></div>
                   </div>
                 ))}
               </div>
@@ -409,17 +409,17 @@ function CariLapanganContent() {
             ) : (
               <>
                 {/* Courts Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
                 {paginatedCourts.map((court) => (
                   <div
                     key={court.court_id}
-                    className="bg-white rounded-2xl shadow-sm border border-[#bccbb9]/30 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col relative group"
+                    className="bg-white rounded-xl shadow-xs border border-[#bccbb9]/30 overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col relative group"
                   >
-                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#006e2f] z-10"></div>
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#006e2f] z-10"></div>
 
                     {/* Image Section */}
-                    <div className="h-48 w-full relative overflow-hidden bg-[#e5eeff]">
-                      <div className="absolute top-3 right-3 z-10 bg-[#006e2f] text-white px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                    <div className="h-40 w-full relative overflow-hidden bg-[#e5eeff]">
+                      <div className="absolute top-2.5 right-2.5 z-10 bg-[#006e2f] text-white px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm">
                         {court.sport_type}
                       </div>
                       <img
@@ -433,36 +433,38 @@ function CariLapanganContent() {
                     </div>
 
                     {/* Details Section */}
-                    <div className="p-5 flex flex-col flex-1 gap-3">
-                      <h3 className="text-lg font-bold text-[#0b1c30] line-clamp-1">{court.name}</h3>
+                    <div className="p-3.5 sm:p-4 flex flex-col flex-1 gap-1.5">
+                      <h3 className="text-sm sm:text-[15px] font-bold text-[#0b1c30] line-clamp-1 leading-snug">
+                        {court.name}
+                      </h3>
 
-                      <div className="flex items-start gap-1.5 text-[#3d4a3d]">
-                        <span className="material-symbols-outlined text-[18px] shrink-0 mt-[1px]">
+                      <div className="flex items-start gap-1 text-[#3d4a3d]">
+                        <span className="material-symbols-outlined text-[15px] shrink-0 mt-[1px]">
                           location_on
                         </span>
-                        <span className="text-xs font-medium line-clamp-1">
+                        <span className="text-[11px] sm:text-xs font-medium line-clamp-1">
                           {court.address}
                           {court.city ? `, ${court.city}` : ''}
                         </span>
                       </div>
 
                       {court.description && (
-                        <p className="text-xs text-[#3d4a3d]/80 line-clamp-2">
+                        <p className="text-[11px] text-[#3d4a3d]/80 line-clamp-1">
                           {court.description}
                         </p>
                       )}
 
-                      <div className="mt-auto pt-4 flex items-center justify-between border-t border-[#bccbb9]/30">
+                      <div className="mt-auto pt-2.5 flex items-center justify-between border-t border-[#bccbb9]/20 gap-2">
                         <div className="flex flex-col">
-                          <span className="text-[11px] font-medium text-[#3d4a3d]">Harga Sewa</span>
-                          <span className="text-base font-bold text-[#006e2f]">
+                          <span className="text-[10px] font-medium text-[#3d4a3d]">Harga Sewa</span>
+                          <span className="text-sm font-bold text-[#006e2f] leading-tight">
                             {formatRupiah(court.price_per_hour)}
                             <span className="text-[10px] font-normal text-[#3d4a3d]">/jam</span>
                           </span>
                         </div>
                         <Link
                           href={`/lapangan/detail?id=${court.court_id}`}
-                          className="bg-[#e5eeff] text-[#006e2f] hover:bg-[#006e2f] hover:text-white px-4 py-2 rounded-xl font-bold text-xs transition-colors border border-[#006e2f]/20"
+                          className="bg-[#e5eeff] text-[#006e2f] hover:bg-[#006e2f] hover:text-white py-1.5 px-3 rounded-lg font-bold text-xs transition-colors border border-[#006e2f]/20 shrink-0"
                         >
                           Lihat Detail
                         </Link>

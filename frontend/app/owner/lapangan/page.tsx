@@ -586,48 +586,33 @@ export default function DaftarLapangan() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl p-4 border border-[#bccbb9]/30 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#e5eeff] text-[#006e2f] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[22px]">stadium</span>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-[#3d4a3d]">Total Lapangan</p>
-              <p className="text-2xl font-bold text-[#0b1c30]">{totalCourts}</p>
-            </div>
+      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
+        <div className="bg-white rounded-xl py-2.5 px-4 border border-[#bccbb9]/30 shadow-xs flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold text-[#3d4a3d]">Total Lapangan</p>
+            <p className="text-xl font-bold text-[#0b1c30] leading-none mt-1">{totalCourts}</p>
           </div>
-          <span className="text-xs text-[#3d4a3d] font-medium bg-[#f8f9ff] px-2.5 py-1 rounded-lg border border-[#bccbb9]/20">
+          <span className="text-[11px] text-[#3d4a3d] font-medium bg-[#f8f9ff] px-2 py-0.5 rounded-md border border-[#bccbb9]/20">
             Terdaftar
           </span>
         </div>
 
-        <div className="bg-white rounded-xl p-4 border border-[#bccbb9]/30 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#22c55e]/15 text-[#006e2f] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[22px]">check_circle</span>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-[#3d4a3d]">Lapangan Aktif</p>
-              <p className="text-2xl font-bold text-[#006e2f]">{activeCourts}</p>
-            </div>
+        <div className="bg-white rounded-xl py-2.5 px-4 border border-[#bccbb9]/30 shadow-xs flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold text-[#3d4a3d]">Lapangan Aktif</p>
+            <p className="text-xl font-bold text-[#006e2f] leading-none mt-1">{activeCourts}</p>
           </div>
-          <span className="text-xs text-[#006e2f] font-semibold bg-[#22c55e]/10 px-2.5 py-1 rounded-lg">
+          <span className="text-[11px] text-[#006e2f] font-semibold bg-[#22c55e]/10 px-2 py-0.5 rounded-md">
             Siap Dipesan
           </span>
         </div>
 
-        <div className="bg-white rounded-xl p-4 border border-[#bccbb9]/30 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#ffdad6]/60 text-[#ba1a1a] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[22px]">pause_circle</span>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-[#3d4a3d]">Non-Aktif</p>
-              <p className="text-2xl font-bold text-[#ba1a1a]">{inactiveCourts}</p>
-            </div>
+        <div className="bg-white rounded-xl py-2.5 px-4 border border-[#bccbb9]/30 shadow-xs flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold text-[#3d4a3d]">Non-Aktif</p>
+            <p className="text-xl font-bold text-[#ba1a1a] leading-none mt-1">{inactiveCourts}</p>
           </div>
-          <span className="text-xs text-[#ba1a1a] font-semibold bg-[#ffdad6]/40 px-2.5 py-1 rounded-lg">
+          <span className="text-[11px] text-[#ba1a1a] font-semibold bg-[#ffdad6]/40 px-2 py-0.5 rounded-md">
             Ditutup Sementara
           </span>
         </div>
@@ -1199,14 +1184,31 @@ export default function DaftarLapangan() {
                     <p className="text-sm font-bold text-[#0b1c30]">Status Lapangan</p>
                     <p className="text-xs text-[#3d4a3d]">{editFormData.status === 'ACTIVE' ? 'Aktif dan dapat dibooking pelanggan' : 'Non-aktif (disembunyikan dari katalog pelanggan)'}</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setEditFormData({ ...editFormData, status: editFormData.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' })}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5 ${editFormData.status === 'ACTIVE' ? 'bg-[#006e2f] text-white hover:bg-[#006e2f]/90' : 'bg-[#ffdad6] text-[#ba1a1a] hover:bg-red-200'}`}
-                  >
-                    <span className="material-symbols-outlined text-[16px]">{editFormData.status === 'ACTIVE' ? 'check_circle' : 'pause_circle'}</span>
-                    <span>{editFormData.status === 'ACTIVE' ? 'Aktif' : 'Non-Aktif'}</span>
-                  </button>
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={editFormData.status === 'ACTIVE'}
+                      onClick={() => setEditFormData({ ...editFormData, status: editFormData.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' })}
+                      className={`w-12 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#006e2f] focus:ring-offset-2 cursor-pointer p-0.5 relative inline-flex items-center ${
+                        editFormData.status === 'ACTIVE' ? 'bg-[#006e2f]' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ease-in-out transform ${
+                          editFormData.status === 'ACTIVE' ? 'translate-x-6' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                    <span
+                      onClick={() => setEditFormData({ ...editFormData, status: editFormData.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' })}
+                      className={`text-sm font-bold cursor-pointer select-none transition-colors ${
+                        editFormData.status === 'ACTIVE' ? 'text-[#006e2f]' : 'text-slate-500'
+                      }`}
+                    >
+                      {editFormData.status === 'ACTIVE' ? 'Aktif' : 'Non-Aktif'}
+                    </span>
+                  </div>
                 </div>
               </section>
 

@@ -488,14 +488,31 @@ export default function TambahLapangan() {
                 <p className="text-sm font-bold text-[#0b1c30]">Status Lapangan</p>
                 <p className="text-xs text-[#3d4a3d]">{status === 'ACTIVE' ? 'Aktif dan dapat dibooking pelanggan' : 'Non-aktif (disembunyikan dari katalog pelanggan)'}</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setStatus(status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5 ${status === 'ACTIVE' ? 'bg-[#006e2f] text-white hover:bg-[#006e2f]/90' : 'bg-[#ffdad6] text-[#ba1a1a] hover:bg-red-200'}`}
-              >
-                <span className="material-symbols-outlined text-[16px]">{status === 'ACTIVE' ? 'check_circle' : 'pause_circle'}</span>
-                <span>{status === 'ACTIVE' ? 'Aktif' : 'Non-Aktif'}</span>
-              </button>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={status === 'ACTIVE'}
+                  onClick={() => setStatus(status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')}
+                  className={`w-12 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#006e2f] focus:ring-offset-2 cursor-pointer p-0.5 relative inline-flex items-center ${
+                    status === 'ACTIVE' ? 'bg-[#006e2f]' : 'bg-slate-300'
+                  }`}
+                >
+                  <span
+                    className={`w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ease-in-out transform ${
+                      status === 'ACTIVE' ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+                <span
+                  onClick={() => setStatus(status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')}
+                  className={`text-sm font-bold cursor-pointer select-none transition-colors ${
+                    status === 'ACTIVE' ? 'text-[#006e2f]' : 'text-slate-500'
+                  }`}
+                >
+                  {status === 'ACTIVE' ? 'Aktif' : 'Non-Aktif'}
+                </span>
+              </div>
             </div>
           </section>
 
