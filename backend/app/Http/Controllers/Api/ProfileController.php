@@ -72,6 +72,7 @@ class ProfileController extends Controller
             'current_password' => 'required|string',
             'bank_name'        => 'required|string|max:50',
             'account_number'   => [
+                'bail',
                 'required',
                 'string',
                 'regex:/^[0-9]+$/',
@@ -80,6 +81,42 @@ class ProfileController extends Controller
                 Rule::unique('wallets', 'account_number')
                     ->where(fn ($query) => $query->where('bank_name', $request->bank_name))
                     ->ignore($user->user_id, 'owner_id'),
+                function ($attribute, $value, $fail) use ($request) {
+                    // 1. Anti-dummy: all identical repeating digits (e.g. 0000000000, 1111111111)
+                    if (preg_match('/^(\d)\1+$/', $value)) {
+                        $fail('Nomor rekening tidak valid (tidak boleh berisi angka yang sama berulang).');
+                        return;
+                    }
+
+                    // 2. Anti-dummy: obvious dummy sequences (e.g. 98765432, 12345678)
+                    if (in_array($value, ['98765432', '12345678'], true)) {
+                        $fail('Nomor rekening tidak valid (tidak boleh berupa urutan angka acak/dummy).');
+                        return;
+                    }
+
+                    // 3. Bank-specific length validation
+                    $bankLengths = [
+                        'BCA'          => [10],
+                        'BNI'          => [10],
+                        'BSI'          => [10],
+                        'BRI'          => [15],
+                        'MANDIRI'      => [10, 13],
+                        'BANK MANDIRI' => [10, 13],
+                        'JAGO'         => [12],
+                        'BANK JAGO'    => [12],
+                        'SEABANK'      => [12],
+                    ];
+
+                    $bankKey = strtoupper(trim($request->bank_name ?? ''));
+                    if (isset($bankLengths[$bankKey])) {
+                        $allowed = $bankLengths[$bankKey];
+                        if (!in_array(strlen($value), $allowed, true)) {
+                            $expected = count($allowed) === 1 ? "{$allowed[0]} digit" : implode(' atau ', $allowed) . ' digit';
+                            $fail("Nomor rekening {$request->bank_name} harus terdiri dari {$expected}.");
+                            return;
+                        }
+                    }
+                },
             ],
             'account_holder'   => 'required|string|max:100',
         ], [
