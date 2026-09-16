@@ -461,11 +461,30 @@ export default function TambahLapangan() {
                   step="5000"
                   value={pricePerHour}
                   onChange={(e) => setPricePerHour(e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
-                  className="w-full bg-[#f8f9ff] text-[#0b1c30] pl-12 pr-4 py-3 rounded-xl border border-[#bccbb9]/40 text-sm h-12 font-medium"
+                  className={`w-full bg-[#f8f9ff] text-[#0b1c30] pl-12 pr-4 py-3 rounded-xl border ${fieldErrors.price_per_hour ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 font-medium`}
                   placeholder="100000"
                 />
               </div>
-              {fieldErrors.price_per_hour && <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.price_per_hour}</span>}
+              {fieldErrors.price_per_hour ? (
+                <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.price_per_hour}</span>
+              ) : (
+                <p className="text-xs font-medium text-[#3d4a3d]">Batas maksimal pengisian adalah Rp 5.000.000/jam.</p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-[#f8f9ff] rounded-xl border border-[#bccbb9]/30 mt-2">
+              <div>
+                <p className="text-sm font-bold text-[#0b1c30]">Status Lapangan</p>
+                <p className="text-xs text-[#3d4a3d]">{status === 'ACTIVE' ? 'Aktif dan dapat dibooking pelanggan' : 'Non-aktif (disembunyikan dari katalog pelanggan)'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStatus(status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer flex items-center gap-1.5 ${status === 'ACTIVE' ? 'bg-[#006e2f] text-white hover:bg-[#006e2f]/90' : 'bg-[#ffdad6] text-[#ba1a1a] hover:bg-red-200'}`}
+              >
+                <span className="material-symbols-outlined text-[16px]">{status === 'ACTIVE' ? 'check_circle' : 'pause_circle'}</span>
+                <span>{status === 'ACTIVE' ? 'Aktif' : 'Non-Aktif'}</span>
+              </button>
             </div>
           </section>
 
@@ -477,7 +496,7 @@ export default function TambahLapangan() {
               </div>
               <div>
                 <h2 className="text-lg font-bold text-[#0b1c30]">2. Lokasi Lapangan</h2>
-                <p className="text-xs text-[#3d4a3d]">Pilih kota dan kecamatan.</p>
+                <p className="text-xs text-[#3d4a3d]">Pilih kota dan kecamatan agar lapangan mudah ditemukan di peta pencarian.</p>
               </div>
             </div>
 
@@ -492,7 +511,7 @@ export default function TambahLapangan() {
                       setCity(e.target.value);
                       setDistrict('');
                     }}
-                    className="appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 text-sm h-12 cursor-pointer"
+                    className={`appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${fieldErrors.city ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer`}
                   >
                     <option value="" disabled>Pilih Kota / Kabupaten...</option>
                     {(cityList.length > 0 ? cityList : Object.keys(CITY_DISTRICTS)).map((c) => (
@@ -501,6 +520,7 @@ export default function TambahLapangan() {
                   </select>
                   <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-[#3d4a3d] pointer-events-none">expand_more</span>
                 </div>
+                {fieldErrors.city && <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.city}</span>}
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -511,9 +531,17 @@ export default function TambahLapangan() {
                     value={district}
                     onChange={(e) => setDistrict(e.target.value)}
                     disabled={!city || loadingDistricts}
-                    className="appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 text-sm h-12 cursor-pointer disabled:bg-gray-100"
+                    className="appearance-none w-full bg-[#f8f9ff] text-[#0b1c30] disabled:bg-gray-100 disabled:text-gray-400 px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm h-12 cursor-pointer"
                   >
-                    <option value="">{loadingDistricts ? 'Memuat...' : 'Pilih Kecamatan...'}</option>
+                    <option value="">
+                      {!city
+                        ? 'Pilih Kota terlebih dahulu...'
+                        : loadingDistricts
+                          ? 'Memuat daftar kecamatan...'
+                          : availableDistricts.length === 0
+                            ? 'Tidak ada kecamatan ditemukan'
+                            : 'Pilih Kecamatan...'}
+                    </option>
                     {availableDistricts.map((d) => (
                       <option key={d} value={d}>{d}</option>
                     ))}
@@ -530,9 +558,10 @@ export default function TambahLapangan() {
                 rows={2}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 text-sm resize-y"
-                placeholder="Masukkan nama jalan, gedung/GOR..."
+                className={`w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border ${fieldErrors.address ? 'border-[#ba1a1a] ring-1 ring-[#ba1a1a]' : 'border-[#bccbb9]/40'} focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y`}
+                placeholder="Masukkan nama jalan, nomor kavling, nama gedung/gor, patokan terdekat."
               />
+              {fieldErrors.address && <span className="text-xs font-semibold text-[#ba1a1a]">{fieldErrors.address}</span>}
             </div>
           </section>
 
@@ -544,27 +573,116 @@ export default function TambahLapangan() {
               </div>
               <div>
                 <h2 className="text-lg font-bold text-[#0b1c30]">3. Fasilitas & Media Visual</h2>
-                <p className="text-xs text-[#3d4a3d]">Pilih fasilitas tambahan dan atur foto.</p>
+                <p className="text-xs text-[#3d4a3d]">Pilih fasilitas tambahan dan atur foto untuk menarik perhatian pelanggan.</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {AMENITIES.map((amenity) => {
-                const isSelected = selectedAmenities.includes(amenity.id);
-                return (
+            <div className="flex flex-col gap-2 mb-2">
+              <label className="text-sm font-bold text-[#0b1c30]">Fasilitas yang Tersedia</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-1">
+                {AMENITIES.map((amenity) => {
+                  const isSelected = selectedAmenities.includes(amenity.id);
+                  return (
+                    <button
+                      type="button"
+                      key={amenity.id}
+                      onClick={() => handleToggleAmenity(amenity.id)}
+                      className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-left ${
+                        isSelected 
+                          ? 'bg-[#22c55e]/10 border-[#006e2f]/50 text-[#006e2f]' 
+                          : 'bg-white border-[#bccbb9]/40 text-[#3d4a3d] hover:bg-[#f8f9ff]'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[18px]">{amenity.icon}</span>
+                      <span className="text-[11px] font-bold leading-tight">{amenity.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-bold text-[#0b1c30]">
+                Deskripsi Tambahan (Opsional)
+              </label>
+              <textarea
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y"
+                placeholder="Tuliskan keunggulan lain: jenis lantai (vinyl/karpet), penerangan (lux), aturan penggunaan..."
+              />
+            </div>
+
+            <div className="flex flex-col gap-3 mt-2 border-t border-[#bccbb9]/20 pt-4">
+              <label
+                htmlFor="multi-photo-upload"
+                className="border-2 border-dashed border-[#bccbb9] hover:border-[#006e2f] bg-[#f8f9ff] hover:bg-[#f0f9f3] rounded-2xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all text-center"
+              >
+                <div className="w-12 h-12 rounded-full bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[28px]">cloud_upload</span>
+                </div>
+                <p className="text-sm font-bold text-[#0b1c30]">Klik untuk Unggah Foto dari Perangkat</p>
+                <p className="text-xs text-[#3d4a3d]">Pilih format PNG, JPG, atau JPEG (Bisa pilih beberapa foto sekaligus)</p>
+                <input
+                  id="multi-photo-upload"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+              </label>
+
+              {selectedPhotos.length > 0 && (
+                <div className="flex flex-col gap-2 mt-2">
+                  <p className="text-xs font-bold text-[#0b1c30]">
+                    Foto Terpilih ({selectedPhotos.length} Foto)
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                    {selectedPhotos.map((photo, idx) => (
+                      <div key={idx} className="relative group rounded-xl overflow-hidden border border-[#bccbb9]/40 h-28 bg-[#f8f9ff]">
+                        <img src={photo} alt={`Foto Lapangan ${idx + 1}`} className="w-full h-full object-cover" />
+                        {idx === 0 && (
+                          <span className="absolute bottom-1.5 left-1.5 bg-[#006e2f] text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                            Foto Utama
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePhoto(idx)}
+                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-600/90 hover:bg-red-600 text-white flex items-center justify-center shadow-md transition-all cursor-pointer"
+                          title="Hapus foto"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">close</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 border-t border-[#bccbb9]/20 pt-4 mt-1">
+              <p className="text-xs font-semibold text-[#3d4a3d]">Atau gunakan foto preset siap pakai:</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {PRESET_IMAGES.map((preset) => (
                   <button
                     type="button"
-                    key={amenity.id}
-                    onClick={() => handleToggleAmenity(amenity.id)}
-                    className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-left ${
-                      isSelected ? 'bg-[#22c55e]/10 border-[#006e2f]/50 text-[#006e2f]' : 'bg-white border-[#bccbb9]/40 text-[#3d4a3d]'
-                    }`}
+                    key={preset.name}
+                    onClick={() => {
+                      setSelectedPhotos((prev) => [...prev, preset.url]);
+                      if (!sportType) setSportType(preset.sport);
+                    }}
+                    className="group relative h-20 rounded-xl overflow-hidden border border-transparent hover:border-[#006e2f] transition-all cursor-pointer text-left"
                   >
-                    <span className="material-symbols-outlined text-[18px]">{amenity.icon}</span>
-                    <span className="text-[11px] font-bold">{amenity.label}</span>
+                    <img src={preset.url} alt={preset.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent p-1.5 flex flex-col justify-end">
+                      <span className="text-[10px] font-bold text-white leading-tight">{preset.name}</span>
+                    </div>
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
           </section>
 
@@ -576,26 +694,33 @@ export default function TambahLapangan() {
               </div>
               <div>
                 <h2 className="text-lg font-bold text-[#0b1c30]">4. Aturan & Regulasi Venue</h2>
+                <p className="text-xs text-[#3d4a3d]">Tetapkan aturan bagi pelanggan dan kebijakan refund saat terjadi pembatalan.</p>
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-bold text-[#0b1c30]">Aturan Venue <span className="text-[#ba1a1a]">*</span></label>
+              <p className="text-[11px] text-[#3d4a3d] mb-1">Beritahu pelanggan apa saja yang diperbolehkan dan dilarang di area lapangan.</p>
               <textarea
-                rows={3}
+                rows={4}
                 value={rules}
                 onChange={(e) => setRules(e.target.value)}
-                className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 text-sm"
+                className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y"
+                placeholder="- Wajib menggunakan sepatu olahraga khusus indoor.&#10;- Dilarang merokok di area GOR."
+                required
               />
             </div>
 
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 mt-2">
               <label className="text-sm font-bold text-[#0b1c30]">Kebijakan Refund & Reschedule <span className="text-[#ba1a1a]">*</span></label>
+              <p className="text-[11px] text-[#3d4a3d] mb-1">Beri kejelasan kepada pelanggan apakah booking bisa dibatalkan atau diganti jadwalnya.</p>
               <textarea
-                rows={2}
+                rows={3}
                 value={refundPolicy}
                 onChange={(e) => setRefundPolicy(e.target.value)}
-                className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 text-sm"
+                className="w-full bg-[#f8f9ff] text-[#0b1c30] px-4 py-3 rounded-xl border border-[#bccbb9]/40 focus:outline-none focus:ring-2 focus:ring-[#006e2f] transition-all text-sm resize-y"
+                placeholder="Booking yang sudah dibayar tidak dapat dibatalkan (Non-refundable). Jika ada hujan, jadwal bisa di-reschedule..."
+                required
               />
             </div>
           </section>
