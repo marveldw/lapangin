@@ -168,4 +168,75 @@ class BankAccountSecurityTest extends TestCase
                 ],
             ]);
     }
+
+    public function test_rejects_bank_account_with_symbols_or_spaces(): void
+    {
+        Sanctum::actingAs($this->owner1);
+
+        $response = $this->putJson('/api/owner/payout-account', [
+            'current_password' => 'password123',
+            'bank_name'        => 'BCA',
+            'account_number'   => '8830-1928-31',
+            'account_holder'   => 'Owner Satu',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['account_number'])
+            ->assertJsonFragment([
+                'account_number' => ['Nomor rekening hanya boleh berisi angka.'],
+            ]);
+    }
+
+    public function test_rejects_bank_account_number_that_is_too_long(): void
+    {
+        Sanctum::actingAs($this->owner1);
+
+        $response = $this->putJson('/api/owner/payout-account', [
+            'current_password' => 'password123',
+            'bank_name'        => 'BCA',
+            'account_number'   => '123456789012345678901', // 21 digits (> 20)
+            'account_holder'   => 'Owner Satu',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['account_number'])
+            ->assertJsonFragment([
+                'account_number' => ['Nomor rekening maksimal 20 digit.'],
+            ]);
+    }
+
+    public function test_re_verification_fails_with_incorrect_password(): void
+    {
+        Sanctum::actingAs($this->owner1);
+
+        $response = $this->putJson('/api/owner/payout-account', [
+            'current_password' => 'wrong_password_attempt',
+            'bank_name'        => 'BCA',
+            'account_number'   => '8830192831',
+            'account_holder'   => 'Owner Satu',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Kata sandi konfirmasi tidak sesuai. Perubahan rekening ditolak demi keamanan dana Anda.',
+            ]);
+    }
+
+    public function test_audit_log_recorded_on_successful_payout_account_update(): void
+    {
+        Sanctum::actingAs($this->owner1);
+
+        $this->putJson('/api/owner/payout-account', [
+            'current_password' => 'password123',
+            'bank_name'        => 'BCA',
+            'account_number'   => '8830192831',
+            'account_holder'   => 'Owner Satu',
+        ])->assertStatus(200);
+
+        $this->assertDatabaseHas('activity_log', [
+            'causer_id'   => $this->owner1->user_id,
+            'description' => "Rekening pencairan dana diubah oleh {$this->owner1->name}",
+        ]);
+    }
 }
