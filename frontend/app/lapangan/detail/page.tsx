@@ -568,5 +568,15 @@ function DetailLapanganContent() {
 }
 
 export default function DetailLapanganPage() {
-  return <DetailLapanganContent />;
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#f8f9ff]">
+          <span className="text-sm font-semibold text-[#006e2f]">Memuat Detail...</span>
+        </div>
+      }
+    >
+      <DetailLapanganContent />
+    </Suspense>
+  );
 }
