@@ -239,4 +239,71 @@ class BankAccountSecurityTest extends TestCase
             'description' => "Rekening pencairan dana diubah oleh {$this->owner1->name}",
         ]);
     }
+
+    public function test_rejects_bca_account_number_with_wrong_digit_length(): void
+    {
+        Sanctum::actingAs($this->owner1);
+
+        // 8 digits on BCA (e.g. 98765432) must be rejected
+        $response = $this->putJson('/api/owner/payout-account', [
+            'current_password' => 'password123',
+            'bank_name'        => 'BCA',
+            'account_number'   => '98765432',
+            'account_holder'   => 'Owner Satu',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['account_number']);
+
+        // 11 digits on BCA must also be rejected
+        $response2 = $this->putJson('/api/owner/payout-account', [
+            'current_password' => 'password123',
+            'bank_name'        => 'BCA',
+            'account_number'   => '54676879809',
+            'account_holder'   => 'Owner Satu',
+        ]);
+
+        $response2->assertStatus(422)
+            ->assertJsonValidationErrors(['account_number'])
+            ->assertJsonFragment([
+                'account_number' => ['Nomor rekening BCA harus terdiri dari 10 digit.'],
+            ]);
+    }
+
+    public function test_rejects_repeating_identical_digits(): void
+    {
+        Sanctum::actingAs($this->owner1);
+
+        $response = $this->putJson('/api/owner/payout-account', [
+            'current_password' => 'password123',
+            'bank_name'        => 'BCA',
+            'account_number'   => '1111111111',
+            'account_holder'   => 'Owner Satu',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['account_number'])
+            ->assertJsonFragment([
+                'account_number' => ['Nomor rekening tidak valid (tidak boleh berisi angka yang sama berulang).'],
+            ]);
+    }
+
+    public function test_rejects_bri_with_incorrect_digit_count(): void
+    {
+        Sanctum::actingAs($this->owner1);
+
+        // BRI requires 15 digits
+        $response = $this->putJson('/api/owner/payout-account', [
+            'current_password' => 'password123',
+            'bank_name'        => 'BRI',
+            'account_number'   => '8830192831', // Only 10 digits
+            'account_holder'   => 'Owner Satu',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['account_number'])
+            ->assertJsonFragment([
+                'account_number' => ['Nomor rekening BRI harus terdiri dari 15 digit.'],
+            ]);
+    }
 }

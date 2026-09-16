@@ -4,12 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import Sidebar from '../../components/Sidebar';
-import AnimatedLoading from '../../components/AnimatedLoading';
 
 export default function OwnerLayout({ children }: { children: React.ReactNode }) {
   const { user, token, isLoading, logout } = useAuth();
   const router = useRouter();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State sidebar
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading) {
@@ -21,12 +20,9 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
     }
   }, [user, token, isLoading, router]);
 
-  if (isLoading) {
-    return <AnimatedLoading fullScreen message="Memuat Lapangin" submessage="Menyiapkan portal pengelola Anda" />;
-  }
-
-  if (!token || user?.role?.toUpperCase() !== 'OWNER') {
-    return null;
+  // Saat memeriksa sesi atau belum terverifikasi sebagai owner, tampilkan layar bersih polos tanpa pop-up animasi
+  if (isLoading || !token || user?.role?.toUpperCase() !== 'OWNER') {
+    return <div className="min-h-screen bg-[#f8f9ff]" />;
   }
 
   return (
