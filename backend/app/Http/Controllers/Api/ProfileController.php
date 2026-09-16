@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
@@ -73,11 +74,20 @@ class ProfileController extends Controller
             'account_number'   => [
                 'required',
                 'string',
-                'regex:/^[0-9]{8,20}$/',
+                'regex:/^[0-9]+$/',
+                'min:8',
+                'max:20',
+                Rule::unique('wallets', 'account_number')
+                    ->where(fn ($query) => $query->where('bank_name', $request->bank_name))
+                    ->ignore($user->user_id, 'owner_id'),
             ],
             'account_holder'   => 'required|string|max:100',
         ], [
-            'account_number.regex' => 'Nomor rekening hanya boleh berupa angka dengan panjang 8 hingga 20 digit.',
+            'account_number.required' => 'Nomor rekening wajib diisi.',
+            'account_number.regex'    => 'Nomor rekening hanya boleh berisi angka.',
+            'account_number.min'      => 'Nomor rekening minimal 8 digit.',
+            'account_number.max'      => 'Nomor rekening maksimal 20 digit.',
+            'account_number.unique'   => 'Nomor rekening ini sudah terdaftar pada akun lain.',
         ]);
 
         // 1. Verifikasi kata sandi akun saat ini
@@ -88,32 +98,26 @@ class ProfileController extends Controller
             ], 422);
         }
 
-        // 2. Cek keunikan kombinasi bank_name + account_number antar akun owner
-        $duplicateAccount = Wallet::where('bank_name', $validated['bank_name'])
-            ->where('account_number', $validated['account_number'])
-            ->where('owner_id', '!=', $user->user_id)
-            ->exists();
-
-        if ($duplicateAccount) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Kombinasi bank dan nomor rekening ini sudah terdaftar pada akun venue owner lain.',
-                'errors'  => [
-                    'account_number' => ['Nomor rekening ini sudah terdaftar pada bank yang sama oleh owner lain.'],
-                ],
-            ], 422);
-        }
-
         // 3. Update wallet bank account
         $wallet = Wallet::firstOrCreate(['owner_id' => $user->user_id]);
         $oldDetails = "{$wallet->bank_name} {$wallet->account_number} a.n {$wallet->account_holder}";
         $newDetails = "{$validated['bank_name']} {$validated['account_number']} a.n {$validated['account_holder']}";
 
-        $wallet->update([
-            'bank_name'      => $validated['bank_name'],
-            'account_number' => $validated['account_number'],
-            'account_holder' => $validated['account_holder'],
-        ]);
+        try {
+            $wallet->update([
+                'bank_name'      => $validated['bank_name'],
+                'account_number' => $validated['account_number'],
+                'account_holder' => $validated['account_holder'],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nomor rekening ini sudah terdaftar pada akun lain.',
+                'errors'  => [
+                    'account_number' => ['Nomor rekening ini sudah terdaftar pada akun lain.'],
+                ],
+            ], 422);
+        }
 
         // 3. Catat audit trail yang tidak dapat dihapus
         activity()
