@@ -147,16 +147,16 @@ export default function Dashboard() {
         </div>
 
         {/* Card 3: Status PENDING (Menunggu Pembayaran / Approval) */}
-        <div className="bg-amber-50 rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group border border-amber-200/80">
-          <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-amber-400/15 rounded-full blur-xl group-hover:bg-amber-400/25 transition-colors"></div>
-          <div className="flex items-center gap-2 text-amber-800 relative z-10">
+        <div className="bg-[#e5eeff] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-[#565e74]/10 rounded-full blur-xl group-hover:bg-[#565e74]/20 transition-colors"></div>
+          <div className="flex items-center gap-2 text-[#3d4a3d] relative z-10">
             <span className="material-symbols-outlined text-[20px]">hourglass_top</span>
-            <span className="text-xs font-bold tracking-wide">Menunggu (Pending)</span>
+            <span className="text-xs font-semibold tracking-wide">Menunggu (Pending)</span>
           </div>
-          <div className="text-3xl font-bold tracking-tight text-amber-700 relative z-10">
+          <div className="text-3xl font-bold tracking-tight text-[#0b1c30] relative z-10">
             {stats.pending_bookings || 0}
           </div>
-          <div className="text-xs font-semibold text-amber-800 mt-auto relative z-10">
+          <div className="text-xs font-medium text-[#3d4a3d] mt-auto relative z-10">
             Menunggu pembayaran/approval
           </div>
         </div>
