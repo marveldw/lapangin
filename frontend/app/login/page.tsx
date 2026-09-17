@@ -23,7 +23,8 @@ function LoginForm() {
   // Auto redirect if already authenticated
   useEffect(() => {
     if (!authLoading && token && user) {
-      if (user.role?.toUpperCase() === "OWNER") {
+      const role = user.role?.toUpperCase();
+      if (role === "OWNER" || role === "STAFF") {
         router.push(redirectParam || "/owner/dashboard");
       } else {
         router.push(redirectParam || "/lapangan");
@@ -50,7 +51,7 @@ function LoginForm() {
       if (role === "ADMIN") {
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
         window.location.href = `${backendUrl}/admin`;
-      } else if (role === "OWNER") {
+      } else if (role === "OWNER" || role === "STAFF") {
         window.location.href = redirectParam || "/owner/dashboard";
       } else {
         // Customer

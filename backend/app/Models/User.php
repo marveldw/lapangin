@@ -34,6 +34,7 @@ class User extends Authenticatable implements FilamentUser
         'password_hash',
         'phone',
         'role',
+        'owner_id',
         'status',
     ];
 
@@ -72,6 +73,26 @@ class User extends Authenticatable implements FilamentUser
         }
 
         return false;
+    }
+
+    public function parentOwner()
+    {
+        return $this->belongsTo(User::class, 'owner_id', 'user_id');
+    }
+
+    public function staffMembers()
+    {
+        return $this->hasMany(User::class, 'owner_id', 'user_id');
+    }
+
+    /**
+     * Get the tenant owner ID for multi-tenant query scoping.
+     * If user is a STAFF/ADMIN sub-account, returns their parent owner ID.
+     * Otherwise returns their own user_id.
+     */
+    public function getTenantOwnerId(): int
+    {
+        return ($this->role === 'STAFF' && $this->owner_id) ? (int) $this->owner_id : (int) $this->user_id;
     }
 
     public function courts()

@@ -26,9 +26,9 @@ class BookingController extends Controller
             ->orderBy('booking_date', 'desc')
             ->orderBy('start_time', 'asc');
 
-        // Dual-role check: Owner can view customer bookings if scope=customer
-        if ($user->role === 'OWNER' && $request->query('scope') !== 'customer') {
-            $courtIds = Court::withTrashed()->where('owner_id', $user->user_id)->pluck('court_id');
+        // Dual-role check: Owner/Staff can view customer bookings if scope=customer
+        if (in_array($user->role, ['OWNER', 'ADMIN', 'STAFF'], true) && $request->query('scope') !== 'customer') {
+            $courtIds = Court::withTrashed()->where('owner_id', $user->getTenantOwnerId())->pluck('court_id');
             if ($courtIds->isEmpty()) {
                 return response()->json([
                     'success' => true,
@@ -260,8 +260,8 @@ class BookingController extends Controller
             ], 404);
         }
 
-        // Authorization check: User must be court owner or the booking creator
-        $isOwner = $booking->court && $booking->court->owner_id === $user->user_id;
+        // Authorization check: User must be court owner/staff or the booking creator
+        $isOwner = $booking->court && $booking->court->owner_id === $user->getTenantOwnerId();
         $isCustomer = $booking->user_id === $user->user_id;
 
         if (!$isOwner && !$isCustomer && $user->role !== 'ADMIN') {
@@ -290,7 +290,7 @@ class BookingController extends Controller
             ], 404);
         }
 
-        $isOwner = $booking->court && $booking->court->owner_id === $user->user_id;
+        $isOwner = $booking->court && $booking->court->owner_id === $user->getTenantOwnerId();
         $isCustomer = $booking->user_id === $user->user_id;
 
         if (!$isOwner && !$isCustomer && $user->role !== 'ADMIN') {

@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PublicCourtController;
+use App\Http\Controllers\Api\StaffController;
 use App\Http\Controllers\Api\WalletController;
 
 // ==========================================
@@ -74,38 +75,51 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/subscriptions/{planId}/pay', [PaymentController::class, 'paySubscription'])->whereNumber('planId');
 
     // ==========================================
-    // OWNER & ADMIN ONLY ROUTES
+    // OPERATIONAL ROUTES (OWNER, ADMIN, STAFF)
     // ==========================================
-    Route::middleware('role:OWNER,ADMIN')->group(function () {
-        // Courts Management (Owner)
+    Route::middleware('role:OWNER,ADMIN,STAFF')->group(function () {
+        // Courts Management (Owner & Staff)
         Route::get('/courts', [CourtController::class, 'index']);
         Route::post('/courts', [CourtController::class, 'store']);
         Route::post('/courts/upload-image', [CourtController::class, 'uploadImage']);
         Route::get('/courts/{id}', [CourtController::class, 'show'])->whereNumber('id');
         Route::put('/courts/{id}', [CourtController::class, 'update'])->whereNumber('id');
-        Route::delete('/courts/{id}', [CourtController::class, 'destroy'])->whereNumber('id');
 
-        // Aliases for /owner/courts (to support both conventions)
+        // Aliases for /owner/courts
         Route::get('/owner/courts', [CourtController::class, 'index']);
         Route::post('/owner/courts', [CourtController::class, 'store']);
         Route::post('/owner/courts/upload-image', [CourtController::class, 'uploadImage']);
         Route::get('/owner/courts/{id}', [CourtController::class, 'show'])->whereNumber('id');
         Route::put('/owner/courts/{id}', [CourtController::class, 'update'])->whereNumber('id');
-        Route::delete('/owner/courts/{id}', [CourtController::class, 'destroy'])->whereNumber('id');
         Route::post('/upload/image', [CourtController::class, 'uploadImage']);
 
-        // Customers Management (Owner)
+        // Customers Management (Owner & Staff)
         Route::get('/customers', [CustomerController::class, 'index']);
         Route::post('/customers', [CustomerController::class, 'store']);
         Route::get('/customers/{id}', [CustomerController::class, 'show'])->whereNumber('id');
         Route::put('/customers/{id}', [CustomerController::class, 'update'])->whereNumber('id');
 
-        // Dashboard Analytics (Owner)
+        // Dashboard Analytics (Owner & Staff)
         Route::get('/dashboard', [DashboardController::class, 'index']);
+    });
 
-        // Wallet & Withdrawal (Owner)
+    // ==========================================
+    // OWNER ONLY PRIVILEGED ROUTES (STAFF FORBIDDEN)
+    // ==========================================
+    Route::middleware('role:OWNER,ADMIN')->group(function () {
+        // Court Deletion (Owner only)
+        Route::delete('/courts/{id}', [CourtController::class, 'destroy'])->whereNumber('id');
+        Route::delete('/owner/courts/{id}', [CourtController::class, 'destroy'])->whereNumber('id');
+
+        // Wallet & Financial Payout (Owner only)
         Route::get('/owner/wallet', [WalletController::class, 'getWallet']);
         Route::post('/owner/withdraw', [WalletController::class, 'requestWithdraw']);
         Route::put('/owner/payout-account', [ProfileController::class, 'updatePayoutAccount']);
+
+        // Staff Management (Owner only)
+        Route::get('/owner/staff', [StaffController::class, 'index']);
+        Route::post('/owner/staff', [StaffController::class, 'store']);
+        Route::put('/owner/staff/{id}', [StaffController::class, 'update'])->whereNumber('id');
+        Route::delete('/owner/staff/{id}', [StaffController::class, 'destroy'])->whereNumber('id');
     });
 });

@@ -11,7 +11,7 @@ class CustomerController extends Controller
     // GET /api/customers — list owner's customers
     public function index(Request $request)
     {
-        $customers = Customer::where('owner_id', $request->user()->user_id)
+        $customers = Customer::where('owner_id', $request->user()->getTenantOwnerId())
             ->withCount('bookings')
             ->orderBy('name')
             ->paginate(25);
@@ -33,7 +33,7 @@ class CustomerController extends Controller
 
         $customer = Customer::create([
             ...$validated,
-            'owner_id' => $request->user()->user_id,
+            'owner_id' => $request->user()->getTenantOwnerId(),
         ]);
 
         return response()->json([
@@ -46,7 +46,7 @@ class CustomerController extends Controller
     public function show(Request $request, $id)
     {
         $customer = Customer::where('customer_id', $id)
-            ->where('owner_id', $request->user()->user_id)
+            ->where('owner_id', $request->user()->getTenantOwnerId())
             ->with(['bookings' => function ($query) {
                 $query->with('court')->latest('booking_date')->limit(50);
             }])
@@ -69,7 +69,7 @@ class CustomerController extends Controller
     public function update(Request $request, $id)
     {
         $customer = Customer::where('customer_id', $id)
-            ->where('owner_id', $request->user()->user_id)
+            ->where('owner_id', $request->user()->getTenantOwnerId())
             ->first();
 
         if (!$customer) {

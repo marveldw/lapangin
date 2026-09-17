@@ -22,7 +22,7 @@ class CourtController extends Controller
     {
         $user = $request->user();
         $perPage = min(50, max(1, (int) $request->query('per_page', 10)));
-        $query = Court::where('owner_id', $user->user_id)
+        $query = Court::where('owner_id', $user->getTenantOwnerId())
             ->with('operatingHours')
             ->orderBy('court_id', 'asc');
 
@@ -88,14 +88,15 @@ class CourtController extends Controller
 
         return DB::transaction(function () use ($user, $validated, $openTimeStr, $closeTimeStr) {
             // Lock user row untuk menserialisasi pengecekan kuota paket dan mencegah race condition
-            $lockedUser = User::where('user_id', $user->user_id)
+            $tenantOwnerId = $user->getTenantOwnerId();
+            $lockedUser = User::where('user_id', $tenantOwnerId)
                 ->lockForUpdate()
                 ->first();
 
             $maxCourts = $lockedUser->getMaxCourtsAllowed();
             $planName  = $lockedUser->active_plan?->name ?? 'FREE';
 
-            $currentCourts = Court::where('owner_id', $lockedUser->user_id)
+            $currentCourts = Court::where('owner_id', $tenantOwnerId)
                 ->where('status', 'ACTIVE')
                 ->count();
 
@@ -115,7 +116,7 @@ class CourtController extends Controller
                 'city'           => $validated['city'],
                 'district'       => $validated['district'] ?? null,
                 'image_url'      => $validated['image_url'] ?? null,
-                'owner_id'       => $lockedUser->user_id,
+                'owner_id'       => $tenantOwnerId,
                 'status'         => $validated['status'] ?? 'ACTIVE',
             ]);
 
@@ -146,7 +147,7 @@ class CourtController extends Controller
     public function show(Request $request, $id)
     {
         $court = Court::where('court_id', $id)
-            ->where('owner_id', $request->user()->user_id)
+            ->where('owner_id', $request->user()->getTenantOwnerId())
             ->with('operatingHours')
             ->first();
 
@@ -167,7 +168,7 @@ class CourtController extends Controller
     public function update(UpdateCourtRequest $request, $id)
     {
         $court = Court::where('court_id', $id)
-            ->where('owner_id', $request->user()->user_id)
+            ->where('owner_id', $request->user()->getTenantOwnerId())
             ->first();
 
         if (!$court) {
@@ -256,8 +257,18 @@ class CourtController extends Controller
     // DELETE /api/courts/{id} — soft delete via SoftDeletes
     public function destroy(Request $request, $id)
     {
+        $user = $request->user();
+
+        // RBAC: Staff explicitly forbidden from deleting courts
+        if ($user->role === 'STAFF') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak. Staf tidak memiliki izin untuk menghapus lapangan.',
+            ], 403);
+        }
+
         $court = Court::where('court_id', $id)
-            ->where('owner_id', $request->user()->user_id)
+            ->where('owner_id', $user->getTenantOwnerId())
             ->first();
 
         if (!$court) {
