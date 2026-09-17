@@ -235,13 +235,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#f8f9ff] via-white to-white flex items-center justify-center p-4 sm:p-6">
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center p-8 text-gray-400">
-            <Loader2 className="w-6 h-6 animate-spin text-[#006e2f]" />
-          </div>
-        }
-      >
+      <Suspense fallback={<div className="min-h-screen bg-[#f8f9ff]" />}>
         <LoginForm />
       </Suspense>
     </main>

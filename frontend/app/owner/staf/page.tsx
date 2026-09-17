@@ -285,9 +285,10 @@ export default function KelolaStafPage() {
       {/* Tabel Data Staf */}
       <div className="bg-white rounded-2xl border border-[#bccbb9]/30 shadow-xs overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center text-gray-400">
-            <div className="inline-block animate-spin w-8 h-8 border-3 border-current border-t-transparent text-[#006e2f] rounded-full mb-3" />
-            <p className="text-sm">Memuat daftar staf...</p>
+          <div className="p-6 space-y-3 animate-pulse">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-14 bg-gray-100 rounded-xl w-full" />
+            ))}
           </div>
         ) : error ? (
           <div className="py-16 text-center text-red-600">

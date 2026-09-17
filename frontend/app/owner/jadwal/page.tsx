@@ -435,11 +435,10 @@ function JadwalContent() {
             </div>
 
             {loadingBookings ? (
-              <div className="py-20 flex justify-center items-center gap-2 text-[#006e2f]">
-                <span className="material-symbols-outlined animate-spin text-[28px]">
-                  progress_activity
-                </span>
-                <span className="text-xs font-bold">Memperbarui jadwal...</span>
+              <div className="py-12 space-y-3 px-6 animate-pulse">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-12 bg-gray-100 rounded-xl w-full" />
+                ))}
               </div>
             ) : (
               <div className="flex flex-col divide-y divide-[#bccbb9]/20">
@@ -525,16 +524,7 @@ function JadwalContent() {
 
 const OwnerJadwalPage = dynamic(() => Promise.resolve(JadwalContent), {
   ssr: false,
-  loading: () => (
-    <div className="flex justify-center items-center h-[60vh] w-full">
-      <div className="flex flex-col items-center gap-3 text-[#006e2f]">
-        <span className="material-symbols-outlined animate-spin text-[40px]">
-          progress_activity
-        </span>
-        <span className="font-bold text-sm">Menyiapkan Papan Jadwal...</span>
-      </div>
-    </div>
-  ),
+  loading: () => <div className="min-h-[60vh] w-full" />,
 });
 
 export default OwnerJadwalPage;
