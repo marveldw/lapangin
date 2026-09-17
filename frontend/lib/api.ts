@@ -15,6 +15,26 @@ const defaultHeaders = {
   'ngrok-skip-browser-warning': 'true',
 };
 
+// Ambil token HANYA untuk endpoint yang bukan public auth
+const getAuthToken = (endpoint: string, explicitToken?: string | null) => {
+  if (explicitToken) return explicitToken;
+
+  // Jangan sertakan token untuk rute autentikasi publik
+  const publicEndpoints = ['/login', '/register', '/forgot-password', '/reset-password'];
+  const isPublicAuth = publicEndpoints.some((path) => endpoint.includes(path));
+
+  if (isPublicAuth) return null;
+
+  if (typeof window !== 'undefined') {
+    return (
+      localStorage.getItem('lapangin_token') ||
+      localStorage.getItem('token') ||
+      null
+    );
+  }
+  return null;
+};
+
 const parseResponse = async (res: Response) => {
   try {
     return await res.json();
@@ -27,51 +47,51 @@ const parseResponse = async (res: Response) => {
 };
 
 export const api = {
-  // GET request
   get: async (endpoint: string, token?: string | null) => {
+    const activeToken = getAuthToken(endpoint, token);
     const res = await fetch(buildUrl(endpoint), {
       method: 'GET',
       headers: {
         ...defaultHeaders,
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {}),
       },
     });
     return parseResponse(res);
   },
 
-  // POST request
   post: async (endpoint: string, body: object, token?: string | null) => {
+    const activeToken = getAuthToken(endpoint, token);
     const res = await fetch(buildUrl(endpoint), {
       method: 'POST',
       headers: {
         ...defaultHeaders,
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {}),
       },
       body: JSON.stringify(body),
     });
     return parseResponse(res);
   },
 
-  // PUT request
   put: async (endpoint: string, body: object, token?: string | null) => {
+    const activeToken = getAuthToken(endpoint, token);
     const res = await fetch(buildUrl(endpoint), {
       method: 'PUT',
       headers: {
         ...defaultHeaders,
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {}),
       },
       body: JSON.stringify(body),
     });
     return parseResponse(res);
   },
 
-  // DELETE request
   delete: async (endpoint: string, token?: string | null) => {
+    const activeToken = getAuthToken(endpoint, token);
     const res = await fetch(buildUrl(endpoint), {
       method: 'DELETE',
       headers: {
         ...defaultHeaders,
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {}),
       },
     });
     return parseResponse(res);
