@@ -26,6 +26,9 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     'FREE'
   ).toUpperCase();
 
+  const isStaff = user?.role?.toUpperCase() === 'STAFF';
+  const isOwner = user?.role?.toUpperCase() === 'OWNER';
+
   return (
     <>
       {/* Overlay Gelap Khusus Mobile */}
@@ -71,44 +74,56 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             <span className="material-symbols-outlined">confirmation_number</span>
             <span className="text-sm tracking-wide">Booking</span>
           </Link>
-          <Link onClick={() => setIsOpen(false)} href="/owner/pendapatan" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/pendapatan')}`}>
-            <span className="material-symbols-outlined">payments</span>
-            <span className="text-sm tracking-wide">Pendapatan</span>
-          </Link>
+          {!isStaff && (
+            <Link onClick={() => setIsOpen(false)} href="/owner/pendapatan" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/pendapatan')}`}>
+              <span className="material-symbols-outlined">payments</span>
+              <span className="text-sm tracking-wide">Pendapatan</span>
+            </Link>
+          )}
           <Link onClick={() => setIsOpen(false)} href="/owner/pelanggan" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/pelanggan')}`}>
             <span className="material-symbols-outlined">group</span>
             <span className="text-sm tracking-wide">Pelanggan</span>
           </Link>
-          <Link onClick={() => setIsOpen(false)} href="/owner/pengaturan" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/pengaturan')}`}>
-            <span className="material-symbols-outlined">settings</span>
-            <span className="text-sm tracking-wide">Pengaturan</span>
-          </Link>
+          {isOwner && (
+            <Link onClick={() => setIsOpen(false)} href="/owner/staf" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/staf')}`}>
+              <span className="material-symbols-outlined">badge</span>
+              <span className="text-sm tracking-wide">Kelola Staf</span>
+            </Link>
+          )}
+          {!isStaff && (
+            <Link onClick={() => setIsOpen(false)} href="/owner/pengaturan" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/pengaturan')}`}>
+              <span className="material-symbols-outlined">settings</span>
+              <span className="text-sm tracking-wide">Pengaturan</span>
+            </Link>
+          )}
         </nav>
 
-        {/* Area Bawah: Upgrade Dinamis */}
-        <div className="p-6 mt-auto border-t border-[#bccbb9]/20 flex flex-col gap-4 bg-[#f8f9ff]/50">
-          <div className="p-3 bg-[#e5eeff] rounded-xl flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#3d4a3d]">Paket Anda:</span>
-              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                planName === 'PRO' 
-                  ? 'bg-amber-100 text-amber-800' 
-                  : planName === 'BASIC' 
-                  ? 'bg-blue-100 text-blue-800' 
-                  : 'bg-gray-200 text-gray-700'
-              }`}>
-                {planName}
-              </span>
-            </div>
+        {/* Area Bawah: Upgrade Dinamis (Hanya untuk Owner) */}
+        {!isStaff && (
+          <div className="p-6 mt-auto border-t border-[#bccbb9]/20 flex flex-col gap-4 bg-[#f8f9ff]/50">
+            <div className="p-3 bg-[#e5eeff] rounded-xl flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-[#3d4a3d]">Paket Anda:</span>
+                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                  planName === 'PRO' 
+                    ? 'bg-amber-100 text-amber-800' 
+                    : planName === 'BASIC' 
+                    ? 'bg-blue-100 text-blue-800' 
+                    : 'bg-gray-200 text-gray-700'
+                }`}>
+                  {planName}
+                </span>
+              </div>
 
-            <Link
-              href="/owner/pengaturan"
-              className="w-full py-1.5 mt-1 bg-[#006e2f] hover:bg-[#005321] text-white text-center rounded-lg text-xs font-bold transition-all shadow-xs"
-            >
-              Kelola Langganan
-            </Link>
+              <Link
+                href="/owner/pengaturan"
+                className="w-full py-1.5 mt-1 bg-[#006e2f] hover:bg-[#005321] text-white text-center rounded-lg text-xs font-bold transition-all shadow-xs"
+              >
+                Kelola Langganan
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
       </aside>
     </>
   );

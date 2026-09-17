@@ -88,11 +88,7 @@ export default function CustomerProfilePage() {
   };
 
   if (authLoading || isFetching) {
-    return (
-      <div className="min-h-screen bg-[#f8f9ff] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#006e2f]" />
-      </div>
-    );
+    return <div className="min-h-screen bg-[#f8f9ff]" />;
   }
 
   return (

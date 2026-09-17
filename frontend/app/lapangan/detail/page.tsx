@@ -243,14 +243,7 @@ function DetailLapanganContent() {
   };
 
   if (loadingCourt) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9ff]">
-        <div className="flex items-center gap-3 text-[#006e2f]">
-          <span className="material-symbols-outlined text-[32px] animate-spin">progress_activity</span>
-          
-        </div>
-      </div>
-    );
+    return <div className="min-h-screen bg-[#f8f9ff]" />;
   }
 
   if (errorCourt || !court) {

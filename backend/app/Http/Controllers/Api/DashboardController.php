@@ -13,7 +13,7 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $ownerId      = $request->user()->user_id;
+        $ownerId      = $request->user()->getTenantOwnerId();
         $today        = Carbon::today()->toDateString();
         $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
         $endOfMonth   = Carbon::now()->endOfMonth()->toDateString();

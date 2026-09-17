@@ -12,16 +12,19 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!isLoading) {
+      const role = user?.role?.toUpperCase();
       if (!token || !user) {
         router.push('/login');
-      } else if (user.role?.toUpperCase() !== 'OWNER') {
+      } else if (role !== 'OWNER' && role !== 'STAFF') {
         router.push('/lapangan');
       }
     }
   }, [user, token, isLoading, router]);
 
-  // Saat memeriksa sesi atau belum terverifikasi sebagai owner, tampilkan layar bersih polos tanpa pop-up animasi
-  if (isLoading || !token || user?.role?.toUpperCase() !== 'OWNER') {
+  // Saat memeriksa sesi atau belum terverifikasi sebagai pengelola, tampilkan layar bersih polos tanpa pop-up animasi
+  const role = user?.role?.toUpperCase();
+  const isAuthorized = role === 'OWNER' || role === 'STAFF';
+  if (isLoading || !token || !isAuthorized) {
     return <div className="min-h-screen bg-[#f8f9ff]" />;
   }
 
@@ -50,9 +53,11 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
           <div className="flex items-center gap-4 sm:gap-6">
             <div className="flex items-center gap-4 sm:pl-6 sm:border-l border-[#bccbb9]/50">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold tracking-wide text-[#0b1c30]">{user?.name || 'Owner'}</p>
+                <p className="text-sm font-semibold tracking-wide text-[#0b1c30]">{user?.name || (role === 'STAFF' ? 'Staf' : 'Owner')}</p>
                 <p className="text-xs font-medium text-[#3d4a3d]">
-                  {user?.subscription?.plan_name ? `Plan: ${user.subscription.plan_name}` : 'Venue Owner'}
+                  {role === 'STAFF' 
+                    ? 'Admin / Staf Venue' 
+                    : (user?.subscription?.plan_name ? `Plan: ${user.subscription.plan_name}` : 'Venue Owner')}
                 </p>
               </div>
               <div className="w-10 h-10 rounded-full bg-[#006e2f] flex items-center justify-center shadow-md border-2 border-[#ffffff] text-white font-semibold text-sm shrink-0">

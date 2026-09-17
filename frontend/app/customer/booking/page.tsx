@@ -212,11 +212,10 @@ export default function CustomerBookingPage() {
           {/* Booking Cards List */}
           <div className="flex flex-col gap-5 pt-8">
             {loading ? (
-              <div className="py-16 flex flex-col items-center justify-center gap-3 text-[#006e2f]">
-                <span className="material-symbols-outlined animate-spin text-[32px]">
-                  progress_activity
-                </span>
-                <span className="text-xs font-bold">Memuat Daftar Reservasi...</span>
+              <div className="space-y-4 animate-pulse">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-36 bg-white rounded-2xl border border-gray-100 p-6" />
+                ))}
               </div>
             ) : filteredBookings.length === 0 ? (
               <div className="bg-white rounded-2xl border border-[#bccbb9]/30 p-12 text-center flex flex-col items-center gap-4">

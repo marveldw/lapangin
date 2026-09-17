@@ -183,14 +183,7 @@ function KonfirmasiBookingContent() {
   };
 
   if (authLoading || loadingCourt) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8f9ff]">
-        <div className="flex items-center gap-2 text-[#006e2f]">
-          <span className="material-symbols-outlined animate-spin text-[28px]">progress_activity</span>
-          <span className="text-sm font-bold">Menyiapkan Checkout...</span>
-        </div>
-      </div>
-    );
+    return <div className="min-h-screen bg-[#f8f9ff]" />;
   }
 
   if (!court || !bookingDate || !startTime || !endTime) {

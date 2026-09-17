@@ -177,11 +177,10 @@ export default function PelangganPage() {
       {/* Table Data */}
       <div className="w-full bg-white rounded-2xl shadow-sm border border-[#bccbb9]/30 overflow-hidden flex flex-col">
         {loading ? (
-          <div className="py-20 flex flex-col items-center justify-center gap-2 text-[#006e2f]">
-            <span className="material-symbols-outlined animate-spin text-[32px]">
-              progress_activity
-            </span>
-            <span className="text-xs font-bold">Memuat Data Pelanggan...</span>
+          <div className="p-6 space-y-3 animate-pulse">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-14 bg-gray-100 rounded-xl w-full" />
+            ))}
           </div>
         ) : filteredCustomers.length === 0 ? (
           <div className="py-20 text-center flex flex-col items-center gap-3">

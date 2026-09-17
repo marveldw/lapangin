@@ -23,7 +23,8 @@ function LoginForm() {
   // Auto redirect if already authenticated
   useEffect(() => {
     if (!authLoading && token && user) {
-      if (user.role?.toUpperCase() === "OWNER") {
+      const role = user.role?.toUpperCase();
+      if (role === "OWNER" || role === "STAFF") {
         router.push(redirectParam || "/owner/dashboard");
       } else {
         router.push(redirectParam || "/lapangan");
@@ -50,7 +51,7 @@ function LoginForm() {
       if (role === "ADMIN") {
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
         window.location.href = `${backendUrl}/admin`;
-      } else if (role === "OWNER") {
+      } else if (role === "OWNER" || role === "STAFF") {
         window.location.href = redirectParam || "/owner/dashboard";
       } else {
         // Customer
@@ -234,13 +235,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#f8f9ff] via-white to-white flex items-center justify-center p-4 sm:p-6">
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center p-8 text-gray-400">
-            <Loader2 className="w-6 h-6 animate-spin text-[#006e2f]" />
-          </div>
-        }
-      >
+      <Suspense fallback={<div className="min-h-screen bg-[#f8f9ff]" />}>
         <LoginForm />
       </Suspense>
     </main>
