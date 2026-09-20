@@ -63,6 +63,15 @@ class CourtController extends Controller
     public function store(StoreCourtRequest $request)
     {
         $user = $request->user();
+
+        // RBAC: Staff explicitly forbidden from creating courts (structural business decision)
+        if ($user->role === 'STAFF') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akses ditolak. Staf tidak memiliki izin untuk menambah lapangan.',
+            ], 403);
+        }
+
         $validated = $request->validated();
 
         // 1. Resolve operating hours from request or parsed description

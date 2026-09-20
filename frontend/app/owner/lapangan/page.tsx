@@ -109,6 +109,7 @@ export default function DaftarLapangan() {
 
   const maxAllowedCourts = getMaxCourtsAllowed(user?.subscription);
   const isQuotaExceeded = isCourtQuotaExceeded(courts.length, maxAllowedCourts);
+  const isStaff = user?.role === 'STAFF';
 
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 500);
@@ -566,23 +567,25 @@ export default function DaftarLapangan() {
           </p>
         </div>
 
-        {isQuotaExceeded ? (
-          <Link
-            href="/owner/pengaturan?tab=SECURITY"
-            className="bg-slate-200 text-slate-600 hover:bg-amber-100 hover:text-amber-800 text-sm font-semibold py-3 px-6 rounded-xl shadow-xs transition-all flex items-center gap-2 self-start lg:self-end shrink-0 cursor-pointer border border-slate-300"
-            title={`Batas kuota paket (${maxAllowedCourts} lapangan) tercapai. Klik untuk upgrade paket.`}
-          >
-            <span className="material-symbols-outlined text-[20px]">lock</span>
-            Tambah Lapangan (Upgrade Paket)
-          </Link>
-        ) : (
-          <Link
-            href="/owner/lapangan/tambah"
-            className="bg-[#006e2f] text-[#ffffff] text-sm font-semibold py-3 px-6 rounded-xl shadow-md hover:bg-[#006e2f]/90 hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 self-start lg:self-end shrink-0 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[20px]">add</span>
-            Tambah Lapangan Baru
-          </Link>
+        {!isStaff && (
+          isQuotaExceeded ? (
+            <Link
+              href="/owner/pengaturan?tab=SECURITY"
+              className="bg-slate-200 text-slate-600 hover:bg-amber-100 hover:text-amber-800 text-sm font-semibold py-3 px-6 rounded-xl shadow-xs transition-all flex items-center gap-2 self-start lg:self-end shrink-0 cursor-pointer border border-slate-300"
+              title={`Batas kuota paket (${maxAllowedCourts} lapangan) tercapai. Klik untuk upgrade paket.`}
+            >
+              <span className="material-symbols-outlined text-[20px]">lock</span>
+              Tambah Lapangan (Upgrade Paket)
+            </Link>
+          ) : (
+            <Link
+              href="/owner/lapangan/tambah"
+              className="bg-[#006e2f] text-[#ffffff] text-sm font-semibold py-3 px-6 rounded-xl shadow-md hover:bg-[#006e2f]/90 hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 self-start lg:self-end shrink-0 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[20px]">add</span>
+              Tambah Lapangan Baru
+            </Link>
+          )
         )}
       </div>
 
@@ -737,22 +740,24 @@ export default function DaftarLapangan() {
             <p className="text-sm text-[#3d4a3d] max-w-md">
               Mulai buat profil lapangan olahraga Anda sekarang untuk menerima reservasi dan mengelola ketersediaan secara online.
             </p>
-            {isQuotaExceeded ? (
-              <Link
-                href="/owner/pengaturan?tab=SECURITY"
-                className="mt-4 bg-slate-200 text-slate-600 hover:bg-amber-100 hover:text-amber-800 px-8 py-3 rounded-xl text-sm font-semibold shadow-xs transition-all flex items-center gap-2 cursor-pointer border border-slate-300"
-              >
-                <span className="material-symbols-outlined text-[20px]">lock</span>
-                Upgrade Paket untuk Menambah Lapangan
-              </Link>
-            ) : (
-              <Link
-                href="/owner/lapangan/tambah"
-                className="mt-4 bg-[#006e2f] text-white px-8 py-3 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px]">add</span>
-                Tambah Lapangan Pertama
-              </Link>
+            {!isStaff && (
+              isQuotaExceeded ? (
+                <Link
+                  href="/owner/pengaturan?tab=SECURITY"
+                  className="mt-4 bg-slate-200 text-slate-600 hover:bg-amber-100 hover:text-amber-800 px-8 py-3 rounded-xl text-sm font-semibold shadow-xs transition-all flex items-center gap-2 cursor-pointer border border-slate-300"
+                >
+                  <span className="material-symbols-outlined text-[20px]">lock</span>
+                  Upgrade Paket untuk Menambah Lapangan
+                </Link>
+              ) : (
+                <Link
+                  href="/owner/lapangan/tambah"
+                  className="mt-4 bg-[#006e2f] text-white px-8 py-3 rounded-xl text-sm font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[20px]">add</span>
+                  Tambah Lapangan Pertama
+                </Link>
+              )
             )}
           </div>
         ) : (

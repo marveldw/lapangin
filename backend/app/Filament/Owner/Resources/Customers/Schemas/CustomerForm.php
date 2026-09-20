@@ -2,6 +2,7 @@
 
 namespace App\Filament\Owner\Resources\Customers\Schemas;
 
+use App\Rules\IndonesianPhoneNumber;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
@@ -18,7 +19,8 @@ class CustomerForm
                     ->required(),
                 TextInput::make('phone')
                     ->tel()
-                    ->required(),
+                    ->required()
+                    ->rules([new IndonesianPhoneNumber()]),
                 TextInput::make('email')
                     ->label('Email address')
                     ->email(),

@@ -78,19 +78,17 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // OPERATIONAL ROUTES (OWNER, ADMIN, STAFF)
     // ==========================================
     Route::middleware('role:OWNER,ADMIN,STAFF')->group(function () {
-        // Courts Management (Owner & Staff)
+        // Courts Management (Staff can view & update operational status/schedule)
         Route::get('/courts', [CourtController::class, 'index']);
-        Route::post('/courts', [CourtController::class, 'store']);
-        Route::post('/courts/upload-image', [CourtController::class, 'uploadImage']);
         Route::get('/courts/{id}', [CourtController::class, 'show'])->whereNumber('id');
         Route::put('/courts/{id}', [CourtController::class, 'update'])->whereNumber('id');
 
         // Aliases for /owner/courts
         Route::get('/owner/courts', [CourtController::class, 'index']);
-        Route::post('/owner/courts', [CourtController::class, 'store']);
-        Route::post('/owner/courts/upload-image', [CourtController::class, 'uploadImage']);
         Route::get('/owner/courts/{id}', [CourtController::class, 'show'])->whereNumber('id');
         Route::put('/owner/courts/{id}', [CourtController::class, 'update'])->whereNumber('id');
+        Route::post('/courts/upload-image', [CourtController::class, 'uploadImage']);
+        Route::post('/owner/courts/upload-image', [CourtController::class, 'uploadImage']);
         Route::post('/upload/image', [CourtController::class, 'uploadImage']);
 
         // Customers Management (Owner & Staff)
@@ -99,7 +97,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::get('/customers/{id}', [CustomerController::class, 'show'])->whereNumber('id');
         Route::put('/customers/{id}', [CustomerController::class, 'update'])->whereNumber('id');
 
-        // Dashboard Analytics (Owner & Staff)
+        // Dashboard Analytics (Operational view for Staff, Full view for Owner)
         Route::get('/dashboard', [DashboardController::class, 'index']);
     });
 
@@ -107,11 +105,14 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // OWNER ONLY PRIVILEGED ROUTES (STAFF FORBIDDEN)
     // ==========================================
     Route::middleware('role:OWNER,ADMIN')->group(function () {
-        // Court Deletion (Owner only)
+        // Court Creation & Deletion (Owner only - structural business decisions)
+        Route::post('/courts', [CourtController::class, 'store']);
+        Route::post('/owner/courts', [CourtController::class, 'store']);
         Route::delete('/courts/{id}', [CourtController::class, 'destroy'])->whereNumber('id');
         Route::delete('/owner/courts/{id}', [CourtController::class, 'destroy'])->whereNumber('id');
 
-        // Wallet & Financial Payout (Owner only)
+        // Financial Reports, Revenue & Wallet (Owner only)
+        Route::get('/owner/revenue', [DashboardController::class, 'revenue']);
         Route::get('/owner/wallet', [WalletController::class, 'getWallet']);
         Route::post('/owner/withdraw', [WalletController::class, 'requestWithdraw']);
         Route::put('/owner/payout-account', [ProfileController::class, 'updatePayoutAccount']);

@@ -58,5 +58,14 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->user_id ?: $request->ip());
         });
+
+        // RBAC Gates: Financial endpoints & court lifecycle decisions (structural)
+        \Illuminate\Support\Facades\Gate::define('view-financial', function (\App\Models\User $user) {
+            return in_array($user->role, ['OWNER', 'ADMIN'], true);
+        });
+
+        \Illuminate\Support\Facades\Gate::define('manage-courts', function (\App\Models\User $user) {
+            return in_array($user->role, ['OWNER', 'ADMIN'], true);
+        });
     }
 }

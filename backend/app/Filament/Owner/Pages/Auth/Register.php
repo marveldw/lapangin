@@ -4,6 +4,7 @@ namespace App\Filament\Owner\Pages\Auth;
 
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Rules\IndonesianPhoneNumber;
 use Filament\Auth\Pages\Register as BaseRegister;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -22,7 +23,11 @@ class Register extends BaseRegister
                     ->label('Nomor WhatsApp / HP')
                     ->tel()
                     ->required()
-                    ->maxLength(20),
+                    ->unique('users', 'phone')
+                    ->rules([new IndonesianPhoneNumber()])
+                    ->validationMessages([
+                        'unique' => 'Nomor telepon ini sudah terdaftar pada akun lain.',
+                    ]),
                 $this->getPasswordFormComponent(),
                 $this->getPasswordConfirmationFormComponent(),
             ]);

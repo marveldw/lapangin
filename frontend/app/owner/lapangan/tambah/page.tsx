@@ -122,6 +122,13 @@ export default function TambahLapangan() {
   const [availableDistricts, setAvailableDistricts] = useState<string[]>([]);
   const [loadingDistricts, setLoadingDistricts] = useState(false);
 
+  // Redirect staf jika mencoba mengakses form penambahan lapangan
+  useEffect(() => {
+    if (user && user.role === 'STAFF') {
+      router.replace('/owner/lapangan');
+    }
+  }, [user, router]);
+
   // 1. Validasi Kuota Lapangan Langsung Saat Halaman Dibuka
   useEffect(() => {
     async function checkOwnerQuota() {

@@ -4,17 +4,18 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Rules\IndonesianPhoneNumber;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
-    // GET /api/customers — list owner's customers
+    // GET /api/customers
     public function index(Request $request)
     {
         $customers = Customer::where('owner_id', $request->user()->getTenantOwnerId())
             ->withCount('bookings')
-            ->orderBy('name')
-            ->paginate(25);
+            ->latest('customer_id')
+            ->get();
 
         return response()->json([
             'success' => true,
@@ -27,7 +28,7 @@ class CustomerController extends Controller
     {
         $validated = $request->validate([
             'name'  => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
+            'phone' => ['required', 'string', new IndonesianPhoneNumber()],
             'email' => 'nullable|email|max:255',
         ]);
 
@@ -81,7 +82,7 @@ class CustomerController extends Controller
 
         $validated = $request->validate([
             'name'  => 'sometimes|string|max:255',
-            'phone' => 'sometimes|string|max:20',
+            'phone' => ['sometimes', 'required', 'string', new IndonesianPhoneNumber()],
             'email' => 'nullable|email|max:255',
         ]);
 

@@ -111,6 +111,10 @@ export default function KelolaStafPage() {
       setFormError('Email staf wajib diisi.');
       return;
     }
+    if (!phone.trim()) {
+      setFormError('Nomor telepon staf wajib diisi.');
+      return;
+    }
     if (password.length < 8) {
       setFormError('Kata sandi minimal 8 karakter.');
       return;
@@ -122,7 +126,7 @@ export default function KelolaStafPage() {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password,
-        phone: phone.trim() || undefined,
+        phone: phone.trim(),
       };
 
       const res = await api.post('/owner/staff', payload, token);
@@ -462,12 +466,18 @@ export default function KelolaStafPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
-                  Nomor Telepon / WhatsApp <span className="text-gray-400 font-normal">(opsional)</span>
+                  Nomor Telepon / WhatsApp <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"
+                  required
+                  inputMode="numeric"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^\d+]/g, '');
+                    const sanitized = val.startsWith('+') ? '+' + val.slice(1).replace(/\+/g, '') : val.replace(/\+/g, '');
+                    setPhone(sanitized);
+                  }}
                   placeholder="081234567890"
                   className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-[#0b1c30] focus:outline-hidden focus:bg-white focus:border-[#006e2f] focus:ring-2 focus:ring-[#006e2f]/10"
                 />
