@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { api } from '@/lib/api';
 import { formatRupiah, formatDateIndo } from '@/lib/formatters';
@@ -75,8 +76,15 @@ const DUMMY_BLURRED_ROWS: BookingItem[] = [
 ];
 
 export default function PendapatanPage() {
+  const router = useRouter();
   const { token, user } = useAuth();
   
+  useEffect(() => {
+    if (user && user.role === 'STAFF') {
+      router.replace('/owner/dashboard');
+    }
+  }, [user, router]);
+
   const isFreePlan = user?.subscription?.plan_name === 'FREE' || !user?.subscription?.plan_name;
 
   const [stats, setStats] = useState<DashboardStats>({

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Rules\IndonesianPhoneNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -41,22 +42,22 @@ class StaffController extends Controller
             'email'    => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8',
             'phone'    => [
-                'nullable',
+                'required',
                 'string',
-                'unique:users,phone',
-                'regex:/^(\+62|62|0)8[1-9][0-9]{7,11}$/',
+                Rule::unique('users', 'phone'),
+                new IndonesianPhoneNumber(),
             ],
         ], [
-            'email.unique' => 'Email ini sudah terdaftar pada akun lain.',
-            'phone.unique' => 'Nomor telepon ini sudah terdaftar pada akun lain.',
-            'phone.regex'  => 'Format nomor telepon seluler Indonesia tidak valid (contoh: 08123456789).',
+            'email.unique'   => 'Email ini sudah terdaftar pada akun lain.',
+            'phone.required' => 'Nomor telepon staf wajib diisi.',
+            'phone.unique'   => 'Nomor telepon ini sudah terdaftar pada akun lain.',
         ]);
 
         $staff = User::create([
             'name'          => $validated['name'],
             'email'         => $validated['email'],
             'password_hash' => Hash::make($validated['password']),
-            'phone'         => $validated['phone'] ?? null,
+            'phone'         => $validated['phone'],
             'role'          => 'STAFF',
             'owner_id'      => $owner->user_id,
             'status'        => 'ACTIVE',
@@ -99,13 +100,35 @@ class StaffController extends Controller
 
         $validated = $request->validate([
             'name'     => 'sometimes|required|string|max:255',
+            'email'    => [
+                'sometimes',
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignoreModel($staff),
+            ],
+            'phone'    => [
+                'sometimes',
+                'required',
+                'string',
+                Rule::unique('users', 'phone')->ignoreModel($staff),
+                new IndonesianPhoneNumber(),
+            ],
             'status'   => ['sometimes', 'required', Rule::in(['ACTIVE', 'INACTIVE'])],
             'password' => 'sometimes|nullable|string|min:8',
+        ], [
+            'email.unique'   => 'Email ini sudah terdaftar pada akun lain.',
+            'phone.required' => 'Nomor telepon staf wajib diisi.',
+            'phone.unique'   => 'Nomor telepon ini sudah terdaftar pada akun lain.',
         ]);
 
         if (isset($validated['password']) && !empty($validated['password'])) {
             $validated['password_hash'] = Hash::make($validated['password']);
             unset($validated['password']);
+        }
+
+        if (array_key_exists('phone', $validated)) {
+            $validated['phone'] = !empty($validated['phone']) ? $validated['phone'] : null;
         }
 
         $staff->update($validated);

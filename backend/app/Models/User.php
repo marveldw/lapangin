@@ -125,11 +125,8 @@ class User extends Authenticatable implements FilamentUser
      */
     public function getActiveSubscriptionAttribute(): ?Subscription
     {
-        if ($this->relationLoaded('subscriptions')) {
-            return $this->subscriptions
-                ->where('status', 'ACTIVE')
-                ->sortByDesc('subscription_id')
-                ->first();
+        if ($this->role === 'STAFF' && $this->owner_id) {
+            return $this->parentOwner()->first()?->active_subscription;
         }
 
         return $this->subscriptions()

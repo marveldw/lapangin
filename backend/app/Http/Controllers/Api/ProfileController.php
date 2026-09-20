@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Wallet;
+use App\Rules\IndonesianPhoneNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -45,13 +46,12 @@ class ProfileController extends Controller
             'phone' => [
                 'required',
                 'string',
-                "unique:users,phone,{$user->user_id},user_id",
-                'regex:/^(\+62|62|0)8[1-9][0-9]{7,11}$/',
+                Rule::unique('users', 'phone')->ignoreModel($user),
+                new IndonesianPhoneNumber(),
             ],
         ], [
             'email.unique' => 'Email ini sudah terdaftar pada akun lain.',
             'phone.unique' => 'Nomor telepon ini sudah terdaftar pada akun lain.',
-            'phone.regex'  => 'Format nomor telepon seluler Indonesia tidak valid (contoh: 08123456789).',
         ]);
 
         $user->update($validated);

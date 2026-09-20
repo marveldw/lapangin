@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Rules\IndonesianPhoneNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -22,13 +24,13 @@ class AuthController extends Controller
             'phone'                 => [
                 'required',
                 'string',
-                'unique:users,phone',
-                'regex:/^(\+62|62|0)8[1-9][0-9]{7,11}$/',
+                Rule::unique('users', 'phone'),
+                new IndonesianPhoneNumber(),
             ],
             'role'                  => 'nullable|string|in:CUSTOMER,OWNER',
         ], [
+            'email.unique' => 'Email ini sudah terdaftar pada akun lain.',
             'phone.unique' => 'Nomor telepon ini sudah terdaftar pada akun lain.',
-            'phone.regex'  => 'Format nomor telepon seluler Indonesia tidak valid (contoh: 08123456789).',
         ]);
 
         $role = $validated['role'] ?? 'CUSTOMER';
@@ -144,18 +146,24 @@ class AuthController extends Controller
 
     private function formatUserResponse(User $user): array
     {
-        $user->loadMissing(['subscriptions.plan']);
+        $isStaff = ($user->role === 'STAFF' && $user->owner_id);
+        $targetUser = $isStaff ? $user->parentOwner()->first() : $user;
 
-        $activeSubscription = $user->subscriptions
-            ->where('status', 'ACTIVE')
-            ->sortByDesc('subscription_id')
-            ->first();
-
+        $activeSubscription = $targetUser?->active_subscription;
         $plan = $activeSubscription?->plan;
         $planName = $plan?->name ?? 'FREE';
         $maxCourts = ($planName === 'PRO' || ($plan && $plan->max_courts === null))
             ? null
             : ($plan?->max_courts ?? Plan::getMaxCourtsForPlan('FREE'));
+
+        $subscriptionData = ($user->role === 'OWNER' || $isStaff) ? [
+            'plan_id'                => $activeSubscription?->plan_id,
+            'plan_name'              => $planName,
+            'max_courts'             => $maxCourts,
+            'max_bookings_per_month' => $plan?->max_bookings_per_month,
+            'status'                 => $activeSubscription?->status ?? 'ACTIVE',
+            'is_inherited'           => $isStaff,
+        ] : null;
 
         return [
             'user_id'      => $user->user_id,
@@ -163,14 +171,9 @@ class AuthController extends Controller
             'email'        => $user->email,
             'phone'        => $user->phone,
             'role'         => $user->role,
+            'owner_id'     => $user->owner_id,
             'status'       => $user->status,
-            'subscription' => ($user->role === 'OWNER') ? [
-                'plan_id'                => $activeSubscription?->plan_id,
-                'plan_name'              => $planName,
-                'max_courts'             => $maxCourts,
-                'max_bookings_per_month' => $plan?->max_bookings_per_month,
-                'status'                 => $activeSubscription?->status ?? 'ACTIVE',
-            ] : null,
+            'subscription' => $subscriptionData,
         ];
     }
 }

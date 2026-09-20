@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Rules\IndonesianPhoneNumber;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Hash;
@@ -25,7 +26,12 @@ class UserForm
                     ->dehydrated(fn (?string $state) => filled($state))
                     ->required(fn (string $operation): bool => $operation === 'create'),
                 TextInput::make('phone')
-                    ->tel(),
+                    ->tel()
+                    ->unique('users', 'phone', ignoreRecord: true)
+                    ->rules([new IndonesianPhoneNumber()])
+                    ->validationMessages([
+                        'unique' => 'Nomor telepon ini sudah terdaftar pada akun lain.',
+                    ]),
                 TextInput::make('role')
                     ->required()
                     ->default('OWNER'),

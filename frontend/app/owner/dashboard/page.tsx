@@ -44,7 +44,8 @@ interface CourtItem {
 }
 
 export default function Dashboard() {
-  const { token, isLoading: authLoading } = useAuth();
+  const { token, user, isLoading: authLoading } = useAuth();
+  const isStaff = user?.role?.toUpperCase() === 'STAFF';
 
   const [stats, setStats] = useState<DashboardStats>({
     total_courts: 0,
@@ -157,32 +158,68 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Card 4: Pendapatan Hari Ini */}
-        <div className="bg-[#e5eeff] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-[#005ac2]/10 rounded-full blur-xl group-hover:bg-[#005ac2]/20 transition-colors"></div>
-          <div className="text-xs font-semibold tracking-wide text-[#3d4a3d] relative z-10">
-            Pendapatan Hari Ini
-          </div>
-          <div className="text-3xl font-bold tracking-tight text-[#0b1c30] relative z-10">
-            {formatRupiahCompact(stats.today_revenue)}
-          </div>
-          <div className="text-xs font-medium text-[#3d4a3d] mt-auto relative z-10">
-            {formatRupiah(stats.today_revenue)}
-          </div>
-        </div>
+        {/* Card 4 & 5: Finansial untuk Owner / Operasional untuk Staff */}
+        {!isStaff ? (
+          <>
+            {/* Card 4: Pendapatan Hari Ini */}
+            <div className="bg-[#e5eeff] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-[#005ac2]/10 rounded-full blur-xl group-hover:bg-[#005ac2]/20 transition-colors"></div>
+              <div className="text-xs font-semibold tracking-wide text-[#3d4a3d] relative z-10">
+                Pendapatan Hari Ini
+              </div>
+              <div className="text-3xl font-bold tracking-tight text-[#0b1c30] relative z-10">
+                {formatRupiahCompact(stats.today_revenue || 0)}
+              </div>
+              <div className="text-xs font-medium text-[#3d4a3d] mt-auto relative z-10">
+                {formatRupiah(stats.today_revenue || 0)}
+              </div>
+            </div>
 
-        {/* Card 5: Pendapatan Bulan Ini */}
-        <div className="bg-[#006e2f] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group text-[#ffffff]">
-          <div className="text-xs font-semibold tracking-wide text-[#4ae176] relative z-10">
-            Pendapatan Bulan Ini
-          </div>
-          <div className="text-3xl font-bold tracking-tight z-10 relative">
-            {formatRupiahCompact(stats.monthly_revenue)}
-          </div>
-          <div className="text-xs font-medium text-[#4ae176] mt-auto z-10 relative">
-            {formatRupiah(stats.monthly_revenue)}
-          </div>
-        </div>
+            {/* Card 5: Pendapatan Bulan Ini */}
+            <div className="bg-[#006e2f] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group text-[#ffffff]">
+              <div className="text-xs font-semibold tracking-wide text-[#4ae176] relative z-10">
+                Pendapatan Bulan Ini
+              </div>
+              <div className="text-3xl font-bold tracking-tight z-10 relative">
+                {formatRupiahCompact(stats.monthly_revenue || 0)}
+              </div>
+              <div className="text-xs font-medium text-[#4ae176] mt-auto z-10 relative">
+                {formatRupiah(stats.monthly_revenue || 0)}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Card 4 (Staff): Kelola Jadwal Operasional */}
+            <Link href="/owner/jadwal" className="bg-[#e5eeff] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-[#006e2f]/10 rounded-full blur-xl group-hover:bg-[#006e2f]/20 transition-colors"></div>
+              <div className="text-xs font-semibold tracking-wide text-[#3d4a3d] relative z-10 flex items-center justify-between">
+                <span>Jadwal Operasional</span>
+                <span className="material-symbols-outlined text-sm text-[#006e2f]">calendar_month</span>
+              </div>
+              <div className="text-xl font-bold tracking-tight text-[#0b1c30] relative z-10 mt-1">
+                Atur Jadwal
+              </div>
+              <div className="text-xs font-medium text-[#006e2f] mt-auto relative z-10 flex items-center gap-1">
+                Buka Kalender Lapangan &rarr;
+              </div>
+            </Link>
+
+            {/* Card 5 (Staff): Konfirmasi Booking */}
+            <Link href="/owner/booking" className="bg-[#006e2f] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group text-[#ffffff]">
+              <div className="text-xs font-semibold tracking-wide text-[#4ae176] relative z-10 flex items-center justify-between">
+                <span>Konfirmasi Booking</span>
+                <span className="material-symbols-outlined text-sm text-white">confirmation_number</span>
+              </div>
+              <div className="text-xl font-bold tracking-tight z-10 relative mt-1">
+                Kelola Pesanan
+              </div>
+              <div className="text-xs font-medium text-[#4ae176] mt-auto z-10 relative flex items-center gap-1">
+                Lihat Semua Booking &rarr;
+              </div>
+            </Link>
+          </>
+        )}
 
       </div>
 
@@ -192,67 +229,102 @@ export default function Dashboard() {
         {/* Konten Kiri */}
         <div className="lg:col-span-2 flex flex-col gap-6">
           
-          {/* Grafik Tren Pendapatan (Desain Baru: Bar Chart) */}
-          <div className="bg-white rounded-2xl shadow-sm border border-[#bccbb9]/40 flex flex-col h-[320px]">
-            <div className="p-5 pb-0 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-[#0b1c30]">Tren Pendapatan</h3>
-              <span className="bg-[#f8f9ff] text-[#006e2f] border border-[#bccbb9]/30 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                Bulan Ini
-              </span>
-            </div>
-            
-            <div className="flex-1 px-5 pb-8 pt-4 flex">
-              {/* Sumbu Y (Skala Rupiah) */}
-              <div className="flex flex-col justify-between text-[10px] font-bold text-[#3d4a3d]/60 pb-1 pr-4 text-right shrink-0 h-full">
-                <span>Rp 10Jt</span>
-                <span>Rp 7.5Jt</span>
-                <span>Rp 5Jt</span>
-                <span>Rp 2.5Jt</span>
-                <span>Rp 0</span>
+          {/* Grafik Tren Pendapatan (Owner) / Panel Operasional (Staff) */}
+          {!isStaff ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-[#bccbb9]/40 flex flex-col h-[320px]">
+              <div className="p-5 pb-0 flex justify-between items-center">
+                <h3 className="text-lg font-bold text-[#0b1c30]">Tren Pendapatan</h3>
+                <span className="bg-[#f8f9ff] text-[#006e2f] border border-[#bccbb9]/30 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                  Bulan Ini
+                </span>
               </div>
               
-              {/* Area Grafik Utama */}
-              <div className="flex-1 relative flex items-end justify-between gap-2 border-b-2 border-[#bccbb9]/40 h-full">
-                
-                {/* Garis Bantu (Grid Lines) */}
-                <div className="absolute inset-0 flex flex-col justify-between z-0">
-                  <div className="w-full border-t border-dashed border-[#bccbb9]/60 h-0"></div>
-                  <div className="w-full border-t border-dashed border-[#bccbb9]/60 h-0"></div>
-                  <div className="w-full border-t border-dashed border-[#bccbb9]/60 h-0"></div>
-                  <div className="w-full border-t border-dashed border-[#bccbb9]/60 h-0"></div>
-                  <div className="w-full h-0"></div>
+              <div className="flex-1 px-5 pb-8 pt-4 flex">
+                {/* Sumbu Y (Skala Rupiah) */}
+                <div className="flex flex-col justify-between text-[10px] font-bold text-[#3d4a3d]/60 pb-1 pr-4 text-right shrink-0 h-full">
+                  <span>Rp 10Jt</span>
+                  <span>Rp 7.5Jt</span>
+                  <span>Rp 5Jt</span>
+                  <span>Rp 2.5Jt</span>
+                  <span>Rp 0</span>
                 </div>
-
-                {/* Data Batang (Bars) */}
-                {[
-                  { label: 'Minggu 1', value: 'Rp 2.400.000', height: '24%' },
-                  { label: 'Minggu 2', value: 'Rp 4.800.000', height: '48%' },
-                  { label: 'Minggu 3', value: 'Rp 6.200.000', height: '62%' },
-                  { label: 'Minggu 4', value: 'Rp 9.500.000', height: '95%' },
-                ].map((bar, i) => (
-                  <div key={i} className="relative flex flex-col items-center flex-1 h-full justify-end group z-10">
-                    
-                    {/* Tooltip Angka Detail */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-9 bg-[#0b1c30] text-white text-[11px] font-bold py-1.5 px-3 rounded-lg shadow-md whitespace-nowrap pointer-events-none z-20">
-                      {bar.value}
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#0b1c30]"></div>
-                    </div>
-                    
-                    {/* Balok Grafik */}
-                    <div 
-                      className="w-10 sm:w-16 md:w-20 bg-[#006e2f]/80 hover:bg-[#006e2f] rounded-t-md transition-all duration-300 cursor-pointer"
-                      style={{ height: bar.height }}
-                    ></div>
-                    
-                    {/* Label Sumbu X */}
-                    <div className="absolute -bottom-7 text-[11px] font-bold text-[#3d4a3d] whitespace-nowrap">
-                      {bar.label}
-                    </div>
+                
+                {/* Area Grafik Utama */}
+                <div className="flex-1 relative flex items-end justify-between gap-2 border-b-2 border-[#bccbb9]/40 h-full">
+                  
+                  {/* Garis Bantu (Grid Lines) */}
+                  <div className="absolute inset-0 flex flex-col justify-between z-0">
+                    <div className="w-full border-t border-dashed border-[#bccbb9]/60 h-0"></div>
+                    <div className="w-full border-t border-dashed border-[#bccbb9]/60 h-0"></div>
+                    <div className="w-full border-t border-dashed border-[#bccbb9]/60 h-0"></div>
+                    <div className="w-full border-t border-dashed border-[#bccbb9]/60 h-0"></div>
+                    <div className="w-full h-0"></div>
                   </div>
-                ))}
+
+                  {/* Data Batang (Bars) */}
+                  {[
+                    { label: 'Minggu 1', value: 'Rp 2.400.000', height: '24%' },
+                    { label: 'Minggu 2', value: 'Rp 4.800.000', height: '48%' },
+                    { label: 'Minggu 3', value: 'Rp 6.200.000', height: '62%' },
+                    { label: 'Minggu 4', value: 'Rp 9.500.000', height: '95%' },
+                  ].map((bar, i) => (
+                    <div key={i} className="relative flex flex-col items-center flex-1 h-full justify-end group z-10">
+                      
+                      {/* Tooltip Angka Detail */}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-9 bg-[#0b1c30] text-white text-[11px] font-bold py-1.5 px-3 rounded-lg shadow-md whitespace-nowrap pointer-events-none z-20">
+                        {bar.value}
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#0b1c30]"></div>
+                      </div>
+                      
+                      {/* Balok Grafik */}
+                      <div 
+                        className="w-10 sm:w-16 md:w-20 bg-[#006e2f]/80 hover:bg-[#006e2f] rounded-t-md transition-all duration-300 cursor-pointer"
+                        style={{ height: bar.height }}
+                      ></div>
+                      
+                      {/* Label Sumbu X */}
+                      <div className="absolute -bottom-7 text-[11px] font-bold text-[#3d4a3d] whitespace-nowrap">
+                        {bar.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-white rounded-2xl shadow-sm border border-[#bccbb9]/40 p-6 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-[#006e2f] font-bold text-xs uppercase tracking-wider mb-1">
+                  <span className="material-symbols-outlined text-base">support_agent</span>
+                  Fokus Operasional Harian
+                </div>
+                <h3 className="text-lg font-bold text-[#0b1c30]">Tugas & Aktivitas Staf</h3>
+                <p className="text-xs text-[#3d4a3d] mt-1 leading-relaxed">
+                  Pantau ketersediaan slot lapangan, verifikasi konfirmasi reservasi pelanggan, dan kelola jadwal bermain secara real-time.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                <Link href="/owner/booking" className="p-4 rounded-xl bg-[#f8f9ff] border border-[#bccbb9]/30 hover:bg-[#e5eeff] transition-colors flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-700 flex items-center justify-center font-bold shrink-0">
+                    <span className="material-symbols-outlined">pending_actions</span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-[#0b1c30]">Konfirmasi Booking</p>
+                    <p className="text-[11px] text-[#3d4a3d]">{stats.pending_bookings || 0} booking perlu tindakan</p>
+                  </div>
+                </Link>
+                <Link href="/owner/jadwal" className="p-4 rounded-xl bg-[#f8f9ff] border border-[#bccbb9]/30 hover:bg-[#e5eeff] transition-colors flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center font-bold shrink-0">
+                    <span className="material-symbols-outlined">event_available</span>
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-[#0b1c30]">Jadwal Hari Ini</p>
+                    <p className="text-[11px] text-[#3d4a3d]">{stats.today_bookings} jadwal terjadwal</p>
+                  </div>
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Tabel Booking Terbaru (Dirapikan) */}
           <div className="bg-[#ffffff] rounded-xl shadow-sm border border-[#bccbb9]/30 overflow-hidden">
@@ -297,7 +369,11 @@ export default function Dashboard() {
                     <th className="p-4 border-b border-[#bccbb9]/20">Lapangan</th>
                     <th className="p-4 border-b border-[#bccbb9]/20">Waktu</th>
                     <th className="p-4 border-b border-[#bccbb9]/20 text-center">Status</th>
-                    <th className="p-4 pr-6 border-b border-[#bccbb9]/20 text-right">Harga</th>
+                    {!isStaff ? (
+                      <th className="p-4 pr-6 border-b border-[#bccbb9]/20 text-right">Harga</th>
+                    ) : (
+                      <th className="p-4 pr-6 border-b border-[#bccbb9]/20 text-right">Aksi</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="text-sm">
@@ -358,9 +434,17 @@ export default function Dashboard() {
                               {b.status}
                             </span>
                           </td>
-                          <td className="p-4 pr-6 border-b border-[#bccbb9]/10 text-right font-bold text-[#006e2f] text-sm">
-                            {formatRupiah(b.price)}
-                          </td>
+                          {!isStaff ? (
+                            <td className="p-4 pr-6 border-b border-[#bccbb9]/10 text-right font-bold text-[#006e2f] text-sm">
+                              {formatRupiah(b.price)}
+                            </td>
+                          ) : (
+                            <td className="p-4 pr-6 border-b border-[#bccbb9]/10 text-right">
+                              <Link href="/owner/booking" className="text-xs font-semibold text-[#006e2f] hover:underline flex items-center justify-end gap-1">
+                                Kelola <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                              </Link>
+                            </td>
+                          )}
                         </tr>
                       );
                     });
@@ -378,9 +462,11 @@ export default function Dashboard() {
           <div className="bg-[#ffffff] rounded-xl shadow-sm border border-[#bccbb9]/30 overflow-hidden flex flex-col">
             <div className="p-6 pb-4 flex justify-between items-center">
               <h3 className="text-xl font-semibold text-[#0b1c30]">Lapangan Anda</h3>
-              <Link href="/owner/lapangan/tambah" className="text-xs font-semibold text-[#006e2f] hover:underline flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">add</span> Tambah
-              </Link>
+              {!isStaff && (
+                <Link href="/owner/lapangan/tambah" className="text-xs font-semibold text-[#006e2f] hover:underline flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[16px]">add</span> Tambah
+                </Link>
+              )}
             </div>
             
             <div className="px-6 pb-4 flex gap-2 overflow-x-auto">
@@ -408,13 +494,19 @@ export default function Dashboard() {
                 <div className="text-center py-8">
                   <span className="material-symbols-outlined text-4xl text-[#3d4a3d]/40 mb-2">stadium</span>
                   <p className="text-sm font-semibold text-[#0b1c30]">Belum Ada Lapangan</p>
-                  <p className="text-xs text-[#3d4a3d] mt-1 mb-4">Tambahkan lapangan pertama Anda untuk mulai menerima booking</p>
-                  <Link 
-                    href="/owner/lapangan/tambah"
-                    className="inline-block bg-[#006e2f] text-white px-4 py-2 rounded-lg text-xs font-semibold"
-                  >
-                    + Tambah Lapangan
-                  </Link>
+                  <p className="text-xs text-[#3d4a3d] mt-1 mb-4">
+                    {!isStaff 
+                      ? 'Tambahkan lapangan pertama Anda untuk mulai menerima booking' 
+                      : 'Belum ada lapangan yang didaftarkan oleh venue owner'}
+                  </p>
+                  {!isStaff && (
+                    <Link 
+                      href="/owner/lapangan/tambah"
+                      className="inline-block bg-[#006e2f] text-white px-4 py-2 rounded-lg text-xs font-semibold"
+                    >
+                      + Tambah Lapangan
+                    </Link>
+                  )}
                 </div>
               ) : (
                 courts.map((c) => (
