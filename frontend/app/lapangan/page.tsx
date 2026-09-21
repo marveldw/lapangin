@@ -45,6 +45,12 @@ function CariLapanganContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
   // 1. Fetch cities & sports on mount
   useEffect(() => {
     async function fetchMetadata() {
@@ -87,7 +93,7 @@ function CariLapanganContent() {
     fetchDistricts();
   }, [city]);
 
-  // 3. Fetch courts from API
+  // 3. Fetch courts from API (server-side pagination)
   const fetchCourts = async () => {
     setLoading(true);
     setError(null);
@@ -97,13 +103,20 @@ function CariLapanganContent() {
       if (city) queryParams.append('city', city);
       if (district) queryParams.append('district', district);
       if (sportType) queryParams.append('sport_type', sportType);
+      queryParams.append('page', String(currentPage));
+      queryParams.append('per_page', String(perPage));
 
       const res = await api.get(`/public/courts?${queryParams.toString()}`);
       if (res.success && res.data) {
-        const items = Array.isArray(res.data.data) ? res.data.data : res.data;
-        setCourts(items || []);
+        const paginated = res.data;
+        const items = Array.isArray(paginated.data) ? paginated.data : [];
+        setCourts(items);
+        setTotalPages(paginated.last_page ?? 1);
+        setTotalItems(paginated.total ?? items.length);
       } else {
         setCourts([]);
+        setTotalPages(1);
+        setTotalItems(0);
         if (res.message) setError(res.message);
       }
     } catch (err) {
@@ -114,10 +127,17 @@ function CariLapanganContent() {
     }
   };
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, city, district, sportType]);
+
+  // Fetch courts when filters, page, or perPage change
   useEffect(() => {
     fetchCourts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [city, district, sportType, debouncedSearch]);
+  }, [city, district, sportType, debouncedSearch, currentPage, perPage]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,18 +167,7 @@ function CariLapanganContent() {
     return result;
   }, [courts, minPrice, maxPrice, sortBy]);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, city, district, sportType, minPrice, maxPrice, sortBy]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredAndSortedCourts.length / perPage));
-  const paginatedCourts = useMemo(() => {
-    const start = (currentPage - 1) * perPage;
-    return filteredAndSortedCourts.slice(start, start + perPage);
-  }, [filteredAndSortedCourts, currentPage, perPage]);
+  // Note: currentPage, perPage, totalPages, totalItems are now declared above with other state
 
   const handleResetFilters = () => {
     setSearch('');
@@ -344,7 +353,7 @@ function CariLapanganContent() {
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-bold text-[#0b1c30]">Menampilkan Lapangan</h2>
                 <span className="text-xs font-bold text-[#006e2f] bg-[#e5eeff] px-3 py-1.5 rounded-full">
-                  {filteredAndSortedCourts.length} Ditemukan
+                  {totalItems} Ditemukan
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -388,7 +397,7 @@ function CariLapanganContent() {
                   </div>
                 ))}
               </div>
-            ) : filteredAndSortedCourts.length === 0 ? (
+            ) : courts.length === 0 ? (
               /* Empty State */
               <div className="bg-white rounded-2xl border border-[#bccbb9]/30 p-12 text-center flex flex-col items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-[#eff4ff] flex items-center justify-center text-[#3d4a3d]">
@@ -410,7 +419,7 @@ function CariLapanganContent() {
               <>
                 {/* Courts Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-                {paginatedCourts.map((court) => (
+                {filteredAndSortedCourts.map((court) => (
                   <div
                     key={court.court_id}
                     className="bg-white rounded-xl shadow-xs border border-[#bccbb9]/30 overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col relative group"
@@ -475,12 +484,12 @@ function CariLapanganContent() {
               </div>
 
               {/* Pagination Controls (Item 3) */}
-              {filteredAndSortedCourts.length > 0 && (
+              {totalItems > 0 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-5 bg-white rounded-2xl border border-[#bccbb9]/30 shadow-xs mt-6">
                   <div className="flex items-center gap-3 text-xs text-[#3d4a3d]">
                     <span>
                       Menampilkan {(currentPage - 1) * perPage + 1} -{' '}
-                      {Math.min(currentPage * perPage, filteredAndSortedCourts.length)} dari {filteredAndSortedCourts.length} lapangan
+                      {Math.min(currentPage * perPage, totalItems)} dari {totalItems} lapangan
                     </span>
                     <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-3">
                       <span>Per halaman:</span>
