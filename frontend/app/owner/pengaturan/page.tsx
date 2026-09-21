@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { api } from '@/lib/api';
 import { formatRupiah } from '@/lib/formatters';
@@ -14,12 +15,38 @@ interface PlanData {
   max_courts: number | null;
   max_bookings_per_month: number | null;
   is_active: boolean;
-} 
+}
 
-export default function PengaturanPage() {
+function getInitialTab(param?: string | null): 'PROFIL' | 'BANK' | 'SECURITY' {
+  if (!param) return 'PROFIL';
+  const lower = param.toLowerCase();
+  if (lower === 'langganan' || lower === 'subscription' || lower === 'paket_langganan' || lower === 'security') {
+    return 'SECURITY';
+  }
+  if (lower === 'bank') {
+    return 'BANK';
+  }
+  return 'PROFIL';
+}
+
+function PengaturanContent() {
+  const searchParams = useSearchParams();
   const { user, token, refreshUser } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'PROFIL' | 'BANK' | 'SECURITY'>('PROFIL');
+  const tabParam = searchParams?.get('tab');
+  const [activeTab, setActiveTab] = useState<'PROFIL' | 'BANK' | 'SECURITY'>(() => getInitialTab(tabParam));
+
+  useEffect(() => {
+    if (tabParam) {
+      if (tabParam === 'langganan' || tabParam === 'subscription' || tabParam.toLowerCase() === 'security' || tabParam === 'paket_langganan') {
+        setActiveTab('SECURITY');
+      } else if (tabParam.toLowerCase() === 'bank') {
+        setActiveTab('BANK');
+      } else if (tabParam.toLowerCase() === 'profil') {
+        setActiveTab('PROFIL');
+      }
+    }
+  }, [tabParam]);
   const [name, setName] = useState(user?.name || 'Owner Venue');
   const [email, setEmail] = useState(user?.email || 'owner@lapangin.com');
   const [phone, setPhone] = useState(user?.phone || '081234567890');
@@ -242,33 +269,30 @@ export default function PengaturanPage() {
         <button
           type="button"
           onClick={() => setActiveTab('PROFIL')}
-          className={`pb-3 border-b-2 font-bold transition-colors cursor-pointer ${
-            activeTab === 'PROFIL'
+          className={`pb-3 border-b-2 font-bold transition-colors cursor-pointer ${activeTab === 'PROFIL'
               ? 'border-[#006e2f] text-[#006e2f]'
               : 'border-transparent text-[#3d4a3d] hover:text-[#0b1c30]'
-          }`}
+            }`}
         >
           Profil Venue
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('BANK')}
-          className={`pb-3 border-b-2 font-bold transition-colors cursor-pointer ${
-            activeTab === 'BANK'
+          className={`pb-3 border-b-2 font-bold transition-colors cursor-pointer ${activeTab === 'BANK'
               ? 'border-[#006e2f] text-[#006e2f]'
               : 'border-transparent text-[#3d4a3d] hover:text-[#0b1c30]'
-          }`}
+            }`}
         >
           Rekening Pencairan
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('SECURITY')}
-          className={`pb-3 border-b-2 font-bold transition-colors cursor-pointer ${
-            activeTab === 'SECURITY'
+          className={`pb-3 border-b-2 font-bold transition-colors cursor-pointer ${activeTab === 'SECURITY'
               ? 'border-[#006e2f] text-[#006e2f]'
               : 'border-transparent text-[#3d4a3d] hover:text-[#0b1c30]'
-          }`}
+            }`}
         >
           Paket Langganan
         </button>
@@ -570,7 +594,7 @@ export default function PengaturanPage() {
                     <span className="text-3xl font-extrabold text-[#0b1c30]">{formatRupiah(freePlan.price)}</span>
                     <span className="text-xs text-[#3d4a3d] mb-1.5">/ bulan</span>
                   </div>
-                  
+
                   <ul className="text-xs text-[#3d4a3d] flex flex-col gap-4 font-medium flex-1 mt-4">
                     <li className="flex items-center gap-2.5">
                       <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
@@ -617,7 +641,7 @@ export default function PengaturanPage() {
                     <span className="text-3xl font-extrabold text-[#0b1c30]">{formatRupiah(basicPlan.price)}</span>
                     <span className="text-xs text-[#3d4a3d] mb-1.5">/ bulan</span>
                   </div>
-                  
+
                   <ul className="text-xs text-[#3d4a3d] flex flex-col gap-4 font-medium flex-1 mt-4">
                     <li className="flex items-center gap-2.5">
                       <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
@@ -672,7 +696,7 @@ export default function PengaturanPage() {
                     <span className="text-3xl font-extrabold text-[#0b1c30]">{formatRupiah(proPlan.price)}</span>
                     <span className="text-xs text-[#3d4a3d] mb-1.5">/ bulan</span>
                   </div>
-                  
+
                   <ul className="text-xs text-[#3d4a3d] flex flex-col gap-4 font-medium flex-1 mt-4">
                     <li className="flex items-center gap-2.5">
                       <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
@@ -739,5 +763,13 @@ export default function PengaturanPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function PengaturanPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[400px] text-sm text-[#3d4a3d]">Memuat pengaturan...</div>}>
+      <PengaturanContent />
+    </Suspense>
   );
 }

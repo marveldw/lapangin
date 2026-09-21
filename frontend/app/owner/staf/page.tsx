@@ -230,7 +230,7 @@ export default function KelolaStafPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-full flex flex-col gap-6">
       {/* Header & Deskripsi */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -254,8 +254,8 @@ export default function KelolaStafPage() {
       {/* Info Card Role & Wewenang */}
       <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#006e2f] text-white flex items-center justify-center shrink-0 shadow-xs">
-            <span className="material-symbols-outlined text-[22px]">shield_person</span>
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-[#006e2f] border border-emerald-300/60 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[22px]">verified_user</span>
           </div>
           <div>
             <h3 className="text-sm font-bold text-[#0b1c30]">Perlindungan Akses Multi-Tenant</h3>
@@ -269,7 +269,7 @@ export default function KelolaStafPage() {
 
       {/* Toolbar & Pencarian */}
       <div className="bg-white rounded-2xl p-4 border border-[#bccbb9]/30 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1 w-full">
           <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">
             search
           </span>
@@ -307,8 +307,8 @@ export default function KelolaStafPage() {
           </div>
         ) : filteredStaff.length === 0 ? (
           <div className="py-16 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-3 text-gray-400">
-              <span className="material-symbols-outlined text-3xl">group_off</span>
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 border border-slate-200 flex items-center justify-center mx-auto mb-3">
+              <span className="material-symbols-outlined text-[28px]">person_search</span>
             </div>
             <h3 className="text-base font-bold text-[#0b1c30]">Belum Ada Staf</h3>
             <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">

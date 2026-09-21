@@ -37,9 +37,7 @@ export default function FaqSection() {
 
         {/* Left: Title & Subtitle */}
         <div className="lg:w-80 shrink-0">
-          <p className="text-[11px] font-bold tracking-widest text-[#006e2f] uppercase mb-2">
-            FAQ
-          </p>
+          
           <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
             Pertanyaan umum
           </h2>

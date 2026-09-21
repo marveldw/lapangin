@@ -111,11 +111,11 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col w-full max-w-6xl mx-auto gap-8 pb-12">
-      
+    <div className="flex flex-col w-full gap-8 pb-12">
+
       {/* 5 Cards Ringkasan Dashboard — Termasuk Status Pending */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        
+
         {/* Card 1: Total Lapangan */}
         <div className="bg-[#e5eeff] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-[#006e2f]/10 rounded-full blur-xl group-hover:bg-[#006e2f]/20 transition-colors"></div>
@@ -148,7 +148,7 @@ export default function Dashboard() {
         <div className="bg-[#e5eeff] rounded-xl p-5 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-[#565e74]/10 rounded-full blur-xl group-hover:bg-[#565e74]/20 transition-colors"></div>
           <div className="text-xs font-semibold tracking-wide text-[#3d4a3d] relative z-10">
-            Menunggu (Pending)
+            Menunggu Konfirmasi
           </div>
           <div className="text-3xl font-bold tracking-tight text-[#0b1c30] relative z-10">
             {stats.pending_bookings || 0}
@@ -225,10 +225,10 @@ export default function Dashboard() {
 
       {/* Grid Utama: Kiri (Span 2) & Kanan (Span 1) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Konten Kiri */}
         <div className="lg:col-span-2 flex flex-col gap-6">
-          
+
           {/* Grafik Tren Pendapatan (Owner) / Panel Operasional (Staff) */}
           {!isStaff ? (
             <div className="bg-white rounded-2xl shadow-sm border border-[#bccbb9]/40 flex flex-col h-[320px]">
@@ -238,7 +238,7 @@ export default function Dashboard() {
                   Bulan Ini
                 </span>
               </div>
-              
+
               <div className="flex-1 px-5 pb-8 pt-4 flex">
                 {/* Sumbu Y (Skala Rupiah) */}
                 <div className="flex flex-col justify-between text-[10px] font-bold text-[#3d4a3d]/60 pb-1 pr-4 text-right shrink-0 h-full">
@@ -248,10 +248,10 @@ export default function Dashboard() {
                   <span>Rp 2.5Jt</span>
                   <span>Rp 0</span>
                 </div>
-                
+
                 {/* Area Grafik Utama */}
                 <div className="flex-1 relative flex items-end justify-between gap-2 border-b-2 border-[#bccbb9]/40 h-full">
-                  
+
                   {/* Garis Bantu (Grid Lines) */}
                   <div className="absolute inset-0 flex flex-col justify-between z-0">
                     <div className="w-full border-t border-dashed border-[#bccbb9]/60 h-0"></div>
@@ -269,19 +269,19 @@ export default function Dashboard() {
                     { label: 'Minggu 4', value: 'Rp 9.500.000', height: '95%' },
                   ].map((bar, i) => (
                     <div key={i} className="relative flex flex-col items-center flex-1 h-full justify-end group z-10">
-                      
+
                       {/* Tooltip Angka Detail */}
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-9 bg-[#0b1c30] text-white text-[11px] font-bold py-1.5 px-3 rounded-lg shadow-md whitespace-nowrap pointer-events-none z-20">
                         {bar.value}
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#0b1c30]"></div>
                       </div>
-                      
+
                       {/* Balok Grafik */}
-                      <div 
+                      <div
                         className="w-10 sm:w-16 md:w-20 bg-[#006e2f]/80 hover:bg-[#006e2f] rounded-t-md transition-all duration-300 cursor-pointer"
                         style={{ height: bar.height }}
                       ></div>
-                      
+
                       {/* Label Sumbu X */}
                       <div className="absolute -bottom-7 text-[11px] font-bold text-[#3d4a3d] whitespace-nowrap">
                         {bar.label}
@@ -335,22 +335,20 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => setBookingFilter('ALL')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      bookingFilter === 'ALL'
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${bookingFilter === 'ALL'
                         ? 'bg-white text-[#006e2f] shadow-xs'
                         : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                      }`}
                   >
                     Semua ({recentBookings.length})
                   </button>
                   <button
                     type="button"
                     onClick={() => setBookingFilter('PENDING')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      bookingFilter === 'PENDING'
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${bookingFilter === 'PENDING'
                         ? 'bg-amber-600 text-white shadow-xs'
                         : 'text-amber-800 hover:text-amber-900'
-                    }`}
+                      }`}
                   >
                     Pending ({stats.pending_bookings || 0})
                   </button>
@@ -424,13 +422,12 @@ export default function Dashboard() {
                             </div>
                           </td>
                           <td className="p-4 border-b border-[#bccbb9]/10 text-center">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase border ${
-                              b.status === 'CONFIRMED' || b.status === 'COMPLETED' 
-                                ? 'bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]' : 
-                              b.status === 'PENDING' 
-                                ? 'bg-[#fffbeb] text-[#b45309] border-[#fde68a]' : 
-                              'bg-[#fef2f2] text-[#b91c1c] border-[#fecaca]'
-                            }`}>
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase border ${b.status === 'CONFIRMED' || b.status === 'COMPLETED'
+                                ? 'bg-[#f0fdf4] text-[#166534] border-[#bbf7d0]' :
+                                b.status === 'PENDING'
+                                  ? 'bg-[#fffbeb] text-[#b45309] border-[#fde68a]' :
+                                  'bg-[#fef2f2] text-[#b91c1c] border-[#fecaca]'
+                              }`}>
                               {b.status}
                             </span>
                           </td>
@@ -457,7 +454,7 @@ export default function Dashboard() {
 
         {/* Konten Kanan (Jadwal & Lapangan) */}
         <div className="flex flex-col gap-6">
-          
+
           {/* Daftar Lapangan */}
           <div className="bg-[#ffffff] rounded-xl shadow-sm border border-[#bccbb9]/30 overflow-hidden flex flex-col">
             <div className="p-6 pb-4 flex justify-between items-center">
@@ -468,7 +465,7 @@ export default function Dashboard() {
                 </Link>
               )}
             </div>
-            
+
             <div className="px-6 pb-4 flex gap-2 overflow-x-auto">
               {courts.length === 0 ? (
                 <p className="text-xs text-[#3d4a3d]">Belum ada lapangan terdaftar</p>
@@ -477,30 +474,29 @@ export default function Dashboard() {
                   <button
                     key={court.court_id}
                     onClick={() => setSelectedCourtId(court.court_id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
-                      selectedCourtId === court.court_id
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${selectedCourtId === court.court_id
                         ? 'bg-[#006e2f] text-white shadow-sm'
                         : 'bg-[#eff4ff] text-[#3d4a3d] hover:bg-[#e5eeff]'
-                    }`}
+                      }`}
                   >
                     {court.name}
                   </button>
                 ))
               )}
             </div>
-            
+
             <div className="flex-1 overflow-y-auto max-h-[400px] px-6 pb-6 flex flex-col gap-3">
               {courts.length === 0 ? (
                 <div className="text-center py-8">
                   <span className="material-symbols-outlined text-4xl text-[#3d4a3d]/40 mb-2">stadium</span>
                   <p className="text-sm font-semibold text-[#0b1c30]">Belum Ada Lapangan</p>
                   <p className="text-xs text-[#3d4a3d] mt-1 mb-4">
-                    {!isStaff 
-                      ? 'Tambahkan lapangan pertama Anda untuk mulai menerima booking' 
+                    {!isStaff
+                      ? 'Tambahkan lapangan pertama Anda untuk mulai menerima booking'
                       : 'Belum ada lapangan yang didaftarkan oleh venue owner'}
                   </p>
                   {!isStaff && (
-                    <Link 
+                    <Link
                       href="/owner/lapangan/tambah"
                       className="inline-block bg-[#006e2f] text-white px-4 py-2 rounded-lg text-xs font-semibold"
                     >
@@ -515,7 +511,7 @@ export default function Dashboard() {
                       <p className="font-semibold text-sm text-[#0b1c30]">{c.name}</p>
                       <p className="text-xs text-[#3d4a3d]">{c.sport_type} • Status: {c.status}</p>
                     </div>
-                    <Link 
+                    <Link
                       href={`/owner/lapangan`}
                       className="p-2 text-[#006e2f] hover:bg-[#e5eeff] rounded-lg transition-colors"
                     >
@@ -534,8 +530,8 @@ export default function Dashboard() {
             </div>
             <h4 className="text-lg font-bold text-[#0b1c30] relative z-10 w-4/5">Kelola Jadwal & Booking Lebih Efisien</h4>
             <p className="text-xs text-[#3d4a3d] mt-1 relative z-10">Pantau operasional lapangan secara real-time dari satu dashboard.</p>
-            <Link 
-              href="/owner/jadwal" 
+            <Link
+              href="/owner/jadwal"
               className="mt-4 bg-[#006e2f] text-[#ffffff] px-5 py-2 rounded-lg text-xs font-semibold self-start relative z-10 hover:bg-[#006e2f]/90 transition-colors shadow-sm"
             >
               Buka Jadwal Lengkap

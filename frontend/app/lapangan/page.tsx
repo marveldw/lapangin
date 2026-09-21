@@ -22,6 +22,17 @@ interface Court {
   image_url: string | null;
 }
 
+// Helper: format angka dengan pemisah ribuan (titik)
+function formatPriceInput(value: string): string {
+  const digits = value.replace(/\D/g, '');
+  if (!digits) return '';
+  return Number(digits).toLocaleString('id-ID');
+}
+
+function getRawPrice(formatted: string): string {
+  return formatted.replace(/\D/g, '');
+}
+
 function CariLapanganContent() {
   const searchParams = useSearchParams();
 
@@ -148,8 +159,10 @@ function CariLapanganContent() {
   const filteredAndSortedCourts = useMemo(() => {
     let result = [...courts];
 
-    const min = minPrice ? parseFloat(minPrice) : null;
-    const max = maxPrice ? parseFloat(maxPrice) : null;
+    const rawMin = getRawPrice(minPrice);
+    const rawMax = getRawPrice(maxPrice);
+    const min = rawMin ? parseFloat(rawMin) : null;
+    const max = rawMax ? parseFloat(rawMax) : null;
 
     if (min !== null && !isNaN(min)) {
       result = result.filter((c) => c.price_per_hour >= min);
@@ -304,10 +317,11 @@ function CariLapanganContent() {
                     Rp
                   </span>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={minPrice}
-                    onChange={(e) => setMinPrice(e.target.value)}
-                    placeholder="Min (e.g. 50000)"
+                    onChange={(e) => setMinPrice(formatPriceInput(e.target.value))}
+                    placeholder="50.000"
                     className="w-full bg-[#f8f9ff] py-2 pl-9 pr-3 rounded-xl border border-[#bccbb9]/40 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none text-xs text-[#0b1c30]"
                   />
                 </div>
@@ -316,10 +330,11 @@ function CariLapanganContent() {
                     Rp
                   </span>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={maxPrice}
-                    onChange={(e) => setMaxPrice(e.target.value)}
-                    placeholder="Maks (e.g. 200000)"
+                    onChange={(e) => setMaxPrice(formatPriceInput(e.target.value))}
+                    placeholder="200.000"
                     className="w-full bg-[#f8f9ff] py-2 pl-9 pr-3 rounded-xl border border-[#bccbb9]/40 focus:border-[#006e2f] focus:ring-1 focus:ring-[#006e2f] outline-none text-xs text-[#0b1c30]"
                   />
                 </div>
@@ -336,7 +351,7 @@ function CariLapanganContent() {
             </div>
 
             {/* Tips Banner */}
-            <div className="bg-[#e5eeff] rounded-2xl p-5 flex flex-col gap-2 border-l-4 border-[#006e2f]">
+            <div className="bg-emerald-50/70 border border-emerald-100 border-l-4 border-l-[#006e2f] rounded-2xl p-5 flex flex-col gap-2">
               <div className="flex items-center gap-1.5 text-[#006e2f]">
                 <span className="material-symbols-outlined text-[18px]">lightbulb</span>
                 <span className="font-bold text-sm">Tips Booking</span>
@@ -352,7 +367,7 @@ function CariLapanganContent() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-[#bccbb9]/30 gap-4">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-bold text-[#0b1c30]">Menampilkan Lapangan</h2>
-                <span className="text-xs font-bold text-[#006e2f] bg-[#e5eeff] px-3 py-1.5 rounded-full">
+                <span className="text-xs font-bold bg-emerald-50 text-[#006e2f] border border-emerald-200/80 px-3 py-1.5 rounded-full">
                   {totalItems} Ditemukan
                 </span>
               </div>
@@ -400,7 +415,7 @@ function CariLapanganContent() {
             ) : courts.length === 0 ? (
               /* Empty State */
               <div className="bg-white rounded-2xl border border-[#bccbb9]/30 p-12 text-center flex flex-col items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-[#eff4ff] flex items-center justify-center text-[#3d4a3d]">
+                <div className="w-16 h-16 rounded-full bg-emerald-50 text-[#006e2f] border border-emerald-200/60 flex items-center justify-center">
                   <span className="material-symbols-outlined text-[32px]">sports_soccer</span>
                 </div>
                 <h3 className="text-lg font-bold text-[#0b1c30]">Belum Ada Lapangan yang Cocok</h3>
@@ -427,7 +442,7 @@ function CariLapanganContent() {
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#006e2f] z-10"></div>
 
                     {/* Image Section */}
-                    <div className="h-40 w-full relative overflow-hidden bg-[#e5eeff]">
+                    <div className="h-40 w-full relative overflow-hidden bg-slate-100">
                       <div className="absolute top-2.5 right-2.5 z-10 bg-[#006e2f] text-white px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm">
                         {court.sport_type}
                       </div>
@@ -473,7 +488,7 @@ function CariLapanganContent() {
                         </div>
                         <Link
                           href={`/lapangan/detail?id=${court.court_id}`}
-                          className="bg-[#e5eeff] text-[#006e2f] hover:bg-[#006e2f] hover:text-white py-1.5 px-3 rounded-lg font-bold text-xs transition-colors border border-[#006e2f]/20 shrink-0"
+                          className="bg-emerald-50 text-[#006e2f] hover:bg-[#006e2f] hover:text-white border border-emerald-200/80 transition-all font-bold text-xs py-1.5 px-3 rounded-lg shrink-0"
                         >
                           Lihat Detail
                         </Link>
@@ -518,7 +533,7 @@ function CariLapanganContent() {
                       <span className="material-symbols-outlined text-[16px]">chevron_left</span>
                       Sebelumnya
                     </button>
-                    <span className="text-xs font-bold px-3 py-1 bg-[#e5eeff] text-[#006e2f] rounded-lg">
+                    <span className="text-xs font-bold px-3 py-1 bg-emerald-50 text-[#006e2f] border border-emerald-200/80 rounded-lg">
                       {currentPage} / {totalPages}
                     </span>
                     <button

@@ -29,9 +29,7 @@ export default function TestimoniSection() {
     <section className="py-20 bg-white border-t border-gray-100">
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         <div className="mb-12">
-          <p className="text-[11px] font-bold tracking-widest text-[#006e2f] uppercase mb-2">
-            KATA MEREKA
-          </p>
+          
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">
             Dipercaya pemain &amp; pemilik lapangan
           </h2>
