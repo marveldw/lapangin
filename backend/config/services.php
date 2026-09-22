@@ -43,6 +43,20 @@ return [
         'is_sanitized'  => env('MIDTRANS_IS_SANITIZED', true),
         'is_3ds'        => env('MIDTRANS_IS_3DS', true),
         'acquirer'      => env('MIDTRANS_ACQUIRER', 'gopay'),
+        'debug_log'     => env('MIDTRANS_DEBUG_LOG', false),
+    ],
+
+    'recaptcha' => [
+        'site_key'        => env('RECAPTCHA_V3_SITE_KEY'),
+        'secret_key'      => env('RECAPTCHA_V3_SECRET_KEY'),
+        'score_threshold' => (float) env('RECAPTCHA_SCORE_THRESHOLD', 0.5),
+        'enabled'         => filter_var(env('RECAPTCHA_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
+    ],
+
+    'turnstile' => [
+        'site_key'   => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+        'enabled'    => filter_var(env('TURNSTILE_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
     ],
 
 ];

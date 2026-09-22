@@ -3,120 +3,127 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ResetPasswordMail;
 use App\Models\User;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Password;
 
 class PasswordResetController extends Controller
 {
     /**
-     * Request a password reset token
-     * POST /api/forgot-password
+     * Request a password reset token & email.
+     * POST /api/forgot-password or POST /api/password/forgot
      */
     public function sendResetToken(Request $request)
     {
         $validated = $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|email|max:255',
         ]);
 
-        $user = User::where('email', $validated['email'])->first();
+        $user = User::where('email', strtolower($validated['email']))->first();
 
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Alamat email tidak terdaftar dalam sistem.',
-            ], 404);
+        // If user exists and is active, generate token & send real email
+        if ($user && $user->status !== 'INACTIVE') {
+            try {
+                $token = Password::broker()->createToken($user);
+                $expireMinutes = (int) config('auth.passwords.users.expire', 60);
+
+                $frontendUrl = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/');
+                $resetUrl = "{$frontendUrl}/reset-password?token=" . urlencode($token) . '&email=' . urlencode($user->email);
+
+                Mail::to($user->email)->send(new ResetPasswordMail($user, $resetUrl, $expireMinutes));
+
+                activity()
+                    ->performedOn($user)
+                    ->causedBy($user)
+                    ->log("Permintaan reset kata sandi dikirim ke email '{$user->email}'.");
+            } catch (Exception $e) {
+                Log::error("Failed to send password reset email to {$user->email}: " . $e->getMessage());
+            }
+        } else {
+            Log::info("Password reset requested for non-existent or inactive email: {$validated['email']}");
         }
 
-        // Generate 64-character secure random token
-        $plainToken = Str::random(64);
-
-        // Store hashed token in password_reset_tokens (standard Laravel security)
-        DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $user->email],
-            [
-                'token'      => Hash::make($plainToken),
-                'created_at' => now(),
-            ]
-        );
-
+        // Security: Always return generic response to prevent email enumeration attacks
         return response()->json([
-            'success'   => true,
-            'message'   => 'Token reset kata sandi berhasil digenerate.',
-            'data'      => [
-                'email'              => $user->email,
-                'token'              => $plainToken,
-                'reset_url'          => url('/reset-password?token=' . $plainToken . '&email=' . urlencode($user->email)),
-                'expires_in_minutes' => 60,
-            ],
+            'success' => true,
+            'message' => 'Jika alamat email Anda terdaftar, tautan reset kata sandi telah dikirim ke inbox atau folder spam Anda.',
         ]);
     }
 
     /**
-     * Reset password using token
-     * POST /api/reset-password
+     * Reset password using token.
+     * POST /api/reset-password or POST /api/password/reset
      */
     public function resetPassword(Request $request)
     {
         $validated = $request->validate([
-            'email'                 => 'required|email',
+            'email'                 => 'required|email|max:255',
             'token'                 => 'required|string',
-            'password'              => 'required|string|min:8|confirmed',
-            'password_confirmation' => 'required|string|min:8',
+            'password'              => 'required|string|min:8|max:128|confirmed',
+            'password_confirmation' => 'required|string|min:8|max:128',
         ]);
 
-        $record = DB::table('password_reset_tokens')
-            ->where('email', $validated['email'])
-            ->first();
-
-        if (!$record) {
+        $user = User::where('email', strtolower($validated['email']))->first();
+        if (!$user) {
             return response()->json([
                 'success' => false,
                 'message' => 'Permintaan reset kata sandi tidak valid atau telah kadaluarsa.',
             ], 422);
         }
 
-        // Check 60-minute expiry
-        if (Carbon::parse($record->created_at)->addMinutes(60)->isPast()) {
-            DB::table('password_reset_tokens')->where('email', $validated['email'])->delete();
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $user->email)
+            ->first();
+
+        // 1. Check if token already used or does not exist
+        if (!$record) {
             return response()->json([
                 'success' => false,
-                'message' => 'Token reset kata sandi telah kadaluarsa. Silakan minta token baru.',
+                'message' => 'Link ini sudah digunakan atau tidak valid. Silakan minta link reset baru.',
             ], 422);
         }
 
-        // Check token hash
-        if (!Hash::check($validated['token'], $record->token)) {
+        // 2. Check token expiration
+        $expireMinutes = (int) config('auth.passwords.users.expire', 60);
+        if (Carbon::parse($record->created_at)->addMinutes($expireMinutes)->isPast()) {
+            Password::broker()->deleteToken($user);
+            return response()->json([
+                'success' => false,
+                'message' => 'Link reset password sudah kadaluarsa. Silakan minta link baru.',
+            ], 422);
+        }
+
+        // 3. Verify token match
+        if (!Password::broker()->tokenExists($user, $validated['token'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Token reset kata sandi tidak valid.',
             ], 422);
         }
 
-        $user = User::where('email', $validated['email'])->first();
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Pengguna tidak ditemukan.',
-            ], 404);
-        }
-
-        // Update password
-        $user->update([
+        // 4. Update user password
+        $user->forceFill([
             'password_hash' => Hash::make($validated['password']),
-        ]);
+        ])->save();
 
-        // Invalidate token
-        DB::table('password_reset_tokens')->where('email', $validated['email'])->delete();
+        // 5. Invalidate reset token immediately (single-use guarantee)
+        Password::broker()->deleteToken($user);
 
-        // Audit log
+        // 6. Invalidate ALL existing Sanctum tokens for that user (force re-login on all devices)
+        $user->tokens()->delete();
+
+        // 7. Audit log
         activity()
             ->performedOn($user)
             ->causedBy($user)
-            ->log("Kata sandi user '{$user->email}' berhasil di-reset.");
+            ->log("Kata sandi user '{$user->email}' berhasil di-reset. Semua sesi aktif telah dihentikan.");
 
         return response()->json([
             'success' => true,

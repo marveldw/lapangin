@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, ArrowRight } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { getBotProtectionToken } from "@/lib/botProtection";
 
 function LoginForm() {
   const router = useRouter();
@@ -38,7 +39,8 @@ function LoginForm() {
     setIsLoading(true);
 
     try {
-      const res = await login(email.trim(), password);
+      const captchaToken = await getBotProtectionToken('login');
+      const res = await login(email.trim(), password, captchaToken);
 
       if (!res.success) {
         setErrorMessage(res.message || "Email atau password yang Anda masukkan salah.");

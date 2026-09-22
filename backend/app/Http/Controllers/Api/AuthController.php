@@ -7,9 +7,11 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Rules\IndonesianPhoneNumber;
+use App\Services\BotProtectionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
@@ -80,8 +82,17 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function login(Request $request)
+    public function login(Request $request, BotProtectionService $botProtection)
     {
+        // 1. Passive bot verification (Google reCAPTCHA v3 / Cloudflare Turnstile)
+        $botCheck = $botProtection->verify($request, 'login');
+        if (!$botCheck['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $botCheck['message'] ?? 'Verifikasi gagal, coba lagi.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'email'    => 'required|email|max:255',
             'password' => 'required|string|max:128',
@@ -90,6 +101,8 @@ class AuthController extends Controller
         $user = User::where('email', $validated['email'])->first();
 
         if (!$user || !Hash::check($validated['password'], $user->password_hash)) {
+            Log::warning("Failed login attempt from IP: {$request->ip()} for email: {$validated['email']}");
+
             return response()->json([
                 'success' => false,
                 'message' => 'Email atau password salah.',

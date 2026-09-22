@@ -31,7 +31,7 @@ export interface RegisterPayload {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<{ success: boolean; message?: string; role?: string; user?: User }>;
+  login: (email: string, password: string, captchaToken?: string | null) => Promise<{ success: boolean; message?: string; role?: string; user?: User }>;
   register: (payload: RegisterPayload) => Promise<{ success: boolean; message?: string; errors?: Record<string, string[]>; role?: string; user?: User }>;
   logout: () => Promise<void>;
   isLoading: boolean;
@@ -86,9 +86,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, captchaToken?: string | null) => {
     try {
-      const res = await api.post('/login', { email, password });
+      const res = await api.post('/login', {
+        email,
+        password,
+        ...(captchaToken ? { captcha_token: captchaToken } : {}),
+      });
       if (res.success && res.token && res.user) {
         setAuth(res.token, res.user);
         return { success: true, role: res.user.role, user: res.user };
