@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { api } from '@/lib/api';
 import { formatRupiah } from '@/lib/formatters';
@@ -14,12 +15,38 @@ interface PlanData {
   max_courts: number | null;
   max_bookings_per_month: number | null;
   is_active: boolean;
-} 
+}
 
-export default function PengaturanPage() {
+function getInitialTab(param?: string | null): 'PROFIL' | 'BANK' | 'SECURITY' {
+  if (!param) return 'PROFIL';
+  const lower = param.toLowerCase();
+  if (lower === 'langganan' || lower === 'subscription' || lower === 'paket_langganan' || lower === 'security') {
+    return 'SECURITY';
+  }
+  if (lower === 'bank') {
+    return 'BANK';
+  }
+  return 'PROFIL';
+}
+
+function PengaturanContent() {
+  const searchParams = useSearchParams();
   const { user, token, refreshUser } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'PROFIL' | 'BANK' | 'SECURITY'>('PROFIL');
+  const tabParam = searchParams?.get('tab');
+  const [activeTab, setActiveTab] = useState<'PROFIL' | 'BANK' | 'SECURITY'>(() => getInitialTab(tabParam));
+
+  useEffect(() => {
+    if (tabParam) {
+      if (tabParam === 'langganan' || tabParam === 'subscription' || tabParam.toLowerCase() === 'security' || tabParam === 'paket_langganan') {
+        setActiveTab('SECURITY');
+      } else if (tabParam.toLowerCase() === 'bank') {
+        setActiveTab('BANK');
+      } else if (tabParam.toLowerCase() === 'profil') {
+        setActiveTab('PROFIL');
+      }
+    }
+  }, [tabParam]);
   const [name, setName] = useState(user?.name || 'Owner Venue');
   const [email, setEmail] = useState(user?.email || 'owner@lapangin.com');
   const [phone, setPhone] = useState(user?.phone || '081234567890');
@@ -242,33 +269,30 @@ export default function PengaturanPage() {
         <button
           type="button"
           onClick={() => setActiveTab('PROFIL')}
-          className={`pb-3 border-b-2 font-bold transition-colors cursor-pointer ${
-            activeTab === 'PROFIL'
+          className={`pb-3 border-b-2 font-bold transition-colors cursor-pointer ${activeTab === 'PROFIL'
               ? 'border-[#006e2f] text-[#006e2f]'
-              : 'border-transparent text-[#3d4a3d] hover:text-[#0b1c30]'
-          }`}
+              : 'border-transparent text-[#3d4a3d] hover:text-[#006e2f]'
+            }`}
         >
           Profil Venue
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('BANK')}
-          className={`pb-3 border-b-2 font-bold transition-colors cursor-pointer ${
-            activeTab === 'BANK'
+          className={`pb-3 border-b-2 font-bold transition-colors cursor-pointer ${activeTab === 'BANK'
               ? 'border-[#006e2f] text-[#006e2f]'
-              : 'border-transparent text-[#3d4a3d] hover:text-[#0b1c30]'
-          }`}
+              : 'border-transparent text-[#3d4a3d] hover:text-[#006e2f]'
+            }`}
         >
           Rekening Pencairan
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('SECURITY')}
-          className={`pb-3 border-b-2 font-bold transition-colors cursor-pointer ${
-            activeTab === 'SECURITY'
+          className={`pb-3 border-b-2 font-bold transition-colors cursor-pointer ${activeTab === 'SECURITY'
               ? 'border-[#006e2f] text-[#006e2f]'
-              : 'border-transparent text-[#3d4a3d] hover:text-[#0b1c30]'
-          }`}
+              : 'border-transparent text-[#3d4a3d] hover:text-[#006e2f]'
+            }`}
         >
           Paket Langganan
         </button>
@@ -283,7 +307,7 @@ export default function PengaturanPage() {
       )}
 
       {/* Container Utama */}
-      <div className="bg-[#e5eeff] rounded-2xl shadow-sm p-6 md:p-8 flex flex-col gap-6 border border-white">
+      <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#bccbb9]/40 shadow-xs flex flex-col gap-6">
         {activeTab === 'PROFIL' && (
           <form onSubmit={handleSaveProfile} className="flex flex-col gap-6">
             {profileError && (
@@ -295,7 +319,7 @@ export default function PengaturanPage() {
 
             {/* Logo Venue */}
             <div className="flex items-center gap-5">
-              <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-sm relative group bg-white border-2 border-white shrink-0 flex items-center justify-center">
+              <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-sm relative group bg-white border-2 border-[#bccbb9]/30 shrink-0 flex items-center justify-center">
                 <img alt="Logo" className="w-12 h-12 object-contain" src="/logo.png" />
               </div>
               <div className="flex flex-col gap-1">
@@ -310,7 +334,7 @@ export default function PengaturanPage() {
                   Nama Venue / Nama Owner
                 </label>
                 <input
-                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] transition-all shadow-sm font-medium"
+                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:ring-2 focus:ring-[#006e2f]/20 focus:border-[#006e2f] outline-hidden transition-all shadow-sm font-medium"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -323,7 +347,7 @@ export default function PengaturanPage() {
                   Email Akun
                 </label>
                 <input
-                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] transition-all shadow-sm font-medium"
+                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:ring-2 focus:ring-[#006e2f]/20 focus:border-[#006e2f] outline-hidden transition-all shadow-sm font-medium"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -336,7 +360,7 @@ export default function PengaturanPage() {
                   Nomor WhatsApp / Seluler
                 </label>
                 <input
-                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] transition-all shadow-sm md:w-1/2 font-medium"
+                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:ring-2 focus:ring-[#006e2f]/20 focus:border-[#006e2f] outline-hidden transition-all shadow-sm md:w-1/2 font-medium"
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -350,7 +374,7 @@ export default function PengaturanPage() {
               <button
                 type="submit"
                 disabled={isSavingProfile}
-                className="px-6 py-2.5 rounded-xl bg-[#006e2f] text-white font-bold text-xs hover:bg-[#005321] transition-colors shadow-md cursor-pointer disabled:opacity-50"
+                className="px-6 py-2.5 rounded-xl bg-[#006e2f] text-white font-bold text-xs hover:bg-[#005524] transition-colors shadow-md cursor-pointer disabled:opacity-50"
               >
                 {isSavingProfile ? 'Menyimpan...' : 'Simpan Profil'}
               </button>
@@ -385,7 +409,7 @@ export default function PengaturanPage() {
                 <select
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
-                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] font-medium"
+                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:ring-2 focus:ring-[#006e2f]/20 focus:border-[#006e2f] outline-hidden font-medium transition-all shadow-sm"
                 >
                   <option value="BCA">BCA (Bank Central Asia)</option>
                   <option value="Mandiri">Bank Mandiri</option>
@@ -402,7 +426,7 @@ export default function PengaturanPage() {
                   Nomor Rekening
                 </label>
                 <input
-                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] font-medium tracking-wider"
+                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:ring-2 focus:ring-[#006e2f]/20 focus:border-[#006e2f] outline-hidden font-medium tracking-wider transition-all shadow-sm"
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
@@ -419,7 +443,7 @@ export default function PengaturanPage() {
                   Nama Lengkap Pemilik Rekening
                 </label>
                 <input
-                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:outline-none focus:border-[#006e2f] md:w-1/2 font-medium"
+                  className="px-4 py-2.5 bg-white border border-[#bccbb9]/40 rounded-xl text-xs text-[#0b1c30] focus:ring-2 focus:ring-[#006e2f]/20 focus:border-[#006e2f] outline-hidden md:w-1/2 font-medium transition-all shadow-sm"
                   type="text"
                   value={accountHolder}
                   onChange={(e) => setAccountHolder(e.target.value)}
@@ -465,7 +489,7 @@ export default function PengaturanPage() {
               <button
                 type="submit"
                 disabled={isSavingBank}
-                className="px-6 py-2.5 rounded-xl bg-[#006e2f] text-white font-bold text-xs hover:bg-[#005321] transition-colors shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                className="px-6 py-2.5 rounded-xl bg-[#006e2f] text-white font-bold text-xs hover:bg-[#005524] transition-colors shadow-md cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-[16px]">verified_user</span>
                 {isSavingBank ? 'Memverifikasi & Menyimpan...' : 'Verifikasi & Simpan Rekening'}
@@ -529,31 +553,31 @@ export default function PengaturanPage() {
               )}
 
               {/* Status Info Saat Ini (Kuota Booking Sudah Dihapus, Kapasitas Lapangan Dinamis) */}
-              <div className="flex flex-col gap-4 bg-white p-6 rounded-xl border border-[#bccbb9]/30 shadow-xs">
+              <div className="bg-slate-50/70 border border-[#bccbb9]/30 rounded-xl p-4 flex flex-col gap-4 shadow-xs">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-xl bg-[#006e2f]/10 text-[#006e2f] flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-[24px]">workspace_premium</span>
+                    <span className="material-symbols-outlined text-[24px] text-[#006e2f]">workspace_premium</span>
                   </div>
                   <div>
                     <h3 className="font-extrabold text-sm text-[#0b1c30]">
                       Paket Anda Saat Ini: {currentPlanName}
                     </h3>
-                    <p className="text-xs text-[#3d4a3d]">
-                      Status:{' '}
-                      <span className="font-bold text-[#006e2f]">
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-[#3d4a3d]">Status:</span>
+                      <span className="bg-emerald-50 text-[#006e2f] border border-emerald-200/80 font-bold text-[11px] px-2.5 py-0.5 rounded-full">
                         {user?.subscription?.status || 'ACTIVE'}
                       </span>
-                    </p>
+                    </div>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-[#bccbb9]/30 text-xs">
-                  <div className="p-3.5 bg-[#f8f9ff] rounded-xl flex items-center justify-between border border-[#bccbb9]/20">
+                  <div className="p-3.5 bg-white rounded-xl flex items-center justify-between border border-[#bccbb9]/20">
                     <span className="text-[#3d4a3d] font-medium flex items-center gap-2">
                       <span className="material-symbols-outlined text-[#006e2f] text-[18px]">stadium</span>
                       Batas Kapasitas Lapangan:
                     </span>
-                    <span className="font-extrabold text-[#006e2f] text-sm">
+                    <span className="text-[#006e2f] font-bold text-sm">
                       {getCourtsLimitText()}
                     </span>
                   </div>
@@ -563,14 +587,14 @@ export default function PengaturanPage() {
               {/* Price Comparison Plan (3 Kolom - Kuota Booking Per Bulan Dihapus) */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
                 {/* Free Plan */}
-                <div className="bg-white border border-[#bccbb9]/40 rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden">
+                <div className="bg-white border border-[#bccbb9]/40 rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden shadow-xs">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">FREE</p>
                   <h4 className="text-lg font-bold text-[#0b1c30] -mt-2">Paket Percobaan</h4>
                   <div className="flex items-end gap-1">
                     <span className="text-3xl font-extrabold text-[#0b1c30]">{formatRupiah(freePlan.price)}</span>
                     <span className="text-xs text-[#3d4a3d] mb-1.5">/ bulan</span>
                   </div>
-                  
+
                   <ul className="text-xs text-[#3d4a3d] flex flex-col gap-4 font-medium flex-1 mt-4">
                     <li className="flex items-center gap-2.5">
                       <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
@@ -607,8 +631,8 @@ export default function PengaturanPage() {
                 </div>
 
                 {/* Basic Plan (Recommended) */}
-                <div className="bg-white border-2 border-[#006e2f] rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden shadow-lg transform lg:-translate-y-2">
-                  <div className="absolute top-0 right-0 left-0 bg-[#006e2f] text-white text-[9px] font-extrabold py-1.5 text-center uppercase tracking-widest">
+                <div className="bg-white border-2 border-[#006e2f]/80 rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden shadow-md transform lg:-translate-y-2">
+                  <div className="absolute top-0 right-0 left-0 bg-[#006e2f] text-white font-bold text-[11px] py-1 text-center uppercase tracking-wider">
                     Rekomendasi
                   </div>
                   <p className="text-[10px] font-bold text-[#006e2f] uppercase tracking-widest mt-4">BASIC</p>
@@ -617,7 +641,7 @@ export default function PengaturanPage() {
                     <span className="text-3xl font-extrabold text-[#0b1c30]">{formatRupiah(basicPlan.price)}</span>
                     <span className="text-xs text-[#3d4a3d] mb-1.5">/ bulan</span>
                   </div>
-                  
+
                   <ul className="text-xs text-[#3d4a3d] flex flex-col gap-4 font-medium flex-1 mt-4">
                     <li className="flex items-center gap-2.5">
                       <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
@@ -650,7 +674,7 @@ export default function PengaturanPage() {
                       type="button"
                       disabled={loadingPlanId !== null}
                       onClick={() => handleSelectPlan(basicPlan)}
-                      className="w-full mt-6 py-3 rounded-xl bg-[#006e2f] hover:bg-[#005321] text-white font-bold text-xs shadow-md transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      className="w-full mt-6 py-3 rounded-xl bg-[#006e2f] hover:bg-[#005524] text-white font-bold text-xs shadow-md transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
                     >
                       {loadingPlanId === basicPlan.plan_id ? (
                         <>
@@ -665,14 +689,14 @@ export default function PengaturanPage() {
                 </div>
 
                 {/* Pro Plan */}
-                <div className="bg-white border border-[#bccbb9]/40 rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden">
+                <div className="bg-white border border-[#bccbb9]/40 rounded-2xl p-6 flex flex-col gap-4 relative overflow-hidden shadow-xs">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">PRO</p>
                   <h4 className="text-lg font-bold text-[#0b1c30] -mt-2">Paket Komplit</h4>
                   <div className="flex items-end gap-1">
                     <span className="text-3xl font-extrabold text-[#0b1c30]">{formatRupiah(proPlan.price)}</span>
                     <span className="text-xs text-[#3d4a3d] mb-1.5">/ bulan</span>
                   </div>
-                  
+
                   <ul className="text-xs text-[#3d4a3d] flex flex-col gap-4 font-medium flex-1 mt-4">
                     <li className="flex items-center gap-2.5">
                       <span className="material-symbols-outlined text-[#006e2f] text-[18px]">check</span>
@@ -705,7 +729,7 @@ export default function PengaturanPage() {
                       type="button"
                       disabled={loadingPlanId !== null}
                       onClick={() => handleSelectPlan(proPlan)}
-                      className="w-full mt-6 py-3 rounded-xl bg-[#0b1c30] hover:bg-[#132d4b] text-white font-bold text-xs shadow-md transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      className="w-full mt-6 py-3 rounded-xl bg-[#006e2f] hover:bg-[#005524] text-white font-bold text-xs shadow-md transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
                     >
                       {loadingPlanId === proPlan.plan_id ? (
                         <>
@@ -739,5 +763,13 @@ export default function PengaturanPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function PengaturanPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[400px] text-sm text-[#3d4a3d]">Memuat pengaturan...</div>}>
+      <PengaturanContent />
+    </Suspense>
   );
 }

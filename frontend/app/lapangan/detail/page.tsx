@@ -243,12 +243,12 @@ function DetailLapanganContent() {
   };
 
   if (loadingCourt) {
-    return <div className="min-h-screen bg-[#f8f9ff]" />;
+    return <div className="min-h-screen bg-slate-50" />;
   }
 
   if (errorCourt || !court) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9ff] px-6 text-center">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 px-6 text-center">
         <span className="material-symbols-outlined text-red-500 text-[48px] mb-2">error</span>
         <h2 className="text-xl font-bold text-[#0b1c30]">{errorCourt || 'Lapangan tidak ditemukan'}</h2>
         <p className="text-xs text-[#3d4a3d] mt-1 mb-6">
@@ -265,11 +265,11 @@ function DetailLapanganContent() {
   }
 
   return (
-    <div className="bg-[#f8f9ff] font-sans text-[#0b1c30] min-h-screen flex flex-col">
+    <div className="bg-slate-50 font-sans text-[#0b1c30] min-h-screen flex flex-col">
       {/* Header */}
       <Navbar />
 
-      <main className="w-full pt-16 bg-[#f8f9ff] flex-1 pb-20">
+      <main className="w-full pt-16 bg-slate-50 flex-1 pb-20">
         <div className="w-full h-[280px] md:h-[380px] relative overflow-hidden bg-slate-900">
           <img
             src={court.image_url || getCourtFallbackImage(court.sport_type)}
@@ -279,7 +279,7 @@ function DetailLapanganContent() {
               (e.target as HTMLImageElement).src = getCourtFallbackImage(court.sport_type);
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#f8f9ff] via-transparent to-black/40"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-50 via-transparent to-black/40"></div>
           <div className="absolute top-6 left-6 md:left-12">
             <Link
               href="/lapangan"
@@ -299,7 +299,7 @@ function DetailLapanganContent() {
                   <span className="bg-[#006e2f] text-white px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wide shadow-sm">
                     {court.sport_type}
                   </span>
-                  <span className="bg-[#e5eeff] text-[#004b1e] px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
+                  <span className="bg-emerald-50 text-[#006e2f] border border-emerald-200/80 px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
                     <span className="material-symbols-outlined text-[14px]">verified</span>
                     Terverifikasi
                   </span>
@@ -322,7 +322,7 @@ function DetailLapanganContent() {
                 </p>
               </div>
 
-              <div className="bg-[#f8f9ff] border border-[#bccbb9]/40 rounded-2xl p-5 md:w-56 shrink-0 flex flex-col justify-center items-center md:items-end text-center md:text-right gap-1 h-fit">
+              <div className="bg-slate-50/60 border border-[#bccbb9]/40 rounded-2xl p-5 md:w-56 shrink-0 flex flex-col justify-center items-center md:items-end text-center md:text-right gap-1 h-fit">
                 <span className="text-[10px] font-bold tracking-widest text-[#3d4a3d] uppercase">
                   Harga Sewa
                 </span>
@@ -443,7 +443,7 @@ function DetailLapanganContent() {
                       return (
                         <div
                           key={slot.hourStr}
-                          className="h-16 bg-[#f8f9ff] border border-[#bccbb9]/30 rounded-xl flex flex-col items-center justify-center text-gray-400 cursor-not-allowed select-none"
+                          className="h-16 bg-slate-100 border border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 cursor-not-allowed select-none"
                         >
                           <span className="font-bold text-xs">{slot.hourStr}</span>
                           <span className="text-[10px]">
@@ -461,7 +461,7 @@ function DetailLapanganContent() {
                         className={`h-16 rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer border ${
                           isSelected
                             ? 'bg-[#006e2f] border-[#006e2f] text-white shadow-md font-bold'
-                            : 'bg-white border-[#006e2f]/40 text-[#006e2f] hover:bg-[#006e2f]/5 hover:border-[#006e2f]'
+                            : 'bg-white border-slate-200 text-[#006e2f] hover:bg-emerald-50/40 hover:border-emerald-400'
                         }`}
                       >
                         <span className="font-extrabold text-sm">{slot.hourStr}</span>
@@ -526,7 +526,7 @@ function DetailLapanganContent() {
                 </div>
               </div>
 
-              <div className="bg-[#f8f9ff] rounded-xl p-4 flex flex-col gap-2 border border-[#bccbb9]/20">
+              <div className="bg-slate-50/60 rounded-xl p-4 flex flex-col gap-2 border border-[#bccbb9]/20">
                 <div className="flex justify-between text-xs">
                   <span className="text-[#3d4a3d]">Harga per jam</span>
                   <span className="font-semibold text-[#0b1c30]">
@@ -564,7 +564,7 @@ export default function DetailLapanganPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[#f8f9ff]">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50">
           <span className="text-sm font-semibold text-[#006e2f]">Memuat Detail...</span>
         </div>
       }

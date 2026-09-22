@@ -15,14 +15,14 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
   const getMenuClass = (path: string) => {
     const isActive = pathname === path || pathname.startsWith(`${path}/`);
-    return isActive 
-      ? 'bg-[#006e2f] text-white font-semibold shadow-sm' 
-      : 'text-[#3d4a3d] hover:bg-[#eff4ff] hover:text-[#0b1c30]';
+    return isActive
+      ? 'bg-[#006e2f] text-white font-semibold shadow-sm'
+      : 'text-[#3d4a3d] hover:bg-emerald-50/80 hover:text-[#006e2f] transition-colors';
   };
 
   const planName = (
-    user?.subscription?.plan_name || 
-    (user as any)?.plan || 
+    user?.subscription?.plan_name ||
+    (user as any)?.plan ||
     'FREE'
   ).toUpperCase();
 
@@ -33,7 +33,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     <>
       {/* Overlay Gelap Khusus Mobile */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setIsOpen(false)}
         ></div>
@@ -41,16 +41,16 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
       {/* Sidebar Container */}
       <aside className={`fixed left-0 top-0 h-full w-72 bg-[#ffffff] z-50 flex flex-col shadow-[1px_0_8px_rgba(0,0,0,0.02)] border-r border-[#bccbb9]/30 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        
+
         {/* Logo & Tombol Close (Mobile) */}
         <div className="p-6 flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <img alt="Lapangin Logo" className="h-8 w-auto object-contain" src="/logo.png" />
             <span className="text-xl font-semibold text-[#006e2f] tracking-tight">Lapangin</span>
           </div>
-          <button 
+          <button
             onClick={() => setIsOpen(false)}
-            className="lg:hidden p-1 rounded-lg text-[#3d4a3d] hover:bg-[#eff4ff] cursor-pointer"
+            className="lg:hidden p-1 rounded-lg text-[#3d4a3d] hover:bg-emerald-50/80 hover:text-[#006e2f] transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined">close</span>
           </button>
@@ -100,23 +100,23 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
         {/* Area Bawah: Upgrade Dinamis (Hanya untuk Owner) */}
         {!isStaff && (
-          <div className="p-6 mt-auto border-t border-[#bccbb9]/20 flex flex-col gap-4 bg-[#f8f9ff]/50">
-            <div className="p-3 bg-[#e5eeff] rounded-xl flex flex-col gap-2">
+          <div className="p-6 mt-auto border-t border-[#bccbb9]/20 flex flex-col gap-4 bg-white">
+            <div className="p-3 bg-emerald-50/70 border border-emerald-200/70 rounded-xl flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-[#3d4a3d]">Paket Anda:</span>
-                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                  planName === 'PRO' 
-                    ? 'bg-amber-100 text-amber-800' 
-                    : planName === 'BASIC' 
-                    ? 'bg-blue-100 text-blue-800' 
-                    : 'bg-gray-200 text-gray-700'
-                }`}>
+                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${planName === 'PRO'
+                    ? 'bg-amber-100 text-amber-800'
+                    : planName === 'BASIC'
+                      ? 'bg-emerald-100 text-[#006e2f]'
+                      : 'bg-gray-200 text-gray-700'
+                  }`}>
                   {planName}
                 </span>
               </div>
 
               <Link
-                href="/owner/pengaturan"
+                onClick={() => setIsOpen(false)}
+                href="/owner/pengaturan?tab=langganan"
                 className="w-full py-1.5 mt-1 bg-[#006e2f] hover:bg-[#005321] text-white text-center rounded-lg text-xs font-bold transition-all shadow-xs"
               >
                 Kelola Langganan

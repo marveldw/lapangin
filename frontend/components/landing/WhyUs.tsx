@@ -43,7 +43,7 @@ const CONTENT = {
     ],
   },
   renter: {
-    tag: "SPORT ENTHUSIAST",
+    tag: "",
     title: "Main kapan saja tanpa ribet cari dan kontak lapangan.",
     ctaText: "Cari Lapangan Sekarang",
     ctaHref: "/lapangan",
@@ -133,10 +133,7 @@ export default function WhyUs() {
           {/* Left Column: Content */}
           <div className="lg:col-span-7 flex flex-col justify-between h-full">
             <div>
-              {/* Badge */}
-              <span className="inline-block px-3.5 py-1 rounded-full bg-[#f0f3f1] text-[11px] font-extrabold tracking-wider text-gray-800 uppercase mb-4">
-                {data.tag}
-              </span>
+              
 
               {/* Title */}
               <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-snug mb-8">
