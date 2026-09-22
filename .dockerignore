@@ -1,0 +1,21 @@
+# Version control & repo files
+.git
+.gitignore
+.github
+
+# Frontend has its own context ./frontend, ignore completely from root build context
+frontend/
+
+# Backend local vendor & runtime caches
+backend/vendor
+backend/.env
+backend/.env.backup
+backend/storage/logs/*.log
+backend/storage/framework/cache/data/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+
+# IDE and docs
+.vscode
+.idea
+*.md

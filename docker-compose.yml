@@ -110,8 +110,8 @@ services:
   # ==================================================
   nginx:
     build:
-      context: .
-      dockerfile: docker/nginx/Dockerfile
+      context: ./docker/nginx
+      dockerfile: Dockerfile
     container_name: lapangin_nginx
     restart: unless-stopped
     ports:
