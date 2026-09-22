@@ -109,14 +109,15 @@ services:
   # 4. REVERSE PROXY & STATIC CACHE (Nginx Alpine)
   # ==================================================
   nginx:
-    image: nginx:alpine
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
     container_name: lapangin_nginx
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - laravel_public:/var/www/html/public:ro
       - laravel_storage:/var/www/html/public/storage:ro
       - certbot_certs:/etc/letsencrypt:ro
