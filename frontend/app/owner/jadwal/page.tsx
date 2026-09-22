@@ -298,42 +298,51 @@ function JadwalContent() {
         </div>
       ) : (
         <>
-          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 mb-6">
-            <div className="bg-white rounded-xl py-2.5 px-4 border border-[#bccbb9]/30 shadow-xs flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold text-[#3d4a3d]">Total Jam Terisi</p>
-                <p className="text-xl font-bold text-[#0b1c30] leading-none mt-1">
-                  {totalHoursBooked} Jam
-                </p>
+          {/* 3 Cards Ringkasan Jadwal — Operasional (Kiri) & Finansial Emerald (Kanan) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mb-6">
+
+            {/* Card 1: Total Jam Terisi (Operasional) */}
+            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/40 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
+              <div className="text-[#3d4a3d] text-xs font-semibold">
+                Total Jam Terisi
               </div>
-              <span className="text-[11px] text-[#3d4a3d] font-medium bg-[#f8f9ff] px-2 py-0.5 rounded-md border border-[#bccbb9]/20">
-                Terjadwal
-              </span>
+              <div className="text-[#0b1c30] text-3xl font-extrabold tracking-tight mt-1">
+                {totalHoursBooked || 0} Jam
+              </div>
+              <div className="text-emerald-700 text-xs font-medium mt-1">
+                Slot Terjadwal Hari Ini
+              </div>
             </div>
 
-            <div className="bg-white rounded-xl py-2.5 px-4 border border-[#bccbb9]/30 shadow-xs flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold text-[#3d4a3d]">Pendapatan Hari Ini</p>
-                <p className="text-xl font-bold text-[#006e2f] leading-none mt-1">
-                  {formatRupiah(dayRevenue)}
-                </p>
+            {/* Card 2: Menunggu Konfirmasi (Operasional) */}
+            <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/40 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
+              <div className="text-[#3d4a3d] text-xs font-semibold">
+                Menunggu Konfirmasi
               </div>
-              <span className="text-[11px] text-[#006e2f] font-semibold bg-[#22c55e]/10 px-2 py-0.5 rounded-md">
-                Terkonfirmasi
-              </span>
+              <div className="text-[#0b1c30] text-3xl font-extrabold tracking-tight mt-1">
+                {pendingCount || 0}
+              </div>
+              <div className={`text-xs font-semibold mt-1 ${(pendingCount || 0) > 0 ? 'text-amber-600' : 'text-[#3d4a3d]'}`}>
+                {(pendingCount || 0) > 0 ? `${pendingCount} booking pending` : 'Tidak ada antrian'}
+              </div>
             </div>
 
-            <div className="bg-white rounded-xl py-2.5 px-4 border border-[#bccbb9]/30 shadow-xs flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold text-[#3d4a3d]">Menunggu Konfirmasi</p>
-                <p className="text-xl font-bold text-amber-600 leading-none mt-1">
-                  {pendingCount} Booking
-                </p>
-              </div>
-              <span className="text-[11px] text-amber-700 font-semibold bg-amber-500/10 px-2 py-0.5 rounded-md">
-                Pending
+            {/* Card 3: Pendapatan Hari Ini (Finansial - Gradasi Emerald) */}
+            <div className="bg-gradient-to-br from-[#006e2f] via-[#005e28] to-[#00451b] text-white rounded-2xl p-5 shadow-sm relative overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
+              <span className="material-symbols-outlined text-white/10 text-5xl absolute -right-2 -bottom-2 pointer-events-none" style={{ fontVariationSettings: "'FILL' 1" }}>
+                payments
               </span>
+              <div className="text-white/80 text-xs font-semibold uppercase tracking-wider relative z-10">
+                Pendapatan Hari Ini
+              </div>
+              <div className="text-white text-2xl font-extrabold tracking-tight mt-1.5 relative z-10">
+                {formatRupiah(dayRevenue || 0)}
+              </div>
+              <div className="text-white/70 text-[11px] font-medium mt-1 relative z-10">
+                Terkonfirmasi Lunas
+              </div>
             </div>
+
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm mb-6 overflow-hidden border border-[#bccbb9]/30">

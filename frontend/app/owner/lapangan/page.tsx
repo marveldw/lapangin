@@ -23,6 +23,7 @@ export interface CourtItem {
   open_time?: string | null;
   close_time?: string | null;
   status: 'ACTIVE' | 'INACTIVE' | string;
+  is_active?: boolean;
   booking_count?: number;
   has_active_booking?: boolean;
   is_locked?: boolean;
@@ -133,7 +134,7 @@ export default function DaftarLapangan() {
     description: '',
     status: 'ACTIVE',
   });
-  
+
   const [editCustomSport, setEditCustomSport] = useState('');
   const [editOpenTime, setEditOpenTime] = useState('08:00');
   const [editCloseTime, setEditCloseTime] = useState('23:00');
@@ -296,13 +297,13 @@ export default function DaftarLapangan() {
 
   const handleOpenEdit = (court: CourtItem) => {
     setEditingCourt(court);
-    
+
     let rawDesc = court.description || '';
     // Ambil langsung jika field open_time / close_time tersedia di court
     let oTime = court.open_time ? court.open_time.slice(0, 5) : '08:00';
     let cTime = court.close_time ? court.close_time.slice(0, 5) : '23:00';
     let foundAmenities: string[] = [];
-    
+
     let eRules = '- Wajib menggunakan sepatu olahraga khusus indoor.\n- Dilarang membawa makanan berat ke dalam area lapangan.\n- Dilarang merokok di area GOR.';
     let eRefund = 'Booking yang sudah dibayar tidak dapat dibatalkan (Non-refundable). Jika ada kendala cuaca pada lapangan outdoor, jadwal bisa di-reschedule.';
 
@@ -365,7 +366,7 @@ export default function DaftarLapangan() {
   };
 
   const handleToggleEditAmenity = (id: string) => {
-    setEditSelectedAmenities(prev => 
+    setEditSelectedAmenities(prev =>
       prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
     );
   };
@@ -427,11 +428,10 @@ export default function DaftarLapangan() {
     const rulesSection = editRules.trim() ? `Aturan Venue:\n${editRules.trim()}\n\n` : '';
     const refundSection = editRefundPolicy.trim() ? `Kebijakan Refund & Reschedule:\n${editRefundPolicy.trim()}` : '';
 
-    const compiledDescription = `Jam Operasional: ${editOpenTime} - ${normalizedCloseTime}\n${
-      editSelectedAmenities.length > 0
-        ? `Fasilitas Tersedia: ${editSelectedAmenities.map(a => AMENITIES.find(x => x.id === a)?.label).join(', ')}.\n\n`
-        : '\n'
-    }${baseDescription}${rulesSection}${refundSection}`;
+    const compiledDescription = `Jam Operasional: ${editOpenTime} - ${normalizedCloseTime}\n${editSelectedAmenities.length > 0
+      ? `Fasilitas Tersedia: ${editSelectedAmenities.map(a => AMENITIES.find(x => x.id === a)?.label).join(', ')}.\n\n`
+      : '\n'
+      }${baseDescription}${rulesSection}${refundSection}`;
 
     try {
       const payload = {
@@ -455,11 +455,11 @@ export default function DaftarLapangan() {
       if (res?.success && res.data) {
         const updated = res.data;
         setCourts((prev) =>
-          prev.map((c) => (c.court_id === editingCourt.court_id ? { 
-            ...c, 
+          prev.map((c) => (c.court_id === editingCourt.court_id ? {
+            ...c,
             ...updated,
             open_time: editOpenTime,
-            close_time: normalizedCloseTime 
+            close_time: normalizedCloseTime
           } : c))
         );
         setToastMessage({
@@ -527,19 +527,14 @@ export default function DaftarLapangan() {
     return filteredCourts.slice(start, start + perPage);
   }, [filteredCourts, currentPage, perPage]);
 
-  const totalCourts = courts.length;
-  const activeCourts = courts.filter((c) => c.status === 'ACTIVE').length;
-  const inactiveCourts = courts.filter((c) => c.status !== 'ACTIVE').length;
-
   return (
     <div className="flex flex-col w-full gap-8 pb-16">
       {toastMessage && (
         <div
-          className={`fixed top-24 right-8 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg border transition-all transform duration-300 animate-in fade-in slide-in-from-top-4 ${
-            toastMessage.type === 'success'
-              ? 'bg-[#006e2f] text-white border-[#22c55e]/40'
-              : 'bg-[#ba1a1a] text-white border-red-400/40'
-          }`}
+          className={`fixed top-24 right-8 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg border transition-all transform duration-300 animate-in fade-in slide-in-from-top-4 ${toastMessage.type === 'success'
+            ? 'bg-[#006e2f] text-white border-[#22c55e]/40'
+            : 'bg-[#ba1a1a] text-white border-red-400/40'
+            }`}
         >
           <span className="material-symbols-outlined text-[22px]">
             {toastMessage.type === 'success' ? 'check_circle' : 'error'}
@@ -558,8 +553,8 @@ export default function DaftarLapangan() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold text-[#0b1c30] tracking-tight">MANAJEMEN LAPANGAN</h1>
-            <span className="bg-[#e5eeff] text-[#006e2f] text-xs font-bold px-3 py-1 rounded-full">
-              {totalCourts} Total
+            <span className="bg-emerald-50/60 text-[#006e2f] border border-emerald-200/60 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+              {courts.length} Total
             </span>
           </div>
           <p className="text-base text-[#3d4a3d] max-w-2xl">
@@ -589,36 +584,48 @@ export default function DaftarLapangan() {
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
-        <div className="bg-white rounded-xl py-2.5 px-4 border border-[#bccbb9]/30 shadow-xs flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold text-[#3d4a3d]">Total Lapangan</p>
-            <p className="text-xl font-bold text-[#0b1c30] leading-none mt-1">{totalCourts}</p>
+      {/* 3 Cards Ringkasan Lapangan — Sama Persis dengan Dashboard */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mb-6">
+
+        {/* Card 1: Total Lapangan */}
+        <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/40 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="text-[#3d4a3d] text-xs font-semibold">
+            Total Lapangan
           </div>
-          <span className="text-[11px] text-[#3d4a3d] font-medium bg-[#f8f9ff] px-2 py-0.5 rounded-md border border-[#bccbb9]/20">
-            Terdaftar
-          </span>
+          <div className="text-[#0b1c30] text-3xl font-extrabold tracking-tight mt-1">
+            {courts.length}
+          </div>
+          <div className="text-emerald-700 text-xs font-medium mt-1">
+            {courts.length > 0 ? `${courts.length} Lapangan Terdaftar` : 'Belum ada'}
+          </div>
         </div>
 
-        <div className="bg-white rounded-xl py-2.5 px-4 border border-[#bccbb9]/30 shadow-xs flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold text-[#3d4a3d]">Lapangan Aktif</p>
-            <p className="text-xl font-bold text-[#006e2f] leading-none mt-1">{activeCourts}</p>
+        {/* Card 2: Lapangan Aktif */}
+        <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/40 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="text-[#3d4a3d] text-xs font-semibold">
+            Lapangan Aktif
           </div>
-          <span className="text-[11px] text-[#006e2f] font-semibold bg-[#22c55e]/10 px-2 py-0.5 rounded-md">
-            Siap Dipesan
-          </span>
+          <div className="text-[#0b1c30] text-3xl font-extrabold tracking-tight mt-1">
+            {courts.filter(c => c.status?.toUpperCase() === 'ACTIVE' || c.is_active).length}
+          </div>
+          <div className="text-emerald-700 text-xs font-medium mt-1">
+            Siap Dipesan Pelanggan
+          </div>
         </div>
 
-        <div className="bg-white rounded-xl py-2.5 px-4 border border-[#bccbb9]/30 shadow-xs flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold text-[#3d4a3d]">Non-Aktif</p>
-            <p className="text-xl font-bold text-[#ba1a1a] leading-none mt-1">{inactiveCourts}</p>
+        {/* Card 3: Non-Aktif */}
+        <div className="bg-white rounded-2xl p-5 border border-[#bccbb9]/40 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
+          <div className="text-[#3d4a3d] text-xs font-semibold">
+            Non-Aktif
           </div>
-          <span className="text-[11px] text-[#ba1a1a] font-semibold bg-[#ffdad6]/40 px-2 py-0.5 rounded-md">
-            Ditutup Sementara
-          </span>
+          <div className="text-[#0b1c30] text-3xl font-extrabold tracking-tight mt-1">
+            {courts.filter(c => c.status?.toUpperCase() !== 'ACTIVE' && !c.is_active).length}
+          </div>
+          <div className={`text-xs font-semibold mt-1 ${courts.filter(c => c.status?.toUpperCase() !== 'ACTIVE' && !c.is_active).length > 0 ? 'text-amber-600' : 'text-[#3d4a3d]'}`}>
+            {courts.filter(c => c.status?.toUpperCase() !== 'ACTIVE' && !c.is_active).length > 0 ? 'Ditutup Sementara' : 'Semua Beroperasi'}
+          </div>
         </div>
+
       </div>
 
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#bccbb9]/30 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
@@ -784,265 +791,257 @@ export default function DaftarLapangan() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 relative">
-          {paginatedCourts.map((court, index) => {
-            const absoluteIndex = (currentPage - 1) * perPage + index;
-            const isRestricted = court.is_locked ?? isCourtRestricted(absoluteIndex, maxAllowedCourts);
-            if (isRestricted) {
+            {paginatedCourts.map((court, index) => {
+              const absoluteIndex = (currentPage - 1) * perPage + index;
+              const isRestricted = court.is_locked ?? isCourtRestricted(absoluteIndex, maxAllowedCourts);
+              if (isRestricted) {
+                return (
+                  <div
+                    key={court.court_id}
+                    className="col-span-1 md:col-span-2 xl:col-span-3 bg-amber-50/90 border border-amber-300/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all shadow-xs"
+                  >
+                    <div className="flex items-center gap-3.5 w-full sm:w-auto">
+                      <div className="w-11 h-11 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 border border-amber-200">
+                        <span className="material-symbols-outlined text-[24px]">lock</span>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-bold text-slate-800 text-sm">{court.name}</h4>
+                          <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                            Dibatasi Kuota
+                          </span>
+                          <span className="text-xs text-slate-500 font-medium">({court.sport_type})</span>
+                        </div>
+                        <p className="text-xs text-slate-600 mt-1">
+                          Lapangan ini dibatasi (collapsed) karena paket aktif Anda hanya mendukung maksimal {maxAllowedCourts} lapangan. Upgrade paket untuk mengaktifkan kembali.
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      href="/owner/pengaturan?tab=SECURITY"
+                      className="text-xs font-bold bg-[#006e2f] hover:bg-[#005321] text-white px-5 py-2.5 rounded-xl transition-all shadow-xs shrink-0 flex items-center gap-1.5 self-end sm:self-center"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">upgrade</span>
+                      Upgrade Paket
+                    </Link>
+                  </div>
+                );
+              }
+
+              const isActive = court.status === 'ACTIVE';
+              const imageUrl = court.image_url || getCourtFallbackImage(court.sport_type);
+              const locationDisplay = court.district
+                ? `${court.district}, ${court.city}`
+                : court.city || court.address;
+
               return (
                 <div
                   key={court.court_id}
-                  className="col-span-1 md:col-span-2 xl:col-span-3 bg-amber-50/90 border border-amber-300/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all shadow-xs"
-                >
-                  <div className="flex items-center gap-3.5 w-full sm:w-auto">
-                    <div className="w-11 h-11 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 border border-amber-200">
-                      <span className="material-symbols-outlined text-[24px]">lock</span>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-bold text-slate-800 text-sm">{court.name}</h4>
-                        <span className="text-[10px] font-bold bg-amber-200 text-amber-900 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                          Dibatasi Kuota
-                        </span>
-                        <span className="text-xs text-slate-500 font-medium">({court.sport_type})</span>
-                      </div>
-                      <p className="text-xs text-slate-600 mt-1">
-                        Lapangan ini dibatasi (collapsed) karena paket aktif Anda hanya mendukung maksimal {maxAllowedCourts} lapangan. Upgrade paket untuk mengaktifkan kembali.
-                      </p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/owner/pengaturan?tab=SECURITY"
-                    className="text-xs font-bold bg-[#006e2f] hover:bg-[#005321] text-white px-5 py-2.5 rounded-xl transition-all shadow-xs shrink-0 flex items-center gap-1.5 self-end sm:self-center"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">upgrade</span>
-                    Upgrade Paket
-                  </Link>
-                </div>
-              );
-            }
-
-            const isActive = court.status === 'ACTIVE';
-            const imageUrl = court.image_url || getCourtFallbackImage(court.sport_type);
-            const locationDisplay = court.district
-              ? `${court.district}, ${court.city}`
-              : court.city || court.address;
-
-            return (
-              <div
-                key={court.court_id}
-                className={`rounded-2xl shadow-sm transition-all duration-300 flex flex-col overflow-hidden border group ${
-                  isActive
+                  className={`rounded-2xl shadow-sm transition-all duration-300 flex flex-col overflow-hidden border group ${isActive
                     ? 'bg-white border-[#bccbb9]/30 hover:shadow-md'
                     : 'bg-[#f1f4f9] border-[#d1d9e2] opacity-90'
-                }`}
-              >
-                <div className="relative h-48 w-full overflow-hidden bg-[#e5eeff]">
-                  <img
-                    src={imageUrl}
-                    alt={court.name}
-                    className={`w-full h-full object-cover transition-transform duration-700 ${
-                      isActive ? 'group-hover:scale-105' : 'grayscale opacity-60 mix-blend-multiply'
                     }`}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = getCourtFallbackImage(court.sport_type);
-                    }}
-                  />
+                >
+                  <div className="relative h-48 w-full overflow-hidden bg-[#e5eeff]">
+                    <img
+                      src={imageUrl}
+                      alt={court.name}
+                      className={`w-full h-full object-cover transition-transform duration-700 ${isActive ? 'group-hover:scale-105' : 'grayscale opacity-60 mix-blend-multiply'
+                        }`}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = getCourtFallbackImage(court.sport_type);
+                      }}
+                    />
 
-                  {!isActive && (
-                    <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-10 pointer-events-none">
-                      <span className="bg-[#0b1c30]/80 text-[#ffffff] text-xs font-bold px-4 py-2 rounded-lg uppercase tracking-widest backdrop-blur-md shadow-sm">
-                        NON-AKTIF
-                      </span>
+                    {!isActive && (
+                      <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-10 pointer-events-none">
+                        <span className="bg-[#0b1c30]/80 text-[#ffffff] text-xs font-bold px-4 py-2 rounded-lg uppercase tracking-widest backdrop-blur-md shadow-sm">
+                          NON-AKTIF
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="absolute bottom-3 left-3 z-20 bg-[#0b1c30]/80 backdrop-blur-md text-[#ffffff] text-[11px] font-bold px-3 py-1 rounded-full shadow-sm uppercase tracking-wider">
+                      {court.sport_type}
                     </div>
-                  )}
 
-                  <div className="absolute bottom-3 left-3 z-20 bg-[#0b1c30]/80 backdrop-blur-md text-[#ffffff] text-[11px] font-bold px-3 py-1 rounded-full shadow-sm uppercase tracking-wider">
-                    {court.sport_type}
-                  </div>
-
-                  <div className="absolute top-3 right-3 z-20 flex gap-2">
-                    <button
-                      onClick={() => handleToggleStatus(court)}
-                      disabled={updatingId === court.court_id}
-                      title={`Klik untuk ubah status ke ${isActive ? 'Non-Aktif' : 'Aktif'}`}
-                      className={`backdrop-blur text-xs font-semibold px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5 transition-all cursor-pointer ${
-                        isActive
+                    <div className="absolute top-3 right-3 z-20 flex gap-2">
+                      <button
+                        onClick={() => handleToggleStatus(court)}
+                        disabled={updatingId === court.court_id}
+                        title={`Klik untuk ubah status ke ${isActive ? 'Non-Aktif' : 'Aktif'}`}
+                        className={`backdrop-blur text-xs font-semibold px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5 transition-all cursor-pointer ${isActive
                           ? 'bg-[#22c55e]/90 text-[#004b1e] hover:bg-[#22c55e]'
                           : 'bg-[#ffdad6]/90 text-[#ba1a1a] hover:bg-[#ffdad6]'
-                      }`}
-                    >
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          isActive ? 'bg-[#006e2f] animate-pulse' : 'bg-[#ba1a1a]'
-                        }`}
-                      ></span>
-                      {updatingId === court.court_id
-                        ? 'Memproses...'
-                        : isActive
-                        ? 'Aktif'
-                        : 'Non-Aktif'}
-                    </button>
+                          }`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full ${isActive ? 'bg-[#006e2f] animate-pulse' : 'bg-[#ba1a1a]'
+                            }`}
+                        ></span>
+                        {updatingId === court.court_id
+                          ? 'Memproses...'
+                          : isActive
+                            ? 'Aktif'
+                            : 'Non-Aktif'}
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <div className="p-6 flex flex-col flex-1">
-                  <div className="flex justify-between items-start gap-2">
-                    <div>
-                      <h3 className="text-xl font-bold text-[#0b1c30] group-hover:text-[#006e2f] transition-colors line-clamp-1">
-                        {court.name}
-                      </h3>
-                      <p className="text-xs text-[#3d4a3d] flex items-center gap-1 mt-1 font-medium line-clamp-1">
-                        <span className="material-symbols-outlined text-[15px] text-[#006e2f] shrink-0">
-                          location_on
+                  <div className="p-6 flex flex-col flex-1">
+                    <div className="flex justify-between items-start gap-2">
+                      <div>
+                        <h3 className="text-xl font-bold text-[#0b1c30] group-hover:text-[#006e2f] transition-colors line-clamp-1">
+                          {court.name}
+                        </h3>
+                        <p className="text-xs text-[#3d4a3d] flex items-center gap-1 mt-1 font-medium line-clamp-1">
+                          <span className="material-symbols-outlined text-[15px] text-[#006e2f] shrink-0">
+                            location_on
+                          </span>
+                          {locationDisplay}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className={`text-lg font-bold block leading-tight ${isActive ? 'text-[#006e2f]' : 'text-[#3d4a3d]'}`}>
+                          {formatRupiah(court.price_per_hour)}
                         </span>
-                        {locationDisplay}
-                      </p>
+                        <span className="text-[11px] font-medium text-[#3d4a3d]">/ jam</span>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className={`text-lg font-bold block leading-tight ${isActive ? 'text-[#006e2f]' : 'text-[#3d4a3d]'}`}>
-                        {formatRupiah(court.price_per_hour)}
+
+                    {/* 1. INFORMASI JUMLAH DIPESAN (Teks info biasa, bukan tombol & tanpa ikon api) */}
+                    <div className="my-3 flex items-center gap-1.5 text-xs text-slate-500">
+                      <span className="material-symbols-outlined text-[16px] text-slate-400">
+                        event_available
                       </span>
-                      <span className="text-[11px] font-medium text-[#3d4a3d]">/ jam</span>
+                      <span>
+                        Total reservasi: <strong className="font-semibold text-slate-700">{court.booking_count || 0} kali</strong>
+                      </span>
+                    </div>
+
+                    {/* 2. BARIS BAWAH: TOGGLE SWITCH GESER & TOMBOL AKSI */}
+                    <div className="mt-auto pt-4 flex items-center justify-between border-t border-[#bccbb9]/20">
+                      {/* Toggle Switch Geser (On / Off) */}
+                      <div className="flex items-center gap-2.5">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={isActive}
+                          onClick={() => handleToggleStatus(court)}
+                          disabled={updatingId === court.court_id || (isActive && !!court.has_active_booking)}
+                          title={
+                            isActive && court.has_active_booking
+                              ? 'Tidak dapat dinonaktifkan: ada jadwal booking aktif atau mendatang hari ini'
+                              : isActive
+                                ? 'Klik untuk nonaktifkan lapangan'
+                                : 'Klik untuk aktifkan lapangan'
+                          }
+                          className={`relative inline-flex h-5 w-10 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isActive && court.has_active_booking
+                            ? 'opacity-50 cursor-not-allowed bg-[#006e2f]'
+                            : updatingId === court.court_id
+                              ? 'opacity-50 cursor-not-allowed ' + (isActive ? 'bg-[#006e2f]' : 'bg-slate-300')
+                              : 'cursor-pointer ' + (isActive ? 'bg-[#006e2f]' : 'bg-slate-300')
+                            }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${isActive ? 'translate-x-5' : 'translate-x-0'
+                              }`}
+                          />
+                        </button>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-semibold text-slate-600 select-none">
+                            {updatingId === court.court_id ? 'Memproses...' : isActive ? 'Aktif' : 'Non-aktif'}
+                          </span>
+                          {isActive && court.has_active_booking && (
+                            <span
+                              className="material-symbols-outlined text-[14px] text-amber-600 cursor-help"
+                              title="Ada jadwal booking aktif hari ini"
+                            >
+                              lock
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Tombol Edit & Delete */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleOpenEdit(court)}
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all shadow-sm cursor-pointer ${isActive ? 'bg-[#e5eeff] text-[#3d4a3d] hover:bg-[#006e2f] hover:text-white' : 'bg-white text-[#3d4a3d] hover:bg-gray-200'
+                            }`}
+                          title="Edit Data Lapangan"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">edit</span>
+                        </button>
+
+                        <button
+                          onClick={() => setCourtToDelete(court)}
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all shadow-sm cursor-pointer ${isActive ? 'bg-[#e5eeff] text-[#3d4a3d] hover:bg-[#ffdad6] hover:text-[#ba1a1a]' : 'bg-white text-[#3d4a3d] hover:bg-gray-200'
+                            }`}
+                          title="Hapus Lapangan"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
+                </div>
+              );
+            })}
+          </div>
 
-                  {/* 1. INFORMASI JUMLAH DIPESAN (Teks info biasa, bukan tombol & tanpa ikon api) */}
-    <div className="my-3 flex items-center gap-1.5 text-xs text-slate-500">
-      <span className="material-symbols-outlined text-[16px] text-slate-400">
-        event_available
-      </span>
-      <span>
-        Total reservasi: <strong className="font-semibold text-slate-700">{court.booking_count || 0} kali</strong>
-      </span>
-    </div>
-
-    {/* 2. BARIS BAWAH: TOGGLE SWITCH GESER & TOMBOL AKSI */}
-    <div className="mt-auto pt-4 flex items-center justify-between border-t border-[#bccbb9]/20">
-      {/* Toggle Switch Geser (On / Off) */}
-      <div className="flex items-center gap-2.5">
-        <button
-          type="button"
-          role="switch"
-          aria-checked={isActive}
-          onClick={() => handleToggleStatus(court)}
-          disabled={updatingId === court.court_id || (isActive && !!court.has_active_booking)}
-          title={
-            isActive && court.has_active_booking
-              ? 'Tidak dapat dinonaktifkan: ada jadwal booking aktif atau mendatang hari ini'
-              : isActive
-              ? 'Klik untuk nonaktifkan lapangan'
-              : 'Klik untuk aktifkan lapangan'
-          }
-          className={`relative inline-flex h-5 w-10 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-            isActive && court.has_active_booking
-              ? 'opacity-50 cursor-not-allowed bg-[#006e2f]'
-              : updatingId === court.court_id
-              ? 'opacity-50 cursor-not-allowed ' + (isActive ? 'bg-[#006e2f]' : 'bg-slate-300')
-              : 'cursor-pointer ' + (isActive ? 'bg-[#006e2f]' : 'bg-slate-300')
-          }`}
-        >
-          <span
-            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${
-              isActive ? 'translate-x-5' : 'translate-x-0'
-            }`}
-          />
-        </button>
-        <div className="flex items-center gap-1">
-          <span className="text-xs font-semibold text-slate-600 select-none">
-            {updatingId === court.court_id ? 'Memproses...' : isActive ? 'Aktif' : 'Non-aktif'}
-          </span>
-          {isActive && court.has_active_booking && (
-            <span
-              className="material-symbols-outlined text-[14px] text-amber-600 cursor-help"
-              title="Ada jadwal booking aktif hari ini"
-            >
-              lock
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Tombol Edit & Delete */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => handleOpenEdit(court)}
-          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all shadow-sm cursor-pointer ${
-            isActive ? 'bg-[#e5eeff] text-[#3d4a3d] hover:bg-[#006e2f] hover:text-white' : 'bg-white text-[#3d4a3d] hover:bg-gray-200'
-          }`}
-          title="Edit Data Lapangan"
-        >
-          <span className="material-symbols-outlined text-[18px]">edit</span>
-        </button>
-
-        <button
-          onClick={() => setCourtToDelete(court)}
-          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all shadow-sm cursor-pointer ${
-            isActive ? 'bg-[#e5eeff] text-[#3d4a3d] hover:bg-[#ffdad6] hover:text-[#ba1a1a]' : 'bg-white text-[#3d4a3d] hover:bg-gray-200'
-          }`}
-          title="Hapus Lapangan"
-        >
-          <span className="material-symbols-outlined text-[18px]">delete</span>
-        </button>
-      </div>
-    </div>
+          {/* Pagination Controls (Item 3) */}
+          {filteredCourts.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-5 bg-white rounded-2xl border border-[#bccbb9]/30 shadow-xs mt-2">
+              <div className="flex items-center gap-3 text-xs text-[#3d4a3d]">
+                <span>
+                  Menampilkan {(currentPage - 1) * perPage + 1} -{' '}
+                  {Math.min(currentPage * perPage, filteredCourts.length)} dari {filteredCourts.length} lapangan
+                </span>
+                <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-3">
+                  <span>Per halaman:</span>
+                  <select
+                    value={perPage}
+                    onChange={(e) => {
+                      setPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="bg-slate-100 font-semibold py-1 px-2 rounded-lg text-xs outline-none border border-slate-300 cursor-pointer"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                  </select>
                 </div>
               </div>
-            );
-          })}
-        </div>
 
-        {/* Pagination Controls (Item 3) */}
-        {filteredCourts.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-4 px-5 bg-white rounded-2xl border border-[#bccbb9]/30 shadow-xs mt-2">
-            <div className="flex items-center gap-3 text-xs text-[#3d4a3d]">
-              <span>
-                Menampilkan {(currentPage - 1) * perPage + 1} -{' '}
-                {Math.min(currentPage * perPage, filteredCourts.length)} dari {filteredCourts.length} lapangan
-              </span>
-              <div className="flex items-center gap-1.5 ml-2 border-l border-slate-200 pl-3">
-                <span>Per halaman:</span>
-                <select
-                  value={perPage}
-                  onChange={(e) => {
-                    setPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  className="bg-slate-100 font-semibold py-1 px-2 rounded-lg text-xs outline-none border border-slate-300 cursor-pointer"
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-xl border border-[#bccbb9]/40 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
                 >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                </select>
+                  <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                  Sebelumnya
+                </button>
+                <span className="text-xs font-bold px-3 py-1 bg-[#e5eeff] text-[#006e2f] rounded-lg">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="px-3 py-1.5 rounded-xl border border-[#bccbb9]/40 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  Berikutnya
+                  <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                </button>
               </div>
             </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-xl border border-[#bccbb9]/40 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">chevron_left</span>
-                Sebelumnya
-              </button>
-              <span className="text-xs font-bold px-3 py-1 bg-[#e5eeff] text-[#006e2f] rounded-lg">
-                {currentPage} / {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages}
-                className="px-3 py-1.5 rounded-xl border border-[#bccbb9]/40 text-xs font-semibold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
-              >
-                Berikutnya
-                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </>
-    )}
+          )}
+        </>
+      )}
 
       {editingCourt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b1c30]/50 backdrop-blur-sm animate-in fade-in">
@@ -1066,7 +1065,7 @@ export default function DaftarLapangan() {
             </div>
 
             <form onSubmit={handleSaveEdit} className="p-6 flex flex-col gap-6 bg-[#f8f9ff]">
-              
+
               <section className="bg-[#ffffff] rounded-2xl shadow-sm border border-[#bccbb9]/30 p-6 flex flex-col gap-5">
                 <div className="flex items-center gap-3 pb-3 border-b border-[#bccbb9]/20">
                   <div className="w-9 h-9 rounded-xl bg-[#22c55e]/20 flex items-center justify-center text-[#006e2f]">
@@ -1195,21 +1194,18 @@ export default function DaftarLapangan() {
                       role="switch"
                       aria-checked={editFormData.status === 'ACTIVE'}
                       onClick={() => setEditFormData({ ...editFormData, status: editFormData.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' })}
-                      className={`w-12 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#006e2f] focus:ring-offset-2 cursor-pointer p-0.5 relative inline-flex items-center ${
-                        editFormData.status === 'ACTIVE' ? 'bg-[#006e2f]' : 'bg-slate-300'
-                      }`}
+                      className={`w-12 h-6 rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#006e2f] focus:ring-offset-2 cursor-pointer p-0.5 relative inline-flex items-center ${editFormData.status === 'ACTIVE' ? 'bg-[#006e2f]' : 'bg-slate-300'
+                        }`}
                     >
                       <span
-                        className={`w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ease-in-out transform ${
-                          editFormData.status === 'ACTIVE' ? 'translate-x-6' : 'translate-x-0'
-                        }`}
+                        className={`w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ease-in-out transform ${editFormData.status === 'ACTIVE' ? 'translate-x-6' : 'translate-x-0'
+                          }`}
                       />
                     </button>
                     <span
                       onClick={() => setEditFormData({ ...editFormData, status: editFormData.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' })}
-                      className={`text-sm font-bold cursor-pointer select-none transition-colors ${
-                        editFormData.status === 'ACTIVE' ? 'text-[#006e2f]' : 'text-slate-500'
-                      }`}
+                      className={`text-sm font-bold cursor-pointer select-none transition-colors ${editFormData.status === 'ACTIVE' ? 'text-[#006e2f]' : 'text-slate-500'
+                        }`}
                     >
                       {editFormData.status === 'ACTIVE' ? 'Aktif' : 'Non-Aktif'}
                     </span>
@@ -1306,11 +1302,10 @@ export default function DaftarLapangan() {
                           type="button"
                           key={amenity.id}
                           onClick={() => handleToggleEditAmenity(amenity.id)}
-                          className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-left ${
-                            isSelected 
-                              ? 'bg-[#22c55e]/10 border-[#006e2f]/50 text-[#006e2f]' 
-                              : 'bg-white border-[#bccbb9]/40 text-[#3d4a3d] hover:bg-[#f8f9ff]'
-                          }`}
+                          className={`flex items-center gap-2 p-3 rounded-xl border transition-all text-left ${isSelected
+                            ? 'bg-[#22c55e]/10 border-[#006e2f]/50 text-[#006e2f]'
+                            : 'bg-white border-[#bccbb9]/40 text-[#3d4a3d] hover:bg-[#f8f9ff]'
+                            }`}
                         >
                           <span className="material-symbols-outlined text-[18px]">{amenity.icon}</span>
                           <span className="text-[11px] font-bold leading-tight">{amenity.label}</span>

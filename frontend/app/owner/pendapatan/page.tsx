@@ -78,7 +78,7 @@ const DUMMY_BLURRED_ROWS: BookingItem[] = [
 export default function PendapatanPage() {
   const router = useRouter();
   const { token, user } = useAuth();
-  
+
   useEffect(() => {
     if (user && user.role === 'STAFF') {
       router.replace('/owner/dashboard');
@@ -131,8 +131,8 @@ export default function PendapatanPage() {
     };
   }, [token]);
 
-  const displayTransactions = isFreePlan && recentTransactions.length === 0 
-    ? DUMMY_BLURRED_ROWS 
+  const displayTransactions = isFreePlan && recentTransactions.length === 0
+    ? DUMMY_BLURRED_ROWS
     : recentTransactions;
 
   return (
@@ -144,65 +144,66 @@ export default function PendapatanPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-[#e5eeff] rounded-2xl p-6 flex flex-col justify-between h-[190px] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group border border-white">
-          <div className="absolute -right-4 -top-4 w-28 h-28 bg-[#006e2f]/10 rounded-full blur-xl group-hover:bg-[#006e2f]/20 transition-colors"></div>
+      <div className="flex flex-wrap items-stretch gap-4 mb-6 max-w-4xl">
+        {/* Card 1: Pendapatan Hari Ini */}
+        <div className="flex-1 min-w-[220px] max-w-[280px] bg-gradient-to-br from-[#006e2f] to-[#004d20] text-white p-4 sm:p-4.5 sm:p-[18px] rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
+          <span className="material-symbols-outlined text-white/10 text-5xl absolute -right-2 -bottom-2 pointer-events-none" style={{ fontVariationSettings: "'FILL' 1" }}>payments</span>
           <div>
-            <p className="font-bold text-[11px] text-[#3d4a3d] uppercase tracking-wider">
+            <p className="text-white/80 text-[11px] font-semibold tracking-wider uppercase relative z-10">
               Pendapatan Hari Ini
             </p>
             {loadingStats ? (
-              <div className="h-9 w-40 bg-gray-300/60 animate-pulse rounded-lg mt-3"></div>
+              <div className="h-7 w-32 bg-white/20 animate-pulse rounded-lg mt-1 mb-2"></div>
             ) : (
-              <h2 className="text-3xl font-extrabold text-[#0b1c30] mt-3">
+              <h2 className="text-white text-xl sm:text-2xl font-extrabold tracking-tight mt-1 mb-2 relative z-10">
                 {formatRupiah(stats.today_revenue)}
               </h2>
             )}
           </div>
-          <div className="flex items-center gap-1.5 bg-[#22c55e]/15 text-[#006e2f] px-3 py-1.5 rounded-full w-fit">
+          <div className="text-emerald-100 text-[11px] font-medium inline-flex items-center gap-1.5 relative z-10">
             <span className="material-symbols-outlined text-[16px]">payments</span>
-            <span className="font-bold text-xs">{stats.today_bookings} booking hari ini</span>
+            <span>{stats.today_bookings} booking hari ini</span>
           </div>
         </div>
 
-        <div className="bg-[#e5eeff] rounded-2xl p-6 flex flex-col justify-between h-[190px] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group border border-white">
-          <div className="absolute -right-4 -top-4 w-28 h-28 bg-[#005ac2]/10 rounded-full blur-xl group-hover:bg-[#005ac2]/20 transition-colors"></div>
+        {/* Card 2: Pendapatan Bulan Ini */}
+        <div className="flex-1 min-w-[220px] max-w-[280px] bg-gradient-to-br from-[#006e2f] to-[#004d20] text-white p-4 sm:p-4.5 sm:p-[18px] rounded-2xl shadow-xs relative overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
+          <span className="material-symbols-outlined text-white/10 text-5xl absolute -right-2 -bottom-2 pointer-events-none" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
           <div>
-            <p className="font-bold text-[11px] text-[#3d4a3d] uppercase tracking-wider">
+            <p className="text-white/80 text-[11px] font-semibold tracking-wider uppercase relative z-10">
               Pendapatan Bulan Ini
             </p>
             {loadingStats ? (
-              <div className="h-9 w-40 bg-gray-300/60 animate-pulse rounded-lg mt-3"></div>
+              <div className="h-7 w-32 bg-white/20 animate-pulse rounded-lg mt-1 mb-2"></div>
             ) : (
-              <h2 className="text-3xl font-extrabold text-[#0b1c30] mt-3">
+              <h2 className="text-white text-xl sm:text-2xl font-extrabold tracking-tight mt-1 mb-2 relative z-10">
                 {formatRupiah(stats.monthly_revenue)}
               </h2>
             )}
           </div>
-          <div className="flex items-center gap-1.5 text-[#3d4a3d] text-xs font-semibold">
-            <span className="material-symbols-outlined text-[18px] text-[#006e2f]">
-              account_balance_wallet
-            </span>
+          <div className="text-emerald-100 text-[11px] font-medium inline-flex items-center gap-1.5 relative z-10">
+            <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span>
             <span>Total akumulasi bulan berjalan</span>
           </div>
         </div>
 
-        <div className="bg-[#e5eeff] rounded-2xl p-6 flex flex-col justify-between h-[190px] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group border border-white">
-          <div className="absolute -right-4 -top-4 w-28 h-28 bg-[#565e74]/10 rounded-full blur-xl group-hover:bg-[#565e74]/20 transition-colors"></div>
+        {/* Card 3: Total Booking Aktif */}
+        <div className="flex-1 min-w-[220px] max-w-[280px] bg-white text-[#0b1c30] p-4 sm:p-4.5 sm:p-[18px] rounded-2xl border border-[#bccbb9]/40 shadow-xs relative overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
+          <span className="material-symbols-outlined text-black/[0.03] text-5xl absolute -right-2 -bottom-2 pointer-events-none" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
           <div>
-            <p className="font-bold text-[11px] text-[#3d4a3d] uppercase tracking-wider">
+            <p className="text-gray-500 text-[11px] font-semibold tracking-wider uppercase relative z-10">
               Total Booking Aktif
             </p>
             {loadingStats ? (
-              <div className="h-9 w-32 bg-gray-300/60 animate-pulse rounded-lg mt-3"></div>
+              <div className="h-7 w-28 bg-gray-200 animate-pulse rounded-lg mt-1 mb-2"></div>
             ) : (
-              <h2 className="text-3xl font-extrabold text-[#0b1c30] mt-3">
+              <h2 className="text-[#0b1c30] text-xl sm:text-2xl font-extrabold tracking-tight mt-1 mb-2 relative z-10">
                 {stats.total_bookings} Booking
               </h2>
             )}
           </div>
-          <div className="flex items-center gap-1.5 text-[#3d4a3d] text-xs font-semibold">
-            <span className="material-symbols-outlined text-[18px] text-[#006e2f]">check_circle</span>
+          <div className="text-emerald-700 text-[11px] font-medium inline-flex items-center gap-1.5 relative z-10">
+            <span className="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
             <span>{stats.total_courts} Lapangan Aktif</span>
           </div>
         </div>
@@ -234,7 +235,7 @@ export default function PendapatanPage() {
           ) : (
             <div className="w-full overflow-x-auto">
               <table className="w-full text-left text-xs text-[#0b1c30]">
-                <thead className="bg-[#f8f9ff] font-bold text-[#3d4a3d] border-b border-[#bccbb9]/30">
+                <thead className="bg-slate-50 font-bold text-[#3d4a3d] border-b border-[#bccbb9]/30">
                   <tr>
                     <th className="py-3 px-6">ID Booking</th>
                     <th className="py-3 px-6">Tanggal Main</th>
@@ -244,7 +245,7 @@ export default function PendapatanPage() {
                 </thead>
                 <tbody className="divide-y divide-[#bccbb9]/20">
                   {displayTransactions.map((tx) => (
-                    <tr key={tx.booking_id} className="hover:bg-[#f8f9ff]/70 transition-colors">
+                    <tr key={tx.booking_id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-4 px-6 font-mono font-bold text-[#006e2f]">
                         #{tx.booking_code}
                       </td>
