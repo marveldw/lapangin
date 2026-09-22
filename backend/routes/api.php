@@ -24,10 +24,14 @@ Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:login');
 
 Route::post('/forgot-password', [PasswordResetController::class, 'sendResetToken'])
-    ->middleware('throttle:10,1');
+    ->middleware('throttle:forgot-password');
+Route::post('/password/forgot', [PasswordResetController::class, 'sendResetToken'])
+    ->middleware('throttle:forgot-password');
 
 Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])
-    ->middleware('throttle:10,1');
+    ->middleware('throttle:reset-password');
+Route::post('/password/reset', [PasswordResetController::class, 'resetPassword'])
+    ->middleware('throttle:reset-password');
 
 Route::get('/plans', [PlanController::class, 'index'])
     ->middleware('throttle:60,1');

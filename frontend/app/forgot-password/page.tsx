@@ -10,7 +10,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successData, setSuccessData] = useState<{ token: string; reset_url: string } | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,9 +20,9 @@ export default function ForgotPasswordPage() {
     try {
       const res = await api.post('/forgot-password', { email });
       if (res?.success) {
-        setSuccessData(res.data);
+        setIsSubmitted(true);
       } else {
-        setErrorMessage(res?.message || 'Email tidak ditemukan dalam sistem.');
+        setErrorMessage(res?.message || 'Terjadi kendala saat memproses permintaan.');
       }
     } catch (err: any) {
       console.error('Forgot password error:', err);
@@ -51,24 +51,17 @@ export default function ForgotPasswordPage() {
           </div>
 
           {/* Success Box */}
-          {successData ? (
+          {isSubmitted ? (
             <div className="space-y-5 animate-in fade-in duration-200">
               <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-3 text-emerald-800 text-xs sm:text-sm">
                 <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600 mt-0.5" />
                 <div className="space-y-1">
-                  <p className="font-bold">Tautan Reset Berhasil Dibuat!</p>
+                  <p className="font-bold">Email Reset Terkirim</p>
                   <p className="text-emerald-700 leading-relaxed">
-                    Token reset sandi telah digenerate. Silakan klik tombol di bawah untuk memasukkan kata sandi baru.
+                    Jika alamat email terdaftar, tautan untuk mengatur ulang kata sandi telah dikirim. Silakan periksa kotak masuk (inbox) atau folder spam email Anda.
                   </p>
                 </div>
               </div>
-
-              <Link
-                href={`/reset-password?token=${encodeURIComponent(successData.token)}&email=${encodeURIComponent(email)}`}
-                className="w-full py-3 px-4 rounded-xl bg-[#006e2f] hover:bg-[#005321] text-white text-sm font-semibold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer text-center"
-              >
-                Lanjut Reset Kata Sandi
-              </Link>
 
               <div className="text-center pt-2">
                 <Link

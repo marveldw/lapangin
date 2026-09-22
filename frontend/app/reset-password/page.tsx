@@ -27,6 +27,11 @@ function ResetPasswordForm() {
     e.preventDefault();
     setErrorMessage(null);
 
+    if (!token || !email) {
+      setErrorMessage("Tautan reset kata sandi tidak lengkap atau tidak valid. Silakan minta tautan baru.");
+      return;
+    }
+
     if (password.length < 8) {
       setErrorMessage("Kata sandi minimal harus 8 karakter.");
       return;

@@ -20,8 +20,11 @@ class MidtransService
      */
     protected function initConfiguration(): void
     {
-        Config::$serverKey = config('services.midtrans.server_key');
-        Config::$clientKey = config('services.midtrans.client_key');
+        $serverKey = config('services.midtrans.server_key');
+        $clientKey = config('services.midtrans.client_key');
+
+        Config::$serverKey = is_string($serverKey) ? trim($serverKey) : $serverKey;
+        Config::$clientKey = is_string($clientKey) ? trim($clientKey) : $clientKey;
         Config::$isProduction = (bool) config('services.midtrans.is_production', false);
         Config::$isSanitized = (bool) config('services.midtrans.is_sanitized', true);
         Config::$is3ds = (bool) config('services.midtrans.is_3ds', true);
@@ -70,9 +73,20 @@ class MidtransService
             $params['item_details'] = $itemDetails;
         }
 
+        if (config('services.midtrans.debug_log', false)) {
+            Log::info("Midtrans Dynamic QRIS Charge Request [Order: {$orderId}]:", [
+                'environment' => Config::$isProduction ? 'PRODUCTION' : 'SANDBOX',
+                'params'      => $params,
+            ]);
+        }
+
         try {
             $response = CoreApi::charge($params);
         } catch (Exception $e) {
+            if (config('services.midtrans.debug_log', false)) {
+                Log::warning("Midtrans Dynamic QRIS Charge Initial Attempt Failed [Order: {$orderId}]: " . $e->getMessage());
+            }
+
             // Jika acquirer tertentu gagal (misal 402 Payment channel is not activated), coba otomatis tanpa parameter acquirer
             if (str_contains($e->getMessage(), '402') || str_contains($e->getMessage(), 'not activated')) {
                 unset($params['qris']);
@@ -85,13 +99,27 @@ class MidtransService
         // Convert object to array for easy handling if needed
         $resArray = json_decode(json_encode($response), true);
 
-        // Extract QR Code URL from actions
+        if (config('services.midtrans.debug_log', false)) {
+            Log::info("Midtrans Dynamic QRIS Charge Raw Response [Order: {$orderId}]:", [
+                'response' => $resArray,
+            ]);
+        }
+
+        // Extract QR Code URL from actions (prioritize raw PNG image 'generate-qr-code')
         $qrUrl = null;
         if (!empty($resArray['actions']) && is_array($resArray['actions'])) {
             foreach ($resArray['actions'] as $action) {
-                if (in_array($action['name'] ?? '', ['generate-qr-code', 'generate-qr-code-v2'])) {
+                if (($action['name'] ?? '') === 'generate-qr-code') {
                     $qrUrl = $action['url'] ?? null;
                     break;
+                }
+            }
+            if (!$qrUrl) {
+                foreach ($resArray['actions'] as $action) {
+                    if (str_contains($action['name'] ?? '', 'generate-qr-code')) {
+                        $qrUrl = $action['url'] ?? null;
+                        break;
+                    }
                 }
             }
         }
@@ -135,7 +163,10 @@ class MidtransService
             return false;
         }
 
+        $serverKey = trim($serverKey);
         $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
         return hash_equals($expectedSignature, $signatureKey);
     }
 }
+
+
