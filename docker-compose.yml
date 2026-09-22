@@ -1,19 +1,20 @@
 services:
   # --------------------------------------------------
-  # 1. DATABASE (PostgreSQL 16 Alpine)
+  # 1. DATABASE (PostgreSQL 15 Alpine)
   # --------------------------------------------------
   db:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     container_name: lapangin_db
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-lapangin}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-lapangin_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lapangin_password}
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - lapangin_pgdata_clean:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-lapangin}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-lapangin_user} -d $${POSTGRES_DB:-lapangin}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -21,7 +22,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 256M
     networks:
       - lapangin_network
 
@@ -48,8 +49,8 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       DB_DATABASE: ${POSTGRES_DB:-lapangin}
-      DB_USERNAME: ${POSTGRES_USER:-postgres}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_USERNAME: ${POSTGRES_USER:-lapangin_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-lapangin_password}
       # --- Laravel Services ---
       SESSION_DRIVER: database
       QUEUE_CONNECTION: database
@@ -60,7 +61,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 256M
     networks:
       - lapangin_network
 
@@ -86,13 +87,13 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 256M
     networks:
       - lapangin_network
 
-# Persistent Storage
+# Persistent Storage (Using clean volume name to bypass stale MySQL volume collisions)
 volumes:
-  postgres_data:
+  lapangin_pgdata_clean:
     driver: local
 
 # Jaringan Terisolasi
