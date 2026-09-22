@@ -1,31 +1,19 @@
 services:
-  # ==================================================
-  # 1. DATABASE (MySQL 8.0 with Small VPS Memory Tuning)
-  # ==================================================
+  # --------------------------------------------------
+  # 1. DATABASE (PostgreSQL 16 Alpine)
+  # --------------------------------------------------
   db:
-    image: mysql:8.0
+    image: postgres:16-alpine
     container_name: lapangin_db
     restart: unless-stopped
-    # Low-memory flags: performance-schema=OFF saves ~150-200MB alone on MySQL 8!
-    # Buffer pool is tunable via MYSQL_BUFFER_POOL_SIZE (default 128M)
-    command: >
-      --default-authentication-plugin=mysql_native_password
-      --innodb-buffer-pool-size=${MYSQL_BUFFER_POOL_SIZE:-128M}
-      --innodb-log-buffer-size=8M
-      --max-connections=30
-      --table-open-cache=256
-      --performance-schema=OFF
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_unicode_ci
     environment:
-      MYSQL_DATABASE: ${DB_DATABASE:-lapangin}
-      MYSQL_USER: ${DB_USERNAME:-lapangin_user}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-lapangin}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-root_secret}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-lapangin}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,65 +21,64 @@ services:
     deploy:
       resources:
         limits:
-          memory: 384M
-        reservations:
-          memory: 256M
+          memory: 512M
     networks:
       - lapangin_network
 
-  # ==================================================
-  # 2. BACKEND (Laravel PHP 8.2-FPM Alpine)
-  # ==================================================
+  # --------------------------------------------------
+  # 2. BACKEND (Laravel 12 + PHP-FPM + Nginx bundled)
+  # --------------------------------------------------
   backend:
     build:
-      context: .
-      dockerfile: docker/php/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: lapangin_backend
     restart: unless-stopped
+    ports:
+      - "8080:8000"
     environment:
+      # --- App ---
       APP_NAME: "${APP_NAME:-Lapangin}"
       APP_ENV: "${APP_ENV:-production}"
       APP_DEBUG: "${APP_DEBUG:-false}"
       APP_KEY: "${APP_KEY}"
-      APP_URL: "${APP_URL:-http://localhost}"
-      # Database Connection
-      DB_CONNECTION: mysql
+      APP_URL: "${APP_URL:-http://localhost:8080}"
+      # --- Database (PostgreSQL) ---
+      DB_CONNECTION: pgsql
       DB_HOST: db
-      DB_PORT: 3306
-      DB_DATABASE: ${DB_DATABASE:-lapangin}
-      DB_USERNAME: ${DB_USERNAME:-lapangin_user}
-      DB_PASSWORD: ${DB_PASSWORD:-secret}
-      # Lightweight database drivers (no Redis container needed)
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-lapangin}
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # --- Laravel Services ---
       SESSION_DRIVER: database
       QUEUE_CONNECTION: database
       CACHE_STORE: database
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - laravel_storage:/var/www/html/storage
-      - laravel_public:/var/www/html/public
     deploy:
       resources:
         limits:
-          memory: 256M
-        reservations:
-          memory: 128M
+          memory: 512M
     networks:
       - lapangin_network
 
-  # ==================================================
+  # --------------------------------------------------
   # 3. FRONTEND (Next.js Standalone Node 20 Alpine)
-  # ==================================================
+  # --------------------------------------------------
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api}
     container_name: lapangin_frontend
     restart: unless-stopped
+    ports:
+      - "3000:3000"
     environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api}
       NODE_ENV: production
       PORT: 3000
     depends_on:
@@ -99,51 +86,16 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
-        reservations:
-          memory: 128M
+          memory: 512M
     networks:
       - lapangin_network
 
-  # ==================================================
-  # 4. REVERSE PROXY & STATIC CACHE (Nginx Alpine)
-  # ==================================================
-  nginx:
-    build:
-      context: ./docker/nginx
-      dockerfile: Dockerfile
-    container_name: lapangin_nginx
-    restart: unless-stopped
-    ports:
-      - "${APP_PORT:-8080}:80"
-    volumes:
-      - laravel_public:/var/www/html/public:ro
-      - laravel_storage:/var/www/html/storage:ro
-      - certbot_certs:/etc/letsencrypt:ro
-    depends_on:
-      - frontend
-      - backend
-    deploy:
-      resources:
-        limits:
-          memory: 64M
-        reservations:
-          memory: 16M
-    networks:
-      - lapangin_network
-
-# Persistent Named Volumes
+# Persistent Storage
 volumes:
-  mysql_data:
-    driver: local
-  laravel_storage:
-    driver: local
-  laravel_public:
-    driver: local
-  certbot_certs:
+  postgres_data:
     driver: local
 
-# Isolated Network
+# Jaringan Terisolasi
 networks:
   lapangin_network:
     driver: bridge
