@@ -55,6 +55,11 @@ services:
       SESSION_DRIVER: database
       QUEUE_CONNECTION: database
       CACHE_STORE: database
+      # --- Midtrans Payment Gateway ---
+      MIDTRANS_SERVER_KEY: "${MIDTRANS_SERVER_KEY:-}"
+      MIDTRANS_CLIENT_KEY: "${MIDTRANS_CLIENT_KEY:-}"
+      MIDTRANS_MERCHANT_ID: "${MIDTRANS_MERCHANT_ID:-}"
+      MIDTRANS_IS_PRODUCTION: "${MIDTRANS_IS_PRODUCTION:-false}"
     depends_on:
       db:
         condition: service_healthy
