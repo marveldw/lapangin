@@ -292,7 +292,7 @@ export default function CustomerBookingPage() {
                         {/* Payment Method Badge */}
                         {b.payment_method === 'QRIS' ? (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200 flex items-center gap-1">
-                            <span>QRIS Dinamis</span>
+                            
                           </span>
                         ) : (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">

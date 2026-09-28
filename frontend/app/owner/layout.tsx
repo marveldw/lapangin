@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/lib/AuthContext';
 import Sidebar from '../../components/Sidebar';
 
@@ -51,6 +52,15 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
           </div>
           
           <div className="flex items-center gap-4 sm:gap-6">
+            <Link
+              href="/lapangan"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-[#006e2f] text-[#006e2f] hover:text-white border border-emerald-200/80 transition-all text-xs font-bold cursor-pointer"
+              title="Kembali ke Halaman Sewa Lapangan"
+            >
+              <span className="material-symbols-outlined text-[18px]">storefront</span>
+              <span className="hidden sm:inline">Sewa Lapangan</span>
+            </Link>
+
             <div className="flex items-center gap-4 sm:pl-6 sm:border-l border-[#bccbb9]/50">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold tracking-wide text-[#0b1c30]">{user?.name || (role === 'STAFF' ? 'Staf' : 'Owner')}</p>

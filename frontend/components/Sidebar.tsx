@@ -44,10 +44,15 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
         {/* Logo & Tombol Close (Mobile) */}
         <div className="p-6 flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <img alt="Lapangin Logo" className="h-8 w-auto object-contain" src="/logo.png" />
+          <Link
+            href="/"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-2 group cursor-pointer hover:opacity-80 transition-opacity"
+            title="Kembali ke Beranda Lapangin"
+          >
+            <img alt="Lapangin Logo" className="h-8 w-auto object-contain transition-transform group-hover:scale-105" src="/logo.png" />
             <span className="text-xl font-semibold text-[#006e2f] tracking-tight">Lapangin</span>
-          </div>
+          </Link>
           <button
             onClick={() => setIsOpen(false)}
             className="lg:hidden p-1 rounded-lg text-[#3d4a3d] hover:bg-emerald-50/80 hover:text-[#006e2f] transition-colors cursor-pointer"
@@ -58,6 +63,10 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
         {/* Navigasi Utama */}
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto scrollbar-none pb-4">
+          <Link onClick={() => setIsOpen(false)} href="/lapangan" className="flex items-center gap-4 px-4 py-2 rounded-lg text-[#3d4a3d] hover:bg-emerald-50/80 hover:text-[#006e2f] transition-all duration-200 mb-2 border-b border-gray-100 pb-3">
+            <span className="material-symbols-outlined text-[#006e2f]">storefront</span>
+            <span className="text-sm font-semibold text-[#006e2f]">Sewa Lapangan</span>
+          </Link>
           <Link onClick={() => setIsOpen(false)} href="/owner/dashboard" className={`flex items-center gap-4 px-4 py-2 rounded-lg transition-all duration-200 ${getMenuClass('/owner/dashboard')}`}>
             <span className="material-symbols-outlined">dashboard</span>
             <span className="text-sm tracking-wide">Dashboard</span>

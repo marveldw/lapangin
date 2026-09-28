@@ -36,15 +36,15 @@ services:
     container_name: lapangin_backend
     restart: unless-stopped
     ports:
-      - "8080:8000"
+      - "${BACKEND_PORT:-8088}:8000"
     environment:
       # --- App ---
       APP_NAME: "${APP_NAME:-Lapangin}"
       APP_ENV: "${APP_ENV:-production}"
       APP_DEBUG: "${APP_DEBUG:-false}"
-      APP_KEY: "${APP_KEY}"
-      APP_URL: "${APP_URL:-http://localhost:8080}"
-      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:3000}"
+      APP_KEY: "${APP_KEY:-base64:e/PQQEqKUCo8RPzIV86qY1ZTsCKRxl7/74eZ0eUk33Q=}"
+      APP_URL: "${APP_URL:-http://localhost:8088}"
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:3001}"
       # --- Database (PostgreSQL) ---
       DB_CONNECTION: pgsql
       DB_HOST: db
@@ -56,20 +56,6 @@ services:
       SESSION_DRIVER: database
       QUEUE_CONNECTION: database
       CACHE_STORE: database
-      # --- Midtrans Payment Gateway ---
-      MIDTRANS_SERVER_KEY: "${MIDTRANS_SERVER_KEY:-}"
-      MIDTRANS_CLIENT_KEY: "${MIDTRANS_CLIENT_KEY:-}"
-      MIDTRANS_MERCHANT_ID: "${MIDTRANS_MERCHANT_ID:-}"
-      MIDTRANS_IS_PRODUCTION: "${MIDTRANS_IS_PRODUCTION:-false}"
-      # --- Mail / SMTP ---
-      MAIL_MAILER: "${MAIL_MAILER:-smtp}"
-      MAIL_HOST: "${MAIL_HOST:-smtp.gmail.com}"
-      MAIL_PORT: "${MAIL_PORT:-587}"
-      MAIL_USERNAME: "${MAIL_USERNAME:-}"
-      MAIL_PASSWORD: "${MAIL_PASSWORD:-}"
-      MAIL_SCHEME: "${MAIL_SCHEME:-}"
-      MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:-noreply@lapangin.id}"
-      MAIL_FROM_NAME: "${MAIL_FROM_NAME:-${APP_NAME:-Lapangin}}"
     depends_on:
       db:
         condition: service_healthy
@@ -88,13 +74,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8088/api}
     container_name: lapangin_frontend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3001}:3000"
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080/api}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8088/api}
       NODE_ENV: production
       PORT: 3000
     depends_on:
