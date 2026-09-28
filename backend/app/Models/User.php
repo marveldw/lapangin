@@ -5,6 +5,7 @@ namespace App\Models;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -14,8 +15,17 @@ use Spatie\Activitylog\Support\LogOptions;
 
 class User extends Authenticatable implements FilamentUser
 {
-    use HasRoles;
+    use HasRoles, SoftDeletes;
     use HasApiTokens, HasFactory, Notifiable, LogsActivity;
+
+    protected static function booted(): void
+    {
+        static::deleted(function (User $user) {
+            if (method_exists($user, 'tokens')) {
+                $user->tokens()->delete();
+            }
+        });
+    }
 
     protected $primaryKey = 'user_id';
 
@@ -77,9 +87,8 @@ class User extends Authenticatable implements FilamentUser
 
     public function parentOwner()
     {
-        return $this->belongsTo(User::class, 'owner_id', 'user_id');
+        return $this->belongsTo(User::class, 'owner_id', 'user_id')->withTrashed();
     }
-
     public function staffMembers()
     {
         return $this->hasMany(User::class, 'owner_id', 'user_id');

@@ -93,4 +93,26 @@ class CustomerController extends Controller
             'data'    => $customer,
         ]);
     }
+
+    // DELETE /api/customers/{id}
+    public function destroy(Request $request, $id)
+    {
+        $customer = Customer::where('customer_id', $id)
+            ->where('owner_id', $request->user()->getTenantOwnerId())
+            ->first();
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Customer tidak ditemukan.',
+            ], 404);
+        }
+
+        $customer->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Customer berhasil dihapus (soft delete). Riwayat pemesanan tetap tersimpan.',
+        ]);
+    }
 }

@@ -100,6 +100,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         Route::post('/customers', [CustomerController::class, 'store']);
         Route::get('/customers/{id}', [CustomerController::class, 'show'])->whereNumber('id');
         Route::put('/customers/{id}', [CustomerController::class, 'update'])->whereNumber('id');
+        Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])->whereNumber('id');
 
         // Dashboard Analytics (Operational view for Staff, Full view for Owner)
         Route::get('/dashboard', [DashboardController::class, 'index']);
