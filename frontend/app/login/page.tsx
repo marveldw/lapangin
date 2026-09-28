@@ -51,7 +51,7 @@ function LoginForm() {
       // Smart Redirect based on Role
       const role = res.role?.toUpperCase();
       if (role === "ADMIN") {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8088";
         window.location.href = `${backendUrl}/admin`;
       } else if (role === "OWNER" || role === "STAFF") {
         window.location.href = redirectParam || "/owner/dashboard";
