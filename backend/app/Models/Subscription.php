@@ -31,11 +31,11 @@ class Subscription extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id', 'user_id');
+        return $this->belongsTo(User::class, 'user_id', 'user_id')->withTrashed();
     }
 
     public function plan()
     {
-        return $this->belongsTo(Plan::class, 'plan_id', 'plan_id');
+        return $this->belongsTo(Plan::class, 'plan_id', 'plan_id')->withTrashed();
     }
 }

@@ -20,13 +20,18 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name'                  => 'required|string|max:255',
-            'email'                 => 'required|email|max:255|unique:users,email',
+            'email'                 => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->withoutTrashed(),
+            ],
             'password'              => 'required|string|min:8|max:128|confirmed',
             'password_confirmation' => 'required|string',
             'phone'                 => [
                 'required',
                 'string',
-                Rule::unique('users', 'phone'),
+                Rule::unique('users', 'phone')->withoutTrashed(),
                 new IndonesianPhoneNumber(),
             ],
             'role'                  => 'nullable|string|in:CUSTOMER,OWNER',

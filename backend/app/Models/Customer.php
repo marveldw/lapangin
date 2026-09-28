@@ -3,13 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 class Customer extends Model
 {
-    use LogsActivity;
-
+    use LogsActivity, SoftDeletes;
     protected $primaryKey = 'customer_id';
 
     public function getActivitylogOptions(): LogOptions
@@ -30,7 +30,7 @@ class Customer extends Model
 
     public function owner()
     {
-        return $this->belongsTo(User::class, 'owner_id', 'user_id');
+        return $this->belongsTo(User::class, 'owner_id', 'user_id')->withTrashed();
     }
 
     public function bookings()

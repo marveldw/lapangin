@@ -39,12 +39,17 @@ class StaffController extends Controller
 
         $validated = $request->validate([
             'name'     => 'required|string|max:255',
-            'email'    => 'required|email|max:255|unique:users,email',
+            'email'    => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->withoutTrashed(),
+            ],
             'password' => 'required|string|min:8',
             'phone'    => [
                 'required',
                 'string',
-                Rule::unique('users', 'phone'),
+                Rule::unique('users', 'phone')->withoutTrashed(),
                 new IndonesianPhoneNumber(),
             ],
         ], [
@@ -105,13 +110,13 @@ class StaffController extends Controller
                 'required',
                 'email',
                 'max:255',
-                Rule::unique('users', 'email')->ignoreModel($staff),
+                Rule::unique('users', 'email')->ignoreModel($staff)->withoutTrashed(),
             ],
             'phone'    => [
                 'sometimes',
                 'required',
                 'string',
-                Rule::unique('users', 'phone')->ignoreModel($staff),
+                Rule::unique('users', 'phone')->ignoreModel($staff)->withoutTrashed(),
                 new IndonesianPhoneNumber(),
             ],
             'status'   => ['sometimes', 'required', Rule::in(['ACTIVE', 'INACTIVE'])],
@@ -165,9 +170,9 @@ class StaffController extends Controller
 
         $staffName = $staff->name;
 
-        // Set status to INACTIVE so audit log & historical bookings are fully preserved
+        // Set status to INACTIVE and soft delete so audit log & historical bookings are fully preserved
         $staff->update(['status' => 'INACTIVE']);
-
+        $staff->delete();
         activity()
             ->causedBy($owner)
             ->performedOn($staff)

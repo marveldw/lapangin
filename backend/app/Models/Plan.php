@@ -3,13 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 class Plan extends Model
 {
-    use LogsActivity;
-
+    use LogsActivity, SoftDeletes;
     public const FREE  = 'FREE';
     public const BASIC = 'BASIC';
     public const PRO   = 'PRO';
