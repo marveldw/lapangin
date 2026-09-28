@@ -90,9 +90,9 @@ class PasswordResetController extends Controller
             ], 422);
         }
 
-        // 2. Check token expiration
+        // 2. Check token expiration (Force UTC comparison to prevent timezone mismatch)
         $expireMinutes = (int) config('auth.passwords.users.expire', 60);
-        if (Carbon::parse($record->created_at)->addMinutes($expireMinutes)->isPast()) {
+        if (Carbon::parse($record->created_at, 'UTC')->addMinutes($expireMinutes)->isBefore(now('UTC'))) {
             Password::broker()->deleteToken($user);
             return response()->json([
                 'success' => false,

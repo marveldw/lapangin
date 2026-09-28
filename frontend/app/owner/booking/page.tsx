@@ -577,16 +577,6 @@ export default function OwnerBookingPage() {
                   </button>
                 </>
               )}
-              {selectedBooking.status === 'CONFIRMED' && (
-                <button
-                  type="button"
-                  disabled={actionLoadingId === selectedBooking.booking_id}
-                  onClick={() => handleUpdateStatus(selectedBooking.booking_id, 'CANCELLED')}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-[#ba1a1a] hover:bg-[#ffdad6]/40 transition-colors cursor-pointer"
-                >
-                  Batalkan Reservasi
-                </button>
-              )}
             </div>
           </div>
         </div>

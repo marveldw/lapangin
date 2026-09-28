@@ -1,12 +1,35 @@
-const rawUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
-const BASE_URL = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl}/api`;
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const currentHost = window.location.hostname;
+    const currentProtocol = window.location.protocol;
+    const envUrl = process.env.NEXT_PUBLIC_API_URL;
+
+    // Jika diakses dari HP / IP publik (misal 103.127.132.8) tetapi env berisi localhost
+    if (currentHost !== 'localhost' && currentHost !== '127.0.0.1') {
+      if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+        return `${currentProtocol}//${currentHost}:8080/api`;
+      }
+    }
+
+    if (envUrl) {
+      const clean = envUrl.replace(/\/+$/, '');
+      return clean.endsWith('/api') ? clean : `${clean}/api`;
+    }
+
+    return `${currentProtocol}//${currentHost}:8080/api`;
+  }
+
+  const rawUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api').replace(/\/+$/, '');
+  return rawUrl.endsWith('/api') ? rawUrl : `${rawUrl}/api`;
+};
 
 const buildUrl = (endpoint: string) => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const baseUrl = getBaseUrl();
   if (cleanEndpoint.startsWith('/api/')) {
-    return `${rawUrl.replace(/\/api$/, '')}${cleanEndpoint}`;
+    return `${baseUrl.replace(/\/api$/, '')}${cleanEndpoint}`;
   }
-  return `${BASE_URL}${cleanEndpoint}`;
+  return `${baseUrl}${cleanEndpoint}`;
 };
 
 const defaultHeaders = {
