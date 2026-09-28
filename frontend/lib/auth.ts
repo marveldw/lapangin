@@ -1,3 +1,5 @@
+import { api } from "./api";
+
 export interface User {
   user_id: number;
   name: string;
@@ -53,15 +55,7 @@ export async function logoutUser(): Promise<void> {
   const token = getAuthToken();
   if (token) {
     try {
-      const rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-      const apiUrl = rawUrl.endsWith("/api") ? rawUrl : `${rawUrl}/api`;
-      await fetch(`${apiUrl}/logout`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      });
+      await api.post("/logout", {}, token);
     } catch (e) {
       console.warn("Logout request failed:", e);
     }
