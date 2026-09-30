@@ -24,9 +24,11 @@ return new class extends Migration
         if ($driver === 'pgsql') {
             DB::statement("CREATE INDEX IF NOT EXISTS idx_bookings_customer_id ON bookings (customer_id);");
         } else {
-            Schema::table('bookings', function (Blueprint $table) {
-                $table->index('customer_id', 'idx_bookings_customer_id');
-            });
+            try {
+                Schema::table('bookings', function (Blueprint $table) {
+                    $table->index('customer_id', 'idx_bookings_customer_id');
+                });
+            } catch (\Throwable $e) {}
         }
     }
 
@@ -40,9 +42,11 @@ return new class extends Migration
         if ($driver === 'pgsql') {
             DB::statement("DROP INDEX IF EXISTS idx_bookings_customer_id;");
         } else {
-            Schema::table('bookings', function (Blueprint $table) {
-                $table->dropIndex('idx_bookings_customer_id');
-            });
+            try {
+                Schema::table('bookings', function (Blueprint $table) {
+                    $table->dropIndex('idx_bookings_customer_id');
+                });
+            } catch (\Throwable $e) {}
         }
 
         if (Schema::hasColumn('bookings', 'deleted_at')) {
