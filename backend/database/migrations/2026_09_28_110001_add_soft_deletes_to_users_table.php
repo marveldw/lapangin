@@ -39,6 +39,18 @@ return new class extends Migration
                 ON users (phone) 
                 WHERE deleted_at IS NULL AND phone IS NOT NULL AND phone != '';
             ");
+        } else {
+            try {
+                Schema::table('users', function (Blueprint $table) {
+                    $table->dropUnique('users_email_unique');
+                });
+            } catch (\Throwable $e) {}
+
+            try {
+                Schema::table('users', function (Blueprint $table) {
+                    $table->dropUnique('users_phone_unique');
+                });
+            } catch (\Throwable $e) {}
         }
     }
 
