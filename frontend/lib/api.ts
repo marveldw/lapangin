@@ -1,8 +1,23 @@
-const rawUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8088').replace(/\/+$/, '');
-const BASE_URL = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl}/api`;
+const getRawUrl = () => {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  if (typeof window !== 'undefined') {
+    if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+      return envUrl.replace(/\/+$/, '');
+    }
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    return `${protocol}//${hostname}:8088`;
+  }
+
+  return (envUrl || 'http://localhost:8088').replace(/\/+$/, '');
+};
 
 const buildUrl = (endpoint: string) => {
+  const rawUrl = getRawUrl();
+  const BASE_URL = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl}/api`;
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
   if (cleanEndpoint.startsWith('/api/')) {
     return `${rawUrl.replace(/\/api$/, '')}${cleanEndpoint}`;
   }
