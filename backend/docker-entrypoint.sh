@@ -19,15 +19,28 @@ if [ -z "$APP_KEY" ]; then
     exit 1
 fi
 
-# Jalankan migrasi dan seeder database
+# Jalankan migrasi database dengan retry loop sampai DB siap
 echo "[Entrypoint] Running database migrations..."
-php artisan migrate --force || echo "[Entrypoint] Migration notice: Migration will run once database is ready."
+MAX_RETRIES=30
+RETRY_COUNT=0
+until php artisan migrate --force || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    echo "[Entrypoint] Waiting for database connection... ($RETRY_COUNT/$MAX_RETRIES)"
+    sleep 2
+done
+
+if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+    echo "[Entrypoint] ERROR: Database migration failed after $MAX_RETRIES attempts."
+    exit 1
+fi
+
+echo "[Entrypoint] Database migration completed successfully."
 
 echo "[Entrypoint] Running database seeds..."
 php artisan db:seed --force || true
 
-# Publish assets & optimize for production
-echo "[Entrypoint] Publishing assets & optimizing for production..."
+# Publish assets and optimize for production
+echo "[Entrypoint] Publishing assets and optimizing for production..."
 php artisan filament:assets || true
 php artisan livewire:publish --assets || true
 php artisan optimize || true
