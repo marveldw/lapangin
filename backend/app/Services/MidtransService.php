@@ -106,25 +106,21 @@ class MidtransService
         }
 
         // Extract QR Code URL from actions (prioritize raw PNG image 'generate-qr-code')
-        $qrUrl = null;
-        if (!empty($resArray['actions']) && is_array($resArray['actions'])) {
+        $qrUrl = $resArray['qr_url'] ?? null;
+        if (!$qrUrl && !empty($resArray['actions']) && is_array($resArray['actions'])) {
             foreach ($resArray['actions'] as $action) {
-                if (($action['name'] ?? '') === 'generate-qr-code') {
+                $actionName = strtolower($action['name'] ?? '');
+                if (str_contains($actionName, 'generate-qr-code') || str_contains($actionName, 'qr')) {
                     $qrUrl = $action['url'] ?? null;
-                    break;
+                    if ($qrUrl) break;
                 }
             }
-            if (!$qrUrl) {
-                foreach ($resArray['actions'] as $action) {
-                    if (str_contains($action['name'] ?? '', 'generate-qr-code')) {
-                        $qrUrl = $action['url'] ?? null;
-                        break;
-                    }
-                }
+            if (!$qrUrl && count($resArray['actions']) > 0) {
+                $qrUrl = $resArray['actions'][0]['url'] ?? null;
             }
         }
 
-        $qrString = $resArray['qr_string'] ?? null;
+        $qrString = $resArray['qr_string'] ?? $resArray['qr_code'] ?? null;
         if (!$qrUrl && !empty($qrString)) {
             $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($qrString);
         }

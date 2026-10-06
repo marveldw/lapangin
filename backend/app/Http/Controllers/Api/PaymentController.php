@@ -207,7 +207,8 @@ class PaymentController extends Controller
             ->latest('transaction_id')
             ->first();
 
-        if ($existingTx && $existingTx->qr_url) {
+        if ($existingTx && ($existingTx->qr_url || $existingTx->qr_string)) {
+            $qrUrl = $existingTx->qr_url ?? ('https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($existingTx->qr_string));
             return response()->json([
                 'success' => true,
                 'message' => 'Silakan lanjutkan pembayaran QRIS Anda.',
@@ -215,7 +216,7 @@ class PaymentController extends Controller
                     'order_id'     => $existingTx->order_id,
                     'gross_amount' => $existingTx->gross_amount,
                     'status'       => $existingTx->status,
-                    'qr_url'       => $existingTx->qr_url,
+                    'qr_url'       => $qrUrl,
                     'qr_string'    => $existingTx->qr_string,
                     'expires_at'   => $existingTx->expires_at?->toIso8601String(),
                 ],
@@ -252,6 +253,8 @@ class PaymentController extends Controller
                 ? Carbon::parse($charge['expires_at'])
                 : now()->addMinutes(15);
 
+            $qrUrl = $charge['qr_url'] ?? (!empty($charge['qr_string']) ? ('https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($charge['qr_string'])) : null);
+
             $tx = Transaction::create([
                 'order_id'         => $charge['order_id'],
                 'user_id'          => $user->user_id,
@@ -260,8 +263,8 @@ class PaymentController extends Controller
                 'gross_amount'     => $plan->price,
                 'status'           => 'PENDING',
                 'payment_type'     => 'qris',
-                'qr_url'           => $charge['qr_url'],
-                'qr_string'        => $charge['qr_string'],
+                'qr_url'           => $qrUrl,
+                'qr_string'        => $charge['qr_string'] ?? null,
                 'expires_at'       => $expiresAt,
                 'payload_response' => $charge['payload_response'],
             ]);

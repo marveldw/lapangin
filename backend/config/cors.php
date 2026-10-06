@@ -6,29 +6,42 @@ return [
     |--------------------------------------------------------------------------
     | Cross-Origin Resource Sharing (CORS) Configuration
     |--------------------------------------------------------------------------
-    |
-    | Here you may configure your settings for cross-origin resource sharing
-    | or "CORS". This determines what cross-origin operations may execute
-    | in web browsers. You are free to adjust these settings as needed.
-    |
-    | To learn more: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
+    | Hardened production & local development CORS configuration for Lapangin.
+    | Supports ports 3000 (Next.js default), 3001, 8088, 5173.
     |
     */
 
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
-    'allowed_methods' => ['*'],
+    // Explicitly allowed REST methods (No wildcards)
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
-    'allowed_origins' => ['*'],
+    // Dynamic origin resolution supporting dev ports (3000, 3001, 8088, 5173) & production env
+    'allowed_origins' => array_values(array_unique(array_filter(
+        explode(',', env(
+            'CORS_ALLOWED_ORIGINS',
+            'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,http://localhost:8088,http://127.0.0.1:8088,http://localhost:5173,http://127.0.0.1:5173,' . env('FRONTEND_URL', '')
+        ))
+    ))),
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['*'],
+    // Allowed request headers (including Next.js & dev proxy headers)
+    'allowed_headers' => [
+        'Content-Type',
+        'X-Requested-With',
+        'Authorization',
+        'Accept',
+        'X-XSRF-TOKEN',
+        'Origin',
+        'ngrok-skip-browser-warning',
+    ],
 
     'exposed_headers' => [],
 
-    'max_age' => 0,
+    // Preflight cache max age (24 hours)
+    'max_age' => 86400,
 
-    'supports_credentials' => false,
+    'supports_credentials' => true,
 
 ];
