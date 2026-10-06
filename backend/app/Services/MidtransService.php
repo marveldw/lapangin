@@ -56,6 +56,10 @@ class MidtransService
                 'order_id'     => $orderId,
                 'gross_amount' => $grossAmount,
             ],
+            'custom_expiry' => [
+                'expiry_duration' => 15,
+                'unit'            => 'minute',
+            ],
             'customer_details' => [
                 'first_name' => $customerDetails['first_name'] ?? 'Pelanggan',
                 'email'      => $customerDetails['email'] ?? 'customer@lapangin.id',
