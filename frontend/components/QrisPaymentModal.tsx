@@ -22,6 +22,7 @@ export default function QrisPaymentModal({
   orderId,
   grossAmount,
   qrUrl,
+  qrString,
   expiresAt,
   title = 'Pembayaran QRIS Dinamis',
   onSuccess,
@@ -192,25 +193,17 @@ export default function QrisPaymentModal({
 
             {/* QR Code Container */}
             <div className="relative p-4 bg-white rounded-2xl border-2 border-dashed border-gray-200 shadow-xs flex flex-col items-center">
-              {(() => {
-                const activeQr = qrUrl || (qrString ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrString)}` : null);
-                return activeQr ? (
-                  <img
-                    src={activeQr}
-                    alt="Scan QRIS"
-                    className="w-48 h-48 sm:w-52 sm:h-52 object-contain"
-                    onError={(e) => {
-                      if (qrString && !(e.currentTarget as HTMLImageElement).src.includes('chart.googleapis.com')) {
-                        (e.currentTarget as HTMLImageElement).src = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(qrString)}`;
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="w-48 h-48 flex items-center justify-center text-gray-400 text-xs">
-                    Memuat QR Code...
-                  </div>
-                );
-              })()}
+              {qrUrl ? (
+                <img
+                  src={qrUrl}
+                  alt="Scan QRIS"
+                  className="w-48 h-48 sm:w-52 sm:h-52 object-contain"
+                />
+              ) : (
+                <div className="w-48 h-48 flex items-center justify-center text-gray-400 text-xs">
+                  Memuat QR Code...
+                </div>
+              )}
 
               {/* Countdown badge */}
               {timeLeft && (
