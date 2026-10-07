@@ -33,7 +33,9 @@ WORKDIR /var/www/html
 RUN apk add --no-cache nginx
 
 # Install PHP extensions untuk Laravel + Filament (pinned version)
-ADD --chmod=755 https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.12/install-php-extensions /usr/local/bin/
+RUN apk add --no-cache curl && \
+    curl -sSLf https://github.com/mlocati/docker-php-extension-installer/releases/download/2.11.12/install-php-extensions -o /usr/local/bin/install-php-extensions && \
+    chmod +x /usr/local/bin/install-php-extensions
 
 RUN install-php-extensions pdo_pgsql pgsql intl zip gd bcmath opcache pcntl && \
     rm /usr/local/bin/install-php-extensions
