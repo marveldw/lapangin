@@ -2,15 +2,26 @@ const getRawUrl = () => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
 
   if (typeof window !== 'undefined') {
-    if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+    // If NEXT_PUBLIC_API_URL is explicitly set to a valid non-localhost URL and not stale 8080
+    if (
+      envUrl &&
+      !envUrl.includes('localhost') &&
+      !envUrl.includes('127.0.0.1') &&
+      !envUrl.includes(':8080')
+    ) {
       return envUrl.replace(/\/+$/, '');
     }
+
+    // Dynamic resolution in browser (works for localhost or any VPS IP)
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
     return `${protocol}//${hostname}:8088`;
   }
 
-  return (envUrl || 'http://localhost:8088').replace(/\/+$/, '');
+  if (envUrl && !envUrl.includes(':8080')) {
+    return envUrl.replace(/\/+$/, '');
+  }
+  return 'http://localhost:8088';
 };
 
 const buildUrl = (endpoint: string) => {
