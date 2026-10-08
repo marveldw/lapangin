@@ -35,9 +35,7 @@ services:
   # 2. BACKEND (Laravel 12 + PHP-FPM + Nginx bundled)
   # --------------------------------------------------
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: marvellinadw/lapangin-backend:latest
     container_name: lapangin_backend
     restart: unless-stopped
     ports:
@@ -95,11 +93,7 @@ services:
   # 3. FRONTEND (Next.js Standalone Node 20 Alpine)
   # --------------------------------------------------
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8088/api}
+    image: marvellinadw/lapangin-frontend:latest
     container_name: lapangin_frontend
     restart: unless-stopped
     ports:
@@ -122,7 +116,7 @@ services:
     networks:
       - lapangin_network
 
-# Persistent Storage (Using clean volume name to bypass stale MySQL volume collisions)
+# Persistent Storage
 volumes:
   lapangin_pgdata_clean:
     driver: local
